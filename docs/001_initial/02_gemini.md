@@ -25,21 +25,21 @@ graph TD
         subgraph "Stateless Program Logic"
             direction TB
             ProgramModule["DSPEx.Program (Behaviour)"]
-            style ProgramModule fill:#cde,stroke:#333,stroke-width:2px
+            style ProgramModule fill:#cde,stroke:#333,stroke-width:2px,color:#000
             Signature["DSPEx.Signature (Struct)"]
-            style Signature fill:#cde,stroke:#333,stroke-width:2px
+            style Signature fill:#cde,stroke:#333,stroke-width:2px,color:#000
         end
 
         subgraph "Stateful Service Layer"
             direction TB
             LM_Client["LM Client (GenServer)"]
-            style LM_Client fill:#f9f,stroke:#333,stroke-width:2px
+            style LM_Client fill:#f9f,stroke:#333,stroke-width:2px,color:#000
             RM_Client["RM Client (GenServer)"]
-            style RM_Client fill:#f9f,stroke:#333,stroke-width:2px
+            style RM_Client fill:#f9f,stroke:#333,stroke-width:2px,color:#000
             Cache["Cache (GenServer + ETS)"]
-            style Cache fill:#f9f,stroke:#333,stroke-width:2px
+            style Cache fill:#f9f,stroke:#333,stroke-width:2px,color:#000
             Teleprompter["Teleprompter (GenServer)"]
-            style Teleprompter fill:#f9f,stroke:#333,stroke-width:2px
+            style Teleprompter fill:#f9f,stroke:#333,stroke-width:2px,color:#000
         end
     end
 
@@ -57,26 +57,10 @@ graph TD
     Teleprompter -- "Uses" --> ProgramModule
     Teleprompter -- "Uses" --> LM_Client
 
-    note right of Supervisor
-        <b>OTP Supervision Tree</b>
-        The App Supervisor ensures that all
-        stateful services (Clients, Cache, etc.)
-        are running and restarts them on failure.
-    end
-
-    note right of ProgramModule
-        <b>Stateless & Functional</b>
-        The core program logic is defined in
-        simple Elixir modules, following
-        functional principles.
-    end
-
-    note left of LM_Client
-        <b>Stateful & Concurrent-Safe</b>
-        `GenServer`s manage state like API keys,
-        caches, and long-running optimization jobs,
-        making them safe for concurrent access.
-    end
+    %% Notes about components
+    Supervisor -.-> |"OTP Supervision Tree<br/>Ensures all stateful services<br/>are running and restarts<br/>them on failure"| Supervisor
+    ProgramModule -.-> |"Stateless & Functional<br/>Core program logic defined<br/>in simple Elixir modules<br/>following functional principles"| ProgramModule
+    LM_Client -.-> |"Stateful & Concurrent-Safe<br/>GenServers manage state like<br/>API keys, caches, and<br/>optimization jobs"| LM_Client
 ```
 
 **Architectural Takeaways:**
@@ -193,41 +177,30 @@ This diagram explains how the declarative `Signature` syntax is transformed into
 ```mermaid
 graph TD
     subgraph "Phase 1: Development"
-        A[Developer writes code in `my_app.ex`]
-        CodeBlock["
-        defmodule MyQuery do
-          use DSPEx.Signature,
-            \"question -> answer\"
-        end
-        "]
+        A[Developer writes code in \`my_app.ex\`]
+        CodeBlock["defmodule MyQuery do<br/>  use DSPEx.Signature,<br/>    question -> answer<br/>end"]
         A --> CodeBlock
     end
 
-    subgraph "Phase 2: Compilation (`mix compile`)"
-        B[Elixir Compiler encounters `use DSPEx.Signature`]
-        C{DSPEx.Signature Macro (`__using__/1`) Executes}
-        D[Macro parses \"question -> answer\" string]
-        E[Macro generates Elixir AST (code definition)]
-        F[
-            Generated AST:
-            - `defstruct [:question, :answer, ...]`
-            - `@type t :: %MyQuery{...}`
-            - `@instructions \"...\"`
-            - Helper functions
-        ]
+    subgraph "Phase 2: Compilation (mix compile)"
+        B[Elixir Compiler encounters use DSPEx.Signature]
+        C{DSPEx.Signature Macro __using__/1 Executes}
+        D[Macro parses question -> answer string]
+        E[Macro generates Elixir AST code definition]
+        F["Generated AST:<br/>- defstruct question, answer<br/>- type definitions<br/>- instructions<br/>- Helper functions"]
 
         B --> C --> D --> E --> F
     end
 
     subgraph "Phase 3: Runtime Artifact"
-        G[Compiler outputs `my_query.beam` file]
-        H{`MyQuery` is a normal, fast Elixir struct}
+        G[Compiler outputs \`my_query.beam\` file]
+        H{\`MyQuery\` is a normal, fast Elixir struct}
 
         F --> G --> H
     end
 
-    style C fill:#f9f,stroke:#333,stroke-width:2px
-    style E fill:#cde,stroke:#333,stroke-width:2px
+    style C fill:#f9f,stroke:#333,stroke-width:2px,color:#000
+    style E fill:#cde,stroke:#333,stroke-width:2px,color:#000
 ```
 
 **Architectural Takeaways:**
