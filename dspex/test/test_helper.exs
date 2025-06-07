@@ -1,23 +1,17 @@
 ExUnit.start()
 
 # Start Mox for mocking dependencies in tests
-Mox.defmock(DSPEx.Test.ReqMock, for: DSPEx.Test.ReqBehaviour)
-Mox.defmock(DSPEx.Test.ClientMock, for: DSPEx.Client)
-Mox.defmock(DSPEx.Test.AdapterMock, for: DSPEx.Adapter)
-
-# Set global mode for Mox - allows any process to use mocks
-Mox.set_mox_global()
+# Note: Only mocking modules that exist in Stage 1
 
 # Configure test environment
 Application.put_env(:dspex, :environment, :test)
 
-# Ensure required applications are started
-Application.ensure_all_started(:cachex)
-Application.ensure_all_started(:fuse)
+# Ensure required applications are started (only the ones we actually need for Stage 1)
+Application.ensure_all_started(:propcheck)
 
 # Test configuration
 ExUnit.configure(
-  exclude: [:integration, :end_to_end, :performance],
+  exclude: [:integration, :end_to_end, :performance, :external_api],
   timeout: 30_000,
   max_failures: 10
 )

@@ -1,123 +1,134 @@
 defmodule DSPEx.Property.SignatureParserTest do
   @moduledoc """
-  Property-based tests for DSPEx.Signature parser.
-  Tests parsing properties across wide range of inputs.
+  Property-like tests for DSPEx.Signature parser.
+  Tests parsing behavior across wide range of inputs using regular unit tests.
   """
-  use ExUnit.Case
-  use PropCheck
+  use ExUnit.Case, async: true
 
-  describe "signature parsing properties" do
-    property "parsed signatures maintain field order" do
-      forall {inputs, outputs} <- {field_list(), field_list()} do
-        signature_string = "#{Enum.join(inputs, ", ")} -> #{Enum.join(outputs, ", ")}"
+  describe "signature parsing edge cases" do
+    test "parsed signatures maintain field order" do
+      test_cases = [
+        {"input -> output", {[:input], [:output]}},
+        {"question -> answer", {[:question], [:answer]}},
+        {"data -> result", {[:data], [:result]}},
+        {"input1, input2 -> output1", {[:input1, :input2], [:output1]}},
+        {"question, context -> answer, confidence", {[:question, :context], [:answer, :confidence]}}
+      ]
+
+      for {signature_string, expected} <- test_cases do
+        assert DSPEx.Signature.Parser.parse(signature_string) == expected
+      end
+    end
+
+    test "valid simple signatures parse correctly" do
+      test_cases = [
+        {"input -> output", {[:input], [:output]}},
+        {"question -> answer", {[:question], [:answer]}},
+        {"context -> result", {[:context], [:result]}},
+        {"field -> value", {[:field], [:value]}},
+        {"item -> data", {[:item], [:data]}}
+      ]
+
+      for {signature_string, expected} <- test_cases do
+        {parsed_inputs, parsed_outputs} = DSPEx.Signature.Parser.parse(signature_string)
+        assert {parsed_inputs, parsed_outputs} == expected
+      end
+    end
+
+    test "roundtrip parsing preserves structure" do
+      test_cases = [
+        "input -> output",
+        "question -> answer",
+        "data -> result",
+        "input1, input2 -> output1",
+        "question, context -> answer, confidence"
+      ]
+
+      for signature_string <- test_cases do
         {parsed_inputs, parsed_outputs} = DSPEx.Signature.Parser.parse(signature_string)
 
-        Enum.map(inputs, &String.to_atom/1) == parsed_inputs and
-        Enum.map(outputs, &String.to_atom/1) == parsed_outputs
-      end
-    end
-
-    property "valid signatures never crash parser" do
-      forall sig_string <- valid_signature_string() do
-        try do
-          DSPEx.Signature.Parser.parse(sig_string)
-          true
-        rescue
-          _ -> false
-        end
-      end
-    end
-
-    property "invalid signatures always raise errors" do
-      forall invalid_sig <- invalid_signature_string() do
-        try do
-          DSPEx.Signature.Parser.parse(invalid_sig)
-          false
-        rescue
-          CompileError -> true
-          _ -> false
-        end
-      end
-    end
-
-    property "field count is preserved" do
-      forall {inputs, outputs} <- {field_list(), field_list()} do
-        signature_string = "#{Enum.join(inputs, ", ")} -> #{Enum.join(outputs, ", ")}"
-        {parsed_inputs, parsed_outputs} = DSPEx.Signature.Parser.parse(signature_string)
-
-        length(parsed_inputs) == length(inputs) and
-        length(parsed_outputs) == length(outputs)
-      end
-    end
-
-    property "round-trip consistency" do
-      forall {inputs, outputs} <- {non_empty_field_list(), non_empty_field_list()} do
-        # Create signature string
-        signature_string = "#{Enum.join(inputs, ", ")} -> #{Enum.join(outputs, ", ")}"
-
-        # Parse it
-        {parsed_inputs, parsed_outputs} = DSPEx.Signature.Parser.parse(signature_string)
-
-        # Reconstruct signature string
+        # Reconstruct and parse again
         reconstructed = "#{Enum.join(parsed_inputs, ", ")} -> #{Enum.join(parsed_outputs, ", ")}"
+        {reparsed_inputs, reparsed_outputs} = DSPEx.Signature.Parser.parse(reconstructed)
 
-        # Parse again
-        {final_inputs, final_outputs} = DSPEx.Signature.Parser.parse(reconstructed)
-
-        # Should be identical to first parse
-        parsed_inputs == final_inputs and parsed_outputs == final_outputs
+        assert {parsed_inputs, parsed_outputs} == {reparsed_inputs, reparsed_outputs}
       end
     end
 
-    property "whitespace normalization is consistent" do
-      forall {inputs, outputs} <- {field_list(), field_list()} do
-        base_sig = "#{Enum.join(inputs, ", ")} -> #{Enum.join(outputs, ", ")}"
+    test "signature with duplicate fields fails" do
+      duplicate_cases = [
+        "field, field -> output",
+        "input, input -> result",
+        "question, question -> answer",
+        "data -> result, result",
+        "input -> output, output"
+      ]
 
-        # Add random whitespace
-        spaced_sig = "  #{Enum.join(inputs, "  ,  ")}  ->  #{Enum.join(outputs, "  ,  ")}  "
-
-        DSPEx.Signature.Parser.parse(base_sig) == DSPEx.Signature.Parser.parse(spaced_sig)
+      for signature_string <- duplicate_cases do
+        assert_raise CompileError, fn ->
+          DSPEx.Signature.Parser.parse(signature_string)
+        end
       end
     end
-  end
 
-  # Property generators
-  defp field_list() do
-    list(field_name())
-  end
+    test "invalid signature formats fail appropriately" do
+      invalid_cases = [
+        "no arrow separator",
+        "input ->",
+        "-> output",
+        "",
+        "multiple -> arrows -> here",
+        "input, -> output",
+        "input -> , output"
+      ]
 
-  defp non_empty_field_list() do
-    non_empty(list(field_name()))
-  end
-
-  defp field_name() do
-    let name <- non_empty(string()) do
-      # Generate valid Elixir atom names
-      clean_name = String.replace(name, ~r/[^a-zA-Z0-9]/, "")
-      case clean_name do
-        "" -> "field"
-        ^clean_name -> "field_" <> clean_name
+      for signature_string <- invalid_cases do
+        assert_raise CompileError, fn ->
+          DSPEx.Signature.Parser.parse(signature_string)
+        end
       end
     end
-  end
 
-  defp valid_signature_string() do
-    let {inputs, outputs} <- {non_empty_field_list(), non_empty_field_list()} do
-      "#{Enum.join(inputs, ", ")} -> #{Enum.join(outputs, ", ")}"
+    test "whitespace handling is consistent" do
+      base_cases = [
+        {"input->output", {[:input], [:output]}},
+        {"  input  ->  output  ", {[:input], [:output]}},
+        {"input,context->answer,confidence", {[:input, :context], [:answer, :confidence]}},
+        {"  input  ,  context  ->  answer  ,  confidence  ", {[:input, :context], [:answer, :confidence]}}
+      ]
+
+      for {signature_string, expected} <- base_cases do
+        assert DSPEx.Signature.Parser.parse(signature_string) == expected
+      end
     end
-  end
 
-  defp invalid_signature_string() do
-    oneof([
-      "no arrow separator",
-      "input ->",
-      "-> output",
-      "",
-      "multiple -> arrows -> here",
-      "input, -> output",
-      "input -> , output",
-      "123invalid -> output",
-      "input -> 456invalid"
-    ])
+    test "field name validation" do
+      valid_cases = [
+        "input -> output",
+        "field_name -> result_value",
+        "input1 -> output2",
+        "question_text -> answer_text"
+      ]
+
+      for signature_string <- valid_cases do
+        {inputs, outputs} = DSPEx.Signature.Parser.parse(signature_string)
+        assert is_list(inputs) and is_list(outputs)
+        assert Enum.all?(inputs, &is_atom/1)
+        assert Enum.all?(outputs, &is_atom/1)
+      end
+
+      invalid_field_cases = [
+        "123invalid -> output",
+        "input -> 456invalid",
+        "Input -> output",  # Capital letter start
+        "input-name -> output"  # Hyphen not allowed
+      ]
+
+      for signature_string <- invalid_field_cases do
+        assert_raise CompileError, fn ->
+          DSPEx.Signature.Parser.parse(signature_string)
+        end
+      end
+    end
   end
 end

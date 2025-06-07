@@ -39,12 +39,16 @@ defmodule DSPEx.SignatureTest do
       end
     end
 
-    test "handles empty input fields" do
-      assert DSPEx.Signature.Parser.parse(" -> answer") == {[], [:answer]}
+    test "rejects empty input fields" do
+      assert_raise CompileError, fn ->
+        DSPEx.Signature.Parser.parse(" -> answer")
+      end
     end
 
-    test "handles empty output fields" do
-      assert DSPEx.Signature.Parser.parse("question -> ") == {[:question], []}
+    test "rejects empty output fields" do
+      assert_raise CompileError, fn ->
+        DSPEx.Signature.Parser.parse("question -> ")
+      end
     end
   end
 
@@ -89,7 +93,7 @@ defmodule DSPEx.SignatureTest do
       assert %MacroTestSig{} = struct(MacroTestSig)
 
       # Check that all fields exist on the struct
-      fields = MacroTestSig.__struct__().__struct__
+      _fields = MacroTestSig.__struct__().__struct__
       struct_fields = Map.keys(MacroTestSig.__struct__()) -- [:__struct__]
       expected_fields = [:input1, :input2, :output1]
 
