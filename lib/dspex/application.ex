@@ -8,8 +8,12 @@ defmodule Dspex.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: Dspex.Worker.start_link(arg)
-      # {Dspex.Worker, arg}
+      # DSPEx-specific services (Foundation starts automatically)
+      {DSPEx.Services.ConfigManager, []},
+      {DSPEx.Services.TelemetrySetup, []},
+
+      # HTTP client pool for external API calls
+      {Finch, name: DSPEx.Finch}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

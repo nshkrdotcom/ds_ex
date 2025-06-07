@@ -1,10 +1,10 @@
 defmodule DSPEx.Predict do
   @moduledoc """
-  Core prediction orchestration module.
+  Core prediction orchestration module with Foundation integration.
 
   Coordinates between signatures, adapters, and clients to execute
-  language model predictions. Provides a simple, functional interface
-  for making predictions based on DSPEx signatures.
+  language model predictions with comprehensive telemetry, error handling,
+  and observability through Foundation infrastructure.
 
   ## Examples
 
@@ -14,23 +14,33 @@ defmodule DSPEx.Predict do
       iex> outputs
       %{answer: "4"}
 
+      # With custom options and correlation tracking
+      iex> {:ok, outputs} = DSPEx.Predict.forward(signature, inputs, %{
+      ...>   provider: :openai,
+      ...>   temperature: 0.9,
+      ...>   correlation_id: "prediction-123"
+      ...> })
+
   """
 
   @type signature :: module()
   @type inputs :: map()
   @type outputs :: map()
   @type prediction_options :: %{
+          optional(:provider) => atom(),
           optional(:model) => String.t(),
           optional(:temperature) => float(),
-          optional(:max_tokens) => pos_integer()
+          optional(:max_tokens) => pos_integer(),
+          optional(:correlation_id) => String.t()
         }
 
   @doc """
-  Execute a prediction using the given signature and inputs.
+  Execute a prediction using the given signature and inputs with Foundation observability.
 
   This is the main entry point for making language model predictions.
   It orchestrates the full pipeline: input validation, message formatting,
-  HTTP request, response parsing, and output validation.
+  HTTP request, response parsing, and output validation with comprehensive
+  telemetry and error tracking.
 
   ## Parameters
 
@@ -52,13 +62,88 @@ defmodule DSPEx.Predict do
   @spec forward(signature(), inputs(), prediction_options()) ::
           {:ok, outputs()} | {:error, atom()}
   def forward(signature, inputs, options) do
-    with {:ok, messages} <- DSPEx.Adapter.format_messages(signature, inputs),
-         {:ok, response} <- DSPEx.Client.request(messages, options),
-         {:ok, outputs} <- DSPEx.Adapter.parse_response(signature, response) do
-      {:ok, outputs}
-    else
-      {:error, reason} -> {:error, reason}
-    end
+    correlation_id =
+      Map.get(options, :correlation_id) || Foundation.Utils.generate_correlation_id()
+
+    # Create comprehensive error context
+    context =
+      Foundation.ErrorContext.new(__MODULE__, :forward,
+        correlation_id: correlation_id,
+        metadata: %{
+          signature: signature,
+          input_fields: Map.keys(inputs),
+          options: Foundation.Utils.truncate_if_large(options, 1000)
+        }
+      )
+
+    Foundation.ErrorContext.with_context(context, fn ->
+      # Start prediction telemetry
+      start_time = System.monotonic_time()
+
+      :telemetry.execute(
+        [:dspex, :predict, :start],
+        %{
+          system_time: System.system_time()
+        },
+        %{
+          signature: signature_name(signature),
+          correlation_id: correlation_id,
+          input_count: map_size(inputs)
+        }
+      )
+
+      # Foundation Events v0.1.3 fixed - re-enabled!
+      Foundation.Events.new_event(
+        :prediction_start,
+        %{
+          signature: signature_name(signature),
+          input_fields: Map.keys(inputs),
+          timestamp: DateTime.utc_now()
+        },
+        correlation_id: correlation_id
+      )
+      |> Foundation.Events.store()
+
+      # Execute the prediction pipeline
+      result = execute_prediction_pipeline(signature, inputs, options, correlation_id)
+
+      # Calculate duration and success
+      duration = System.monotonic_time() - start_time
+      success = match?({:ok, _}, result)
+
+      # Emit telemetry stop event
+      :telemetry.execute(
+        [:dspex, :predict, :stop],
+        %{
+          duration: duration,
+          success: success
+        },
+        %{
+          signature: signature_name(signature),
+          correlation_id: correlation_id,
+          provider: Map.get(options, :provider)
+        }
+      )
+
+      # Store prediction completion event - Foundation v0.1.3 fixed!
+      Foundation.Events.new_event(
+        :prediction_complete,
+        %{
+          signature: signature_name(signature),
+          duration_ms: System.convert_time_unit(duration, :native, :millisecond),
+          success: success,
+          output_fields:
+            case result do
+              {:ok, outputs} -> Map.keys(outputs)
+              _ -> []
+            end
+        },
+        correlation_id: correlation_id
+      )
+      |> Foundation.Events.store()
+
+      result
+    end)
   end
 
   @doc """
@@ -87,11 +172,41 @@ defmodule DSPEx.Predict do
   @spec predict_field(signature(), inputs(), atom(), prediction_options()) ::
           {:ok, any()} | {:error, atom()}
   def predict_field(signature, inputs, output_field, options) do
-    case forward(signature, inputs, options) do
+    correlation_id =
+      Map.get(options, :correlation_id) || Foundation.Utils.generate_correlation_id()
+
+    case forward(signature, inputs, Map.put(options, :correlation_id, correlation_id)) do
       {:ok, outputs} ->
         case Map.fetch(outputs, output_field) do
-          {:ok, value} -> {:ok, value}
-          :error -> {:error, :field_not_found}
+          {:ok, value} ->
+            # Foundation v0.1.3 fixed - re-enabled!
+            Foundation.Events.new_event(
+              :field_extraction_success,
+              %{
+                signature: signature_name(signature),
+                field: output_field,
+                value_type: type_of(value)
+              },
+              correlation_id: correlation_id
+            )
+            |> Foundation.Events.store()
+
+            {:ok, value}
+
+          :error ->
+            # Foundation v0.1.3 fixed - re-enabled!
+            Foundation.Events.new_event(
+              :field_extraction_error,
+              %{
+                signature: signature_name(signature),
+                field: output_field,
+                available_fields: Map.keys(outputs)
+              },
+              correlation_id: correlation_id
+            )
+            |> Foundation.Events.store()
+
+            {:error, :field_not_found}
         end
 
       {:error, reason} ->
@@ -118,10 +233,45 @@ defmodule DSPEx.Predict do
   """
   @spec validate_inputs(signature(), inputs()) :: :ok | {:error, atom()}
   def validate_inputs(signature, inputs) do
-    case DSPEx.Adapter.format_messages(signature, inputs) do
-      {:ok, _messages} -> :ok
-      {:error, reason} -> {:error, reason}
-    end
+    correlation_id = Foundation.Utils.generate_correlation_id()
+
+    # Start validation telemetry
+    start_time = System.monotonic_time()
+
+    :telemetry.execute(
+      [:dspex, :signature, :validation, :start],
+      %{
+        system_time: System.system_time()
+      },
+      %{
+        signature: signature_name(signature),
+        correlation_id: correlation_id
+      }
+    )
+
+    result =
+      case DSPEx.Adapter.format_messages(signature, inputs) do
+        {:ok, _messages} -> :ok
+        {:error, reason} -> {:error, reason}
+      end
+
+    # Stop validation telemetry
+    duration = System.monotonic_time() - start_time
+    success = result == :ok
+
+    :telemetry.execute(
+      [:dspex, :signature, :validation, :stop],
+      %{
+        duration: duration,
+        success: success
+      },
+      %{
+        signature: signature_name(signature),
+        correlation_id: correlation_id
+      }
+    )
+
+    result
   end
 
   @doc """
@@ -146,7 +296,8 @@ defmodule DSPEx.Predict do
       description = %{
         inputs: inputs,
         outputs: outputs,
-        description: get_description(signature)
+        description: get_description(signature),
+        name: signature_name(signature)
       }
 
       {:ok, description}
@@ -157,7 +308,100 @@ defmodule DSPEx.Predict do
 
   # Private helper functions
 
-  @spec get_input_fields(signature()) :: {:ok, [atom()]} | {:error, :invalid_signature}
+  defp execute_prediction_pipeline(signature, inputs, options, correlation_id) do
+    with {:ok, messages} <- format_messages_with_telemetry(signature, inputs, correlation_id),
+         {:ok, response} <- make_client_request(messages, options, correlation_id),
+         {:ok, outputs} <- parse_response_with_telemetry(signature, response, correlation_id) do
+      {:ok, outputs}
+    else
+      {:error, reason} ->
+        # Emit exception telemetry
+        :telemetry.execute([:dspex, :predict, :exception], %{}, %{
+          signature: signature_name(signature),
+          correlation_id: correlation_id,
+          error_type: reason
+        })
+
+        {:error, reason}
+    end
+  end
+
+  defp format_messages_with_telemetry(signature, inputs, correlation_id) do
+    start_time = System.monotonic_time()
+
+    :telemetry.execute(
+      [:dspex, :adapter, :format, :start],
+      %{
+        system_time: System.system_time()
+      },
+      %{
+        signature: signature_name(signature),
+        correlation_id: correlation_id
+      }
+    )
+
+    result = DSPEx.Adapter.format_messages(signature, inputs)
+
+    duration = System.monotonic_time() - start_time
+    success = match?({:ok, _}, result)
+
+    :telemetry.execute(
+      [:dspex, :adapter, :format, :stop],
+      %{
+        duration: duration,
+        success: success
+      },
+      %{
+        signature: signature_name(signature),
+        correlation_id: correlation_id,
+        adapter: "default"
+      }
+    )
+
+    result
+  end
+
+  defp make_client_request(messages, options, correlation_id) do
+    # Add correlation_id to options for client request
+    client_options = Map.put(options, :correlation_id, correlation_id)
+    DSPEx.Client.request(messages, client_options)
+  end
+
+  defp parse_response_with_telemetry(signature, response, correlation_id) do
+    start_time = System.monotonic_time()
+
+    :telemetry.execute(
+      [:dspex, :adapter, :parse, :start],
+      %{
+        system_time: System.system_time()
+      },
+      %{
+        signature: signature_name(signature),
+        correlation_id: correlation_id
+      }
+    )
+
+    result = DSPEx.Adapter.parse_response(signature, response)
+
+    duration = System.monotonic_time() - start_time
+    success = match?({:ok, _}, result)
+
+    :telemetry.execute(
+      [:dspex, :adapter, :parse, :stop],
+      %{
+        duration: duration,
+        success: success
+      },
+      %{
+        signature: signature_name(signature),
+        correlation_id: correlation_id,
+        adapter: "default"
+      }
+    )
+
+    result
+  end
+
   defp get_input_fields(signature) do
     if function_exported?(signature, :input_fields, 0) do
       {:ok, signature.input_fields()}
@@ -166,7 +410,6 @@ defmodule DSPEx.Predict do
     end
   end
 
-  @spec get_output_fields(signature()) :: {:ok, [atom()]} | {:error, :invalid_signature}
   defp get_output_fields(signature) do
     if function_exported?(signature, :output_fields, 0) do
       {:ok, signature.output_fields()}
@@ -175,7 +418,6 @@ defmodule DSPEx.Predict do
     end
   end
 
-  @spec get_description(signature()) :: String.t()
   defp get_description(signature) do
     if function_exported?(signature, :description, 0) do
       signature.description()
@@ -183,4 +425,20 @@ defmodule DSPEx.Predict do
       "No description available"
     end
   end
+
+  defp signature_name(signature) when is_atom(signature) do
+    signature
+    |> Module.split()
+    |> List.last()
+    |> String.to_atom()
+  end
+
+  defp signature_name(_signature), do: :unknown
+
+  defp type_of(value) when is_binary(value), do: :string
+  defp type_of(value) when is_number(value), do: :number
+  defp type_of(value) when is_boolean(value), do: :boolean
+  defp type_of(value) when is_list(value), do: :list
+  defp type_of(value) when is_map(value), do: :map
+  defp type_of(_), do: :unknown
 end

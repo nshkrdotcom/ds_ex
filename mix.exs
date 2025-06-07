@@ -26,12 +26,15 @@ defmodule Dspex.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      # Core - JSON serialization
-      {:jason, "~> 1.4"},
+      # Infrastructure & Observability
+      {:foundation, "~> 0.1.3"},
+
+      # Core - JSON serialization (jason already included in foundation)
+      # {:jason, "~> 1.4"}, # Removed - provided by Foundation
 
       # HTTP & Networking - minimal resilient client
       {:req, "~> 0.5"},
-      {:fuse, "~> 2.5"},
+      # {:fuse, "~> 2.5"}, # Removed - provided by Foundation
       {:cachex, "~> 3.6"},
       {:external_service, "~> 1.1"},
       {:retry, "~> 0.18"},

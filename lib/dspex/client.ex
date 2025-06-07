@@ -1,22 +1,16 @@
 defmodule DSPEx.Client do
   @moduledoc """
-  HTTP client for Google Gemini API communication.
+  HTTP client for language model API communication with Foundation integration.
 
-  Provides a simple, synchronous interface for making requests to Google's
-  Gemini language models via the AI Studio API. Built with Req for HTTP
-  and includes basic error handling.
+  Provides a robust interface for making requests to various language model providers
+  with built-in circuit breakers, rate limiting, telemetry, and error handling via
+  Foundation infrastructure.
 
   ## Configuration
 
-  Set your Gemini API key via environment variable:
-
-      export GEMINI_API_KEY="your-api-key-here"
-
-  Or configure via application config:
-
-      config :dspex,
-        gemini_api_key: "your-api-key-here",
-        model: "gemini-2.5-flash-preview-05-20"
+  Configuration is managed through Foundation's config system. Default providers
+  are configured automatically, but you can override via application config or
+  environment variables.
 
   ## Examples
 
@@ -25,24 +19,39 @@ defmodule DSPEx.Client do
       iex> response.choices
       [%{message: %{content: "Hello! How can I help you?"}}]
 
+      # With custom options
+      iex> {:ok, response} = DSPEx.Client.request(messages, %{
+      ...>   provider: :openai,
+      ...>   temperature: 0.9,
+      ...>   correlation_id: "req-123"
+      ...> })
+
   """
 
   @type message :: %{role: String.t(), content: String.t()}
   @type request_options :: %{
+          optional(:provider) => atom(),
           optional(:model) => String.t(),
           optional(:temperature) => float(),
-          optional(:max_tokens) => pos_integer()
+          optional(:max_tokens) => pos_integer(),
+          optional(:correlation_id) => String.t()
         }
   @type response :: %{choices: [%{message: message()}]}
-  @type error_reason :: :timeout | :network_error | :invalid_response | :api_error
+  @type error_reason ::
+          :timeout
+          | :network_error
+          | :invalid_response
+          | :api_error
+          | :circuit_open
+          | :rate_limited
 
   @doc """
-  Make a request to the configured LLM provider.
+  Make a request to the configured LLM provider with Foundation protection.
 
   ## Parameters
 
   - `messages` - List of message maps with role and content
-  - `options` - Optional request configuration (model, temperature, etc.)
+  - `options` - Optional request configuration (provider, model, temperature, etc.)
 
   ## Returns
 
@@ -57,62 +66,261 @@ defmodule DSPEx.Client do
 
   @spec request([message()], request_options()) :: {:ok, response()} | {:error, error_reason()}
   def request(messages, options) do
-    with {:ok, request_body} <- build_request_body(messages, options),
-         {:ok, http_response} <- make_http_request(request_body),
-         {:ok, parsed_response} <- parse_response(http_response) do
+    # Validate messages before proceeding
+    if not valid_messages?(messages) do
+      {:error, :invalid_messages}
+    else
+      correlation_id =
+        Map.get(options, :correlation_id) || Foundation.Utils.generate_correlation_id()
+
+      provider = Map.get(options, :provider) || get_default_provider()
+
+      # Create error context for debugging
+      context =
+        Foundation.ErrorContext.new(__MODULE__, :request,
+          correlation_id: correlation_id,
+          metadata: %{
+            provider: provider,
+            message_count: length(messages),
+            options: options
+          }
+        )
+
+      Foundation.ErrorContext.with_context(context, fn ->
+        # Emit telemetry start event
+        start_time = System.monotonic_time()
+
+        :telemetry.execute(
+          [:dspex, :client, :request, :start],
+          %{
+            system_time: System.system_time()
+          },
+          %{
+            provider: provider,
+            correlation_id: correlation_id,
+            message_count: length(messages)
+          }
+        )
+
+        # Execute request with Foundation protection (v0.1.2 has working APIs)
+        result =
+          Foundation.Infrastructure.execute_protected(
+            {:dspex_client, provider},
+            [
+              circuit_breaker: get_circuit_breaker_name(provider),
+              rate_limiter: {:dspex_provider, provider}
+            ],
+            fn -> do_request(messages, options, provider, correlation_id) end
+          )
+
+        # Emit telemetry stop event
+        duration = System.monotonic_time() - start_time
+        success = match?({:ok, _}, result)
+
+        :telemetry.execute(
+          [:dspex, :client, :request, :stop],
+          %{
+            duration: duration,
+            success: success
+          },
+          %{
+            provider: provider,
+            correlation_id: correlation_id
+          }
+        )
+
+        # Foundation.Infrastructure.execute_protected wraps our function's return value
+        # So {:ok, response} becomes {:ok, {:ok, response}}
+        case result do
+          {:ok, {:ok, response}} ->
+            # Foundation v0.1.3 fixed - re-enabled!
+            Foundation.Events.new_event(
+              :client_request_success,
+              %{
+                provider: provider,
+                response_size: estimate_response_size(response),
+                timestamp: DateTime.utc_now()
+              },
+              correlation_id: correlation_id
+            )
+            |> Foundation.Events.store()
+
+            {:ok, response}
+
+          {:ok, {:error, reason}} ->
+            # Our function returned an error, but circuit breaker didn't trip
+            # Emit exception telemetry
+            :telemetry.execute(
+              [:dspex, :client, :request, :exception],
+              %{
+                duration: duration
+              },
+              %{
+                provider: provider,
+                correlation_id: correlation_id,
+                error_type: reason
+              }
+            )
+
+            {:error, reason}
+
+          {:error, :circuit_open} = error ->
+            # Foundation v0.1.3 fixed - re-enabled!
+            Foundation.Events.new_event(
+              :circuit_breaker_open,
+              %{
+                provider: provider,
+                timestamp: DateTime.utc_now()
+              },
+              correlation_id: correlation_id
+            )
+            |> Foundation.Events.store()
+
+            error
+
+          {:error, :rate_limited} = error ->
+            # Foundation v0.1.3 fixed - re-enabled!
+            Foundation.Events.new_event(
+              :rate_limit_exceeded,
+              %{
+                provider: provider,
+                timestamp: DateTime.utc_now()
+              },
+              correlation_id: correlation_id
+            )
+            |> Foundation.Events.store()
+
+            error
+
+          {:error, reason} = error ->
+            # Foundation-level error (not from our function)
+            # Emit exception telemetry
+            :telemetry.execute(
+              [:dspex, :client, :request, :exception],
+              %{
+                duration: duration
+              },
+              %{
+                provider: provider,
+                correlation_id: correlation_id,
+                error_type: reason
+              }
+            )
+
+            error
+        end
+      end)
+    end
+  end
+
+  # Private functions
+
+  defp do_request(messages, options, provider, correlation_id) do
+    with {:ok, provider_config} <- get_provider_config(provider),
+         {:ok, request_body} <- build_request_body(messages, options, provider_config),
+         {:ok, http_response} <- make_http_request(request_body, provider_config, correlation_id),
+         {:ok, parsed_response} <- parse_response(http_response, provider) do
       {:ok, parsed_response}
     else
       {:error, reason} -> {:error, reason}
     end
   end
 
-  # Private functions
+  defp get_default_provider do
+    DSPEx.Services.ConfigManager.get_with_default([:prediction, :default_provider], :gemini)
+  end
 
-  @spec build_request_body([message()], request_options()) ::
-          {:ok, map()} | {:error, :invalid_messages}
-  defp build_request_body(messages, options) do
+  defp get_provider_config(provider) do
+    case DSPEx.Services.ConfigManager.get([:providers, provider]) do
+      {:ok, config} ->
+        {:ok, config}
+
+      {:error, _} ->
+        # TODO: Use Foundation.Error.new when APIs stabilize
+        {:error, :provider_not_configured}
+    end
+  end
+
+  defp get_circuit_breaker_name(provider) do
+    :"dspex_client_#{provider}"
+  end
+
+  defp build_request_body(messages, options, provider_config) do
     if valid_messages?(messages) do
-      # Convert OpenAI-style messages to Gemini format
-      # For single user message, omit role. For multi-turn, include roles.
-      contents =
-        case messages do
-          [%{role: "user", content: content}] ->
-            # Single user message - no role needed (matches curl example)
-            [%{parts: [%{text: content}]}]
+      case determine_provider_type(provider_config) do
+        :gemini ->
+          build_gemini_request_body(messages, options, provider_config)
 
-          multiple_messages ->
-            # Multi-turn conversation - include roles
-            Enum.map(multiple_messages, fn message ->
-              case convert_role(message.role) do
-                "user" -> %{parts: [%{text: message.content}], role: "user"}
-                "model" -> %{parts: [%{text: message.content}], role: "model"}
-                _ -> %{parts: [%{text: message.content}]}
-              end
-            end)
-        end
+        :openai ->
+          build_openai_request_body(messages, options, provider_config)
 
-      body = %{
-        contents: contents,
-        generationConfig: %{
-          temperature: Map.get(options, :temperature, 0.7),
-          maxOutputTokens: Map.get(options, :max_tokens, 150)
-        }
-      }
-
-      {:ok, body}
+        :unknown ->
+          {:error, :unsupported_provider}
+      end
     else
       {:error, :invalid_messages}
     end
   end
 
-  @spec convert_role(String.t()) :: String.t()
-  defp convert_role("user"), do: "user"
-  defp convert_role("assistant"), do: "model"
-  # Gemini treats system as user
-  defp convert_role("system"), do: "user"
-  defp convert_role(other), do: other
+  defp determine_provider_type(%{base_url: base_url}) when is_binary(base_url) do
+    cond do
+      String.contains?(base_url, "generativelanguage.googleapis.com") -> :gemini
+      String.contains?(base_url, "api.openai.com") -> :openai
+      true -> :unknown
+    end
+  end
 
-  @spec valid_messages?([message()]) :: boolean()
+  defp determine_provider_type(_), do: :unknown
+
+  defp build_gemini_request_body(messages, options, provider_config) do
+    # Convert OpenAI-style messages to Gemini format
+    contents =
+      case messages do
+        [%{role: "user", content: content}] ->
+          # Single user message - no role needed (matches curl example)
+          [%{parts: [%{text: content}]}]
+
+        multiple_messages ->
+          # Multi-turn conversation - include roles
+          Enum.map(multiple_messages, fn message ->
+            case convert_gemini_role(message.role) do
+              "user" -> %{parts: [%{text: message.content}], role: "user"}
+              "model" -> %{parts: [%{text: message.content}], role: "model"}
+              _ -> %{parts: [%{text: message.content}]}
+            end
+          end)
+      end
+
+    body = %{
+      contents: contents,
+      generationConfig: %{
+        temperature:
+          Map.get(options, :temperature) || provider_config[:default_temperature] || 0.7,
+        maxOutputTokens:
+          Map.get(options, :max_tokens) || provider_config[:default_max_tokens] || 150
+      }
+    }
+
+    {:ok, body}
+  end
+
+  defp build_openai_request_body(messages, options, provider_config) do
+    body = %{
+      model: Map.get(options, :model) || provider_config[:default_model] || "gpt-4",
+      messages: messages,
+      temperature: Map.get(options, :temperature) || provider_config[:default_temperature] || 0.7,
+      max_tokens: Map.get(options, :max_tokens) || provider_config[:default_max_tokens] || 150
+    }
+
+    {:ok, body}
+  end
+
+  defp convert_gemini_role("user"), do: "user"
+  defp convert_gemini_role("assistant"), do: "model"
+  # Gemini treats system as user
+  defp convert_gemini_role("system"), do: "user"
+  defp convert_gemini_role(other), do: other
+
   defp valid_messages?(messages) when is_list(messages) and length(messages) > 0 do
     Enum.all?(messages, fn
       %{role: role, content: content} when is_binary(role) and is_binary(content) -> true
@@ -122,43 +330,125 @@ defmodule DSPEx.Client do
 
   defp valid_messages?(_), do: false
 
-  @spec make_http_request(map()) :: {:ok, Req.Response.t()} | {:error, error_reason()}
-  defp make_http_request(body) do
-    url = get_api_url()
-    headers = get_headers()
+  defp make_http_request(body, provider_config, correlation_id) do
+    url = build_api_url(provider_config)
+    headers = build_headers(provider_config)
+    timeout = Map.get(provider_config, :timeout, 30_000)
 
-    case Req.post(url, json: body, headers: headers, receive_timeout: 30_000) do
+    case Req.post(url, json: body, headers: headers, receive_timeout: timeout) do
       {:ok, %Req.Response{status: 200} = response} ->
         {:ok, response}
 
-      {:ok, %Req.Response{status: status}} when status >= 400 ->
+      {:ok, %Req.Response{status: status, body: error_body}} when status >= 400 ->
+        # Foundation v0.1.3 fixed - re-enabled!
+        Foundation.Events.new_event(
+          :api_error,
+          %{
+            status: status,
+            error_body: Foundation.Utils.truncate_if_large(error_body, 500),
+            timestamp: DateTime.utc_now()
+          },
+          correlation_id: correlation_id
+        )
+        |> Foundation.Events.store()
+
         {:error, :api_error}
 
       {:error, %{__exception__: true} = exception} ->
-        case exception do
-          %{reason: :timeout} -> {:error, :timeout}
-          %{reason: :closed} -> {:error, :network_error}
-          _ -> {:error, :network_error}
-        end
+        error_type =
+          case exception do
+            %{reason: :timeout} -> :timeout
+            %{reason: :closed} -> :network_error
+            _ -> :network_error
+          end
+
+        # Foundation v0.1.3 fixed - re-enabled!
+        Foundation.Events.new_event(
+          :network_error,
+          %{
+            error_type: error_type,
+            exception: Exception.format(:error, exception),
+            timestamp: DateTime.utc_now()
+          },
+          correlation_id: correlation_id
+        )
+        |> Foundation.Events.store()
+
+        {:error, error_type}
     end
   end
 
-  @spec parse_response(Req.Response.t()) :: {:ok, response()} | {:error, :invalid_response}
-  defp parse_response(%Req.Response{body: body}) when is_map(body) do
-    case body do
-      %{"candidates" => candidates} when is_list(candidates) ->
-        parsed_choices = Enum.map(candidates, &parse_candidate/1)
-        {:ok, %{choices: parsed_choices}}
+  defp build_api_url(provider_config) do
+    api_key = resolve_api_key(provider_config.api_key)
+    base_url = provider_config.base_url
+
+    case determine_provider_type(provider_config) do
+      :gemini ->
+        model = provider_config.default_model
+        "#{base_url}/#{model}:generateContent?key=#{api_key}"
+
+      :openai ->
+        "#{base_url}/chat/completions"
+
+      :unknown ->
+        base_url
+    end
+  end
+
+  defp build_headers(provider_config) do
+    case determine_provider_type(provider_config) do
+      :gemini ->
+        [{"content-type", "application/json"}]
+
+      :openai ->
+        api_key = resolve_api_key(provider_config.api_key)
+
+        [
+          {"content-type", "application/json"},
+          {"authorization", "Bearer #{api_key}"}
+        ]
+
+      :unknown ->
+        [{"content-type", "application/json"}]
+    end
+  end
+
+  defp resolve_api_key({:system, env_var}) do
+    System.get_env(env_var) || raise "Environment variable #{env_var} not set"
+  end
+
+  defp resolve_api_key(api_key) when is_binary(api_key), do: api_key
+
+  defp parse_response(%Req.Response{body: body}, provider) when is_map(body) do
+    case provider do
+      provider when provider in [:gemini] ->
+        parse_gemini_response(body)
+
+      provider when provider in [:openai] ->
+        parse_openai_response(body)
 
       _ ->
-        {:error, :invalid_response}
+        {:error, :unsupported_provider}
     end
   end
 
-  defp parse_response(_), do: {:error, :invalid_response}
+  defp parse_response(_, _), do: {:error, :invalid_response}
 
-  @spec parse_candidate(map()) :: %{message: message()}
-  defp parse_candidate(%{"content" => %{"parts" => parts}}) when is_list(parts) do
+  defp parse_gemini_response(%{"candidates" => candidates}) when is_list(candidates) do
+    parsed_choices = Enum.map(candidates, &parse_gemini_candidate/1)
+    {:ok, %{choices: parsed_choices}}
+  end
+
+  defp parse_gemini_response(_), do: {:error, :invalid_response}
+
+  defp parse_openai_response(%{"choices" => choices}) when is_list(choices) do
+    parsed_choices = Enum.map(choices, &parse_openai_choice/1)
+    {:ok, %{choices: parsed_choices}}
+  end
+
+  defp parse_openai_response(_), do: {:error, :invalid_response}
+
+  defp parse_gemini_candidate(%{"content" => %{"parts" => parts}}) when is_list(parts) do
     # Extract text from first part
     content =
       case List.first(parts) do
@@ -169,44 +459,27 @@ defmodule DSPEx.Client do
     %{message: %{role: "assistant", content: content}}
   end
 
-  defp parse_candidate(%{"content" => content}) when is_map(content) do
+  defp parse_gemini_candidate(%{"content" => content}) when is_map(content) do
     # Fallback for different content structure
     text = get_in(content, ["parts", Access.at(0), "text"]) || ""
     %{message: %{role: "assistant", content: text}}
   end
 
-  defp parse_candidate(_candidate) do
+  defp parse_gemini_candidate(_candidate) do
     %{message: %{role: "assistant", content: ""}}
   end
 
-  @spec get_api_url() :: String.t()
-  defp get_api_url do
-    api_key = get_api_key()
-
-    base_url =
-      Application.get_env(
-        :dspex,
-        :api_url,
-        "https://generativelanguage.googleapis.com/v1beta/models"
-      )
-
-    model = Application.get_env(:dspex, :model, "gemini-2.5-flash-preview-05-20")
-    "#{base_url}/#{model}:generateContent?key=#{api_key}"
+  defp parse_openai_choice(%{"message" => message}) do
+    %{message: message}
   end
 
-  @spec get_headers() :: [{String.t(), String.t()}]
-  defp get_headers do
-    [
-      {"content-type", "application/json"}
-    ]
+  defp parse_openai_choice(_choice) do
+    %{message: %{role: "assistant", content: ""}}
   end
 
-  @spec get_api_key() :: String.t()
-  defp get_api_key do
-    Application.get_env(
-      :dspex,
-      :gemini_api_key,
-      System.get_env("GEMINI_API_KEY", "mock-gemini-key")
-    )
+  defp estimate_response_size(response) do
+    response
+    |> :erlang.term_to_binary()
+    |> byte_size()
   end
 end

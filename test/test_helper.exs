@@ -11,7 +11,14 @@ Application.ensure_all_started(:propcheck)
 
 # Test configuration
 ExUnit.configure(
-  exclude: [:integration, :end_to_end, :performance, :external_api, :phase2_features],
+  exclude: [
+    :integration,
+    :end_to_end,
+    :performance,
+    :external_api,
+    :phase2_features,
+    :reproduction_test
+  ],
   timeout: 30_000,
   max_failures: 10
 )
