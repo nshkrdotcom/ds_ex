@@ -65,85 +65,43 @@ defmodule DSPEx.Predict do
     correlation_id =
       Map.get(options, :correlation_id) || Foundation.Utils.generate_correlation_id()
 
-    # Create comprehensive error context
-    context =
-      Foundation.ErrorContext.new(__MODULE__, :forward,
+    # Start prediction telemetry
+    start_time = System.monotonic_time()
+
+    :telemetry.execute(
+      [:dspex, :predict, :start],
+      %{
+        system_time: System.system_time()
+      },
+      %{
+        signature: signature_name(signature),
         correlation_id: correlation_id,
-        metadata: %{
-          signature: signature,
-          input_fields: Map.keys(inputs),
-          options: Foundation.Utils.truncate_if_large(options, 1000)
-        }
-      )
+        input_count: map_size(inputs)
+      }
+    )
 
-    Foundation.ErrorContext.with_context(context, fn ->
-      # Start prediction telemetry
-      start_time = System.monotonic_time()
+    # Execute the prediction pipeline
+    result = execute_prediction_pipeline(signature, inputs, options, correlation_id)
 
-      :telemetry.execute(
-        [:dspex, :predict, :start],
-        %{
-          system_time: System.system_time()
-        },
-        %{
-          signature: signature_name(signature),
-          correlation_id: correlation_id,
-          input_count: map_size(inputs)
-        }
-      )
+    # Calculate duration and success
+    duration = System.monotonic_time() - start_time
+    success = match?({:ok, _}, result)
 
-      # Foundation Events v0.1.3 fixed - re-enabled!
-      Foundation.Events.new_event(
-        :prediction_start,
-        %{
-          signature: signature_name(signature),
-          input_fields: Map.keys(inputs),
-          timestamp: DateTime.utc_now()
-        },
-        correlation_id: correlation_id
-      )
-      |> Foundation.Events.store()
+    # Emit telemetry stop event
+    :telemetry.execute(
+      [:dspex, :predict, :stop],
+      %{
+        duration: duration,
+        success: success
+      },
+      %{
+        signature: signature_name(signature),
+        correlation_id: correlation_id,
+        provider: Map.get(options, :provider)
+      }
+    )
 
-      # Execute the prediction pipeline
-      result = execute_prediction_pipeline(signature, inputs, options, correlation_id)
-
-      # Calculate duration and success
-      duration = System.monotonic_time() - start_time
-      success = match?({:ok, _}, result)
-
-      # Emit telemetry stop event
-      :telemetry.execute(
-        [:dspex, :predict, :stop],
-        %{
-          duration: duration,
-          success: success
-        },
-        %{
-          signature: signature_name(signature),
-          correlation_id: correlation_id,
-          provider: Map.get(options, :provider)
-        }
-      )
-
-      # Store prediction completion event - Foundation v0.1.3 fixed!
-      Foundation.Events.new_event(
-        :prediction_complete,
-        %{
-          signature: signature_name(signature),
-          duration_ms: System.convert_time_unit(duration, :native, :millisecond),
-          success: success,
-          output_fields:
-            case result do
-              {:ok, outputs} -> Map.keys(outputs)
-              _ -> []
-            end
-        },
-        correlation_id: correlation_id
-      )
-      |> Foundation.Events.store()
-
-      result
-    end)
+    result
   end
 
   @doc """

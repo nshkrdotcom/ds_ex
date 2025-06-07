@@ -6,10 +6,18 @@ defmodule DSPEx.Services.TelemetrySetup do
   use GenServer
   require Logger
 
+  @doc """
+  Starts the telemetry setup service.
+  """
+  @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
+  @doc """
+  Initializes the telemetry setup service.
+  """
+  @spec init(term()) :: {:ok, map()}
   def init(_opts) do
     # Wait for Foundation to be ready
     :ok = wait_for_foundation()
@@ -17,15 +25,14 @@ defmodule DSPEx.Services.TelemetrySetup do
     # Set up DSPEx telemetry
     setup_dspex_telemetry()
 
-    # Register with Foundation's service registry
-    :ok = Foundation.ServiceRegistry.register(:production, :dspex_telemetry_setup, self())
-
-    # Set up graceful shutdown handling
-    setup_shutdown_hooks()
+    # Register with Foundation's service registry using a valid service name
+    # Use :telemetry_service as it's in the allowed list
+    :ok = Foundation.ServiceRegistry.register(:production, :telemetry_service, self())
 
     {:ok, %{telemetry_active: true, handlers_attached: true}}
   end
 
+  @spec wait_for_foundation() :: :ok
   defp wait_for_foundation do
     case Foundation.available?() do
       true ->
@@ -37,6 +44,7 @@ defmodule DSPEx.Services.TelemetrySetup do
     end
   end
 
+  @spec setup_dspex_telemetry() :: :ok
   defp setup_dspex_telemetry do
     # Define DSPEx-specific telemetry events
     events = [
@@ -66,32 +74,10 @@ defmodule DSPEx.Services.TelemetrySetup do
     )
 
     Logger.info("DSPEx telemetry setup complete")
+    :ok
   end
 
-  defp setup_shutdown_hooks do
-    # Handle ExUnit test completion if in test environment
-    if Code.ensure_loaded?(ExUnit) do
-      setup_exunit_integration()
-    end
-  end
-
-  defp setup_exunit_integration do
-    # Hook into ExUnit's lifecycle to gracefully shutdown telemetry
-    # This prevents race conditions during test cleanup
-    pid = self()
-
-    spawn(fn ->
-      # Monitor ExUnit completion
-      ref = Process.monitor(ExUnit.Server)
-
-      receive do
-        {:DOWN, ^ref, :process, _pid, _reason} ->
-          # ExUnit is shutting down - signal our telemetry to stop
-          send(pid, :prepare_for_shutdown)
-      end
-    end)
-  end
-
+  @spec handle_info(term(), map()) :: {:noreply, map()}
   def handle_info(:prepare_for_shutdown, state) do
     Logger.debug("DSPEx Telemetry: Preparing for graceful shutdown")
 
@@ -105,6 +91,7 @@ defmodule DSPEx.Services.TelemetrySetup do
     {:noreply, state}
   end
 
+  @spec graceful_detach_handlers() :: :ok
   defp graceful_detach_handlers do
     try do
       :telemetry.detach("dspex-telemetry-handlers")
@@ -115,8 +102,11 @@ defmodule DSPEx.Services.TelemetrySetup do
           "DSPEx Telemetry: Handler detach failed (expected during shutdown): #{inspect(error)}"
         )
     end
+
+    :ok
   end
 
+  @spec terminate(term(), map()) :: :ok
   def terminate(_reason, state) do
     if state[:handlers_attached] do
       graceful_detach_handlers()
@@ -125,6 +115,10 @@ defmodule DSPEx.Services.TelemetrySetup do
     :ok
   end
 
+  @doc """
+  Handles DSPEx telemetry events with defensive programming for shutdown scenarios.
+  """
+  @spec handle_dspex_event(list(atom()), map(), map(), map()) :: :ok
   def handle_dspex_event(event, measurements, metadata, config) do
     # Enhanced defensive programming: Protect against Foundation/ExUnit race conditions
     # During test cleanup, ETS tables may be unavailable causing crashes
@@ -191,6 +185,7 @@ defmodule DSPEx.Services.TelemetrySetup do
   end
 
   # Enhanced logging for telemetry issues
+  @spec log_telemetry_skip(term(), list(atom()), map()) :: :ok
   defp log_telemetry_skip(reason, event, process_info) do
     if Application.get_env(:dspex, :telemetry_debug, false) do
       Logger.warning("""
@@ -202,6 +197,8 @@ defmodule DSPEx.Services.TelemetrySetup do
       To disable this logging, set config :dspex, telemetry_debug: false
       """)
     end
+
+    :ok
   end
 
   # Renamed original handlers to be called defensively

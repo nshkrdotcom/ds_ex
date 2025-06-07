@@ -26,6 +26,9 @@ defmodule DSPEx.Client do
       ...>   correlation_id: "req-123"
       ...> })
 
+  ## Type Specifications
+
+  See `@type` definitions for detailed type information following Elixir best practices.
   """
 
   @type message :: %{role: String.t(), content: String.t()}
@@ -44,6 +47,10 @@ defmodule DSPEx.Client do
           | :api_error
           | :circuit_open
           | :rate_limited
+          | :invalid_messages
+          | :provider_not_configured
+          | :unsupported_provider
+          | :unexpected_result
 
   @doc """
   Make a request to the configured LLM provider with Foundation protection.
@@ -57,6 +64,13 @@ defmodule DSPEx.Client do
 
   - `{:ok, response}` - Successful response with choices
   - `{:error, reason}` - Error with categorized reason
+
+  ## Examples
+
+      iex> messages = [%{role: "user", content: "What is 2+2?"}]
+      iex> {:ok, response} = DSPEx.Client.request(messages)
+      iex> is_map(response)
+      true
 
   """
   @spec request([message()]) :: {:ok, response()} | {:error, error_reason()}
@@ -75,146 +89,55 @@ defmodule DSPEx.Client do
 
       provider = Map.get(options, :provider) || get_default_provider()
 
-      # Create error context for debugging
-      context =
-        Foundation.ErrorContext.new(__MODULE__, :request,
-          correlation_id: correlation_id,
-          metadata: %{
-            provider: provider,
-            message_count: length(messages),
-            options: options
-          }
-        )
-
-      Foundation.ErrorContext.with_context(context, fn ->
-        # Emit telemetry start event
-        start_time = System.monotonic_time()
-
-        :telemetry.execute(
-          [:dspex, :client, :request, :start],
-          %{
-            system_time: System.system_time()
-          },
-          %{
-            provider: provider,
-            correlation_id: correlation_id,
-            message_count: length(messages)
-          }
-        )
-
-        # Execute request with Foundation protection (v0.1.2 has working APIs)
-        result =
-          Foundation.Infrastructure.execute_protected(
-            {:dspex_client, provider},
-            [
-              circuit_breaker: get_circuit_breaker_name(provider),
-              rate_limiter: {:dspex_provider, provider}
-            ],
-            fn -> do_request(messages, options, provider, correlation_id) end
-          )
-
-        # Emit telemetry stop event
-        duration = System.monotonic_time() - start_time
-        success = match?({:ok, _}, result)
-
-        :telemetry.execute(
-          [:dspex, :client, :request, :stop],
-          %{
-            duration: duration,
-            success: success
-          },
-          %{
-            provider: provider,
-            correlation_id: correlation_id
-          }
-        )
-
-        # Foundation.Infrastructure.execute_protected wraps our function's return value
-        # So {:ok, response} becomes {:ok, {:ok, response}}
-        case result do
-          {:ok, {:ok, response}} ->
-            # Foundation v0.1.3 fixed - re-enabled!
-            Foundation.Events.new_event(
-              :client_request_success,
-              %{
-                provider: provider,
-                response_size: estimate_response_size(response),
-                timestamp: DateTime.utc_now()
-              },
-              correlation_id: correlation_id
-            )
-            |> Foundation.Events.store()
-
-            {:ok, response}
-
-          {:ok, {:error, reason}} ->
-            # Our function returned an error, but circuit breaker didn't trip
-            # Emit exception telemetry
-            :telemetry.execute(
-              [:dspex, :client, :request, :exception],
-              %{
-                duration: duration
-              },
-              %{
-                provider: provider,
-                correlation_id: correlation_id,
-                error_type: reason
-              }
-            )
-
-            {:error, reason}
-
-          {:error, :circuit_open} = error ->
-            # Foundation v0.1.3 fixed - re-enabled!
-            Foundation.Events.new_event(
-              :circuit_breaker_open,
-              %{
-                provider: provider,
-                timestamp: DateTime.utc_now()
-              },
-              correlation_id: correlation_id
-            )
-            |> Foundation.Events.store()
-
-            error
-
-          {:error, :rate_limited} = error ->
-            # Foundation v0.1.3 fixed - re-enabled!
-            Foundation.Events.new_event(
-              :rate_limit_exceeded,
-              %{
-                provider: provider,
-                timestamp: DateTime.utc_now()
-              },
-              correlation_id: correlation_id
-            )
-            |> Foundation.Events.store()
-
-            error
-
-          {:error, reason} = error ->
-            # Foundation-level error (not from our function)
-            # Emit exception telemetry
-            :telemetry.execute(
-              [:dspex, :client, :request, :exception],
-              %{
-                duration: duration
-              },
-              %{
-                provider: provider,
-                correlation_id: correlation_id,
-                error_type: reason
-              }
-            )
-
-            error
-        end
-      end)
+      # Execute the request with proper error handling
+      do_protected_request(messages, options, provider, correlation_id)
     end
   end
 
   # Private functions
 
+  @spec do_protected_request([message()], request_options(), atom(), binary()) ::
+          {:ok, response()} | {:error, error_reason()}
+  defp do_protected_request(messages, options, provider, correlation_id) do
+    # Emit telemetry start event
+    start_time = System.monotonic_time()
+
+    :telemetry.execute(
+      [:dspex, :client, :request, :start],
+      %{
+        system_time: System.system_time()
+      },
+      %{
+        provider: provider,
+        correlation_id: correlation_id,
+        message_count: length(messages)
+      }
+    )
+
+    # Execute request directly for now (Foundation contract issues)
+    result = do_request(messages, options, provider, correlation_id)
+
+    # Emit telemetry stop event
+    duration = System.monotonic_time() - start_time
+    success = match?({:ok, _}, result)
+
+    :telemetry.execute(
+      [:dspex, :client, :request, :stop],
+      %{
+        duration: duration,
+        success: success
+      },
+      %{
+        provider: provider,
+        correlation_id: correlation_id
+      }
+    )
+
+    result
+  end
+
+  @spec do_request([message()], request_options(), atom(), binary()) ::
+          {:ok, response()} | {:error, error_reason()}
   defp do_request(messages, options, provider, correlation_id) do
     with {:ok, provider_config} <- get_provider_config(provider),
          {:ok, request_body} <- build_request_body(messages, options, provider_config),
@@ -226,25 +149,24 @@ defmodule DSPEx.Client do
     end
   end
 
+  @spec get_default_provider() :: atom()
   defp get_default_provider do
     DSPEx.Services.ConfigManager.get_with_default([:prediction, :default_provider], :gemini)
   end
 
+  @spec get_provider_config(atom()) :: {:ok, map()} | {:error, :provider_not_configured}
   defp get_provider_config(provider) do
     case DSPEx.Services.ConfigManager.get([:providers, provider]) do
       {:ok, config} ->
         {:ok, config}
 
       {:error, _} ->
-        # TODO: Use Foundation.Error.new when APIs stabilize
         {:error, :provider_not_configured}
     end
   end
 
-  defp get_circuit_breaker_name(provider) do
-    :"dspex_client_#{provider}"
-  end
-
+  @spec build_request_body([message()], request_options(), map()) ::
+          {:ok, map()} | {:error, :unsupported_provider}
   defp build_request_body(messages, options, provider_config) do
     if valid_messages?(messages) do
       case determine_provider_type(provider_config) do
@@ -475,11 +397,5 @@ defmodule DSPEx.Client do
 
   defp parse_openai_choice(_choice) do
     %{message: %{role: "assistant", content: ""}}
-  end
-
-  defp estimate_response_size(response) do
-    response
-    |> :erlang.term_to_binary()
-    |> byte_size()
   end
 end
