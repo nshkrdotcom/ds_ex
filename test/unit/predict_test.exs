@@ -26,6 +26,7 @@ defmodule DSPEx.PredictTest do
       assert {:error, :missing_inputs} = DSPEx.Predict.forward(MockSignature, inputs)
     end
 
+    @tag :external_api
     test "accepts valid inputs and attempts prediction" do
       inputs = %{question: "What is 2+2?"}
 
@@ -42,6 +43,7 @@ defmodule DSPEx.PredictTest do
       end
     end
 
+    @tag :external_api
     test "forwards options to client" do
       inputs = %{question: "What is 2+2?"}
       options = %{model: "different-model", temperature: 0.5}
@@ -57,6 +59,7 @@ defmodule DSPEx.PredictTest do
       end
     end
 
+    @tag :external_api
     test "handles multi-field signatures" do
       inputs = %{question: "What is AI?", context: "Computer science"}
 
@@ -88,6 +91,7 @@ defmodule DSPEx.PredictTest do
                DSPEx.Predict.predict_field(MockSignature, inputs, :answer)
     end
 
+    @tag :external_api
     test "passes through prediction errors" do
       inputs = %{question: "What is 2+2?"}
 
@@ -101,6 +105,8 @@ defmodule DSPEx.PredictTest do
       end
     end
 
+    @tag :external_api
+    @tag :external_api
     test "accepts options parameter" do
       inputs = %{question: "What is 2+2?"}
       options = %{temperature: 0.2}
@@ -206,6 +212,8 @@ defmodule DSPEx.PredictTest do
       assert {:error, :invalid_signature} = DSPEx.Predict.forward(InvalidSignature, inputs)
     end
 
+    @tag :external_api
+    @tag :external_api
     test "propagates client errors" do
       inputs = %{question: "What is 2+2?"}
 
@@ -238,6 +246,8 @@ defmodule DSPEx.PredictTest do
       end
     end
 
+    @tag :external_api
+    @tag :external_api
     test "uses DSPEx.Client for HTTP requests" do
       inputs = %{question: "What is 2+2?"}
 

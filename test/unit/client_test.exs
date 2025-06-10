@@ -35,6 +35,8 @@ defmodule DSPEx.ClientTest do
       assert {:error, :invalid_messages} = DSPEx.Client.request(messages)
     end
 
+    @tag :external_api
+    @tag :external_api
     test "accepts valid messages with extra fields" do
       messages = [%{role: "user", content: "hello", extra: "field"}]
 
@@ -75,6 +77,8 @@ defmodule DSPEx.ClientTest do
   end
 
   describe "request/2 with options" do
+    @tag :external_api
+    @tag :external_api
     test "accepts custom model option" do
       messages = [%{role: "user", content: "Hello"}]
       options = %{model: "different-model"}
@@ -90,6 +94,8 @@ defmodule DSPEx.ClientTest do
       end
     end
 
+    @tag :external_api
+    @tag :external_api
     test "accepts custom temperature option" do
       messages = [%{role: "user", content: "Hello"}]
       options = %{temperature: 0.5}
@@ -104,6 +110,7 @@ defmodule DSPEx.ClientTest do
       end
     end
 
+    @tag :external_api
     test "accepts custom max_tokens option" do
       messages = [%{role: "user", content: "Hello"}]
       options = %{max_tokens: 100}
@@ -118,6 +125,7 @@ defmodule DSPEx.ClientTest do
       end
     end
 
+    @tag :external_api
     test "accepts all options together" do
       messages = [%{role: "user", content: "Hello"}]
 
@@ -137,6 +145,7 @@ defmodule DSPEx.ClientTest do
       end
     end
 
+    @tag :external_api
     test "uses defaults when no options provided" do
       messages = [%{role: "user", content: "Hello"}]
 
@@ -153,6 +162,8 @@ defmodule DSPEx.ClientTest do
   end
 
   describe "error categorization" do
+    @tag :external_api
+    @tag :external_api
     test "returns consistent error types" do
       messages = [%{role: "user", content: "Hello"}]
 
