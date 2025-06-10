@@ -276,7 +276,7 @@ defmodule DSPEx.ClientManager do
   @spec load_provider_config(atom(), map()) :: {:ok, map()} | {:error, atom()}
   defp load_provider_config(provider, user_config) do
     # Try to get configuration from Foundation, but handle gracefully if not available
-    base_config = 
+    base_config =
       try do
         case ConfigManager.get([:providers, provider]) do
           {:ok, config} -> config
@@ -288,10 +288,12 @@ defmodule DSPEx.ClientManager do
       catch
         :exit, _ -> get_fallback_config(provider)
       end
-    
+
     case base_config do
-      nil -> {:error, :provider_not_configured}
-      config -> 
+      nil ->
+        {:error, :provider_not_configured}
+
+      config ->
         # Merge user config over base config
         merged_config = Map.merge(config, user_config)
         {:ok, merged_config}
@@ -376,7 +378,8 @@ defmodule DSPEx.ClientManager do
     try do
       :telemetry.execute(event, measurements, metadata)
     rescue
-      _ -> :ok  # Ignore telemetry errors
+      # Ignore telemetry errors
+      _ -> :ok
     catch
       _ -> :ok
     end
@@ -428,14 +431,14 @@ defmodule DSPEx.ClientManager do
     try do
       Foundation.Utils.generate_correlation_id()
     rescue
-      _ -> 
+      _ ->
         # Fallback for when Foundation is not available
         "test-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
     end
   end
 
   # HTTP request handling functions (adapted from DSPEx.Client)
-  
+
   @spec build_request_body([message()], request_options(), map()) ::
           {:ok, map()} | {:error, :unsupported_provider}
   defp build_request_body(messages, options, provider_config) do
@@ -510,7 +513,8 @@ defmodule DSPEx.ClientManager do
 
   defp convert_gemini_role("user"), do: "user"
   defp convert_gemini_role("assistant"), do: "model"
-  defp convert_gemini_role("system"), do: "user"  # Gemini treats system as user
+  # Gemini treats system as user
+  defp convert_gemini_role("system"), do: "user"
   defp convert_gemini_role(other), do: other
 
   defp make_http_request(body, provider_config, _correlation_id) do
@@ -581,7 +585,8 @@ defmodule DSPEx.ClientManager do
   end
 
   defp resolve_api_key({:system, env_var}) do
-    System.get_env(env_var) || ""  # Return empty string in test env
+    # Return empty string in test env
+    System.get_env(env_var) || ""
   end
 
   defp resolve_api_key(api_key) when is_binary(api_key), do: api_key
