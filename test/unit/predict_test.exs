@@ -230,6 +230,7 @@ defmodule DSPEx.PredictTest do
   end
 
   describe "integration with existing modules" do
+    @tag :external_api
     test "uses DSPEx.Adapter for message formatting" do
       inputs = %{question: "What is 2+2?"}
 
@@ -246,7 +247,6 @@ defmodule DSPEx.PredictTest do
       end
     end
 
-    @tag :external_api
     @tag :external_api
     test "uses DSPEx.Client for HTTP requests" do
       inputs = %{question: "What is 2+2?"}

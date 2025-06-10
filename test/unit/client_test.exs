@@ -54,6 +54,7 @@ defmodule DSPEx.ClientTest do
       end
     end
 
+    @tag :external_api
     test "accepts multiple valid messages" do
       messages = [
         %{role: "user", content: "Hello"},
