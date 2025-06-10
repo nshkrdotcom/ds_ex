@@ -80,6 +80,10 @@ defmodule DSPEx.Client do
 
   @spec request([message()], request_options()) :: {:ok, response()} | {:error, error_reason()}
   def request(messages, options) do
+    request(:default, messages, options)
+  end
+
+  def request(client_id, messages, options) do
     # Validate messages before proceeding
     if not valid_messages?(messages) do
       {:error, :invalid_messages}
@@ -87,7 +91,8 @@ defmodule DSPEx.Client do
       correlation_id =
         Map.get(options, :correlation_id) || Foundation.Utils.generate_correlation_id()
 
-      provider = Map.get(options, :provider) || get_default_provider()
+      # Determine provider from client_id or options
+      provider = resolve_provider(client_id, options)
 
       # Execute the request with proper error handling
       do_protected_request(messages, options, provider, correlation_id)
@@ -146,6 +151,22 @@ defmodule DSPEx.Client do
       {:ok, parsed_response}
     else
       {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @spec resolve_provider(atom(), request_options()) :: atom()
+  defp resolve_provider(client_id, options) do
+    # Priority: options > client_id mapping > default
+    cond do
+      Map.has_key?(options, :provider) ->
+        Map.get(options, :provider)
+
+      client_id != :default ->
+        # Map client_id to provider (e.g., :openai -> :openai)
+        client_id
+
+      true ->
+        get_default_provider()
     end
   end
 

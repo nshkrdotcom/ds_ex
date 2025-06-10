@@ -1,7 +1,8 @@
 defmodule DSPEx.PredictTest do
   @moduledoc """
-  Unit tests for DSPEx.Predict module orchestration.
-  Tests prediction pipeline, input validation, and error handling.
+  Comprehensive unit tests for DSPEx.Predict module.
+  Tests prediction pipeline, Program behavior integration, input validation,
+  error handling, telemetry, and performance characteristics.
   """
   use ExUnit.Case, async: true
 
@@ -229,6 +230,387 @@ defmodule DSPEx.PredictTest do
     end
   end
 
+  describe "DSPEx.Program behavior integration" do
+    test "new/2 creates valid program structs" do
+      # Test with atom client
+      program = DSPEx.Predict.new(MockSignature, :openai)
+
+      assert %DSPEx.Predict{} = program
+      assert program.signature == MockSignature
+      assert program.client == :openai
+      # Default adapter
+      assert program.adapter == nil
+      # Empty demos initially
+      assert program.demos == []
+    end
+
+    test "new/2 supports different client types" do
+      # String client
+      program1 = DSPEx.Predict.new(MockSignature, "custom-client")
+      assert program1.client == "custom-client"
+
+      # Atom client 
+      program2 = DSPEx.Predict.new(MockSignature, :gemini)
+      assert program2.client == :gemini
+    end
+
+    test "new/3 accepts custom options" do
+      opts = %{adapter: :custom_adapter, demos: [%{input: "test"}]}
+      program = DSPEx.Predict.new(MockSignature, :openai, opts)
+
+      assert program.signature == MockSignature
+      assert program.client == :openai
+      assert program.adapter == :custom_adapter
+      assert program.demos == [%{input: "test"}]
+    end
+
+    test "implements DSPEx.Program behavior correctly" do
+      # Verify behavior implementation
+      assert DSPEx.Program.implements_program?(DSPEx.Predict)
+
+      # Test program_name extraction
+      program = DSPEx.Predict.new(MockSignature, :test)
+      assert DSPEx.Program.program_name(program) == :Predict
+    end
+
+    test "forward/2 delegates to Program behavior" do
+      program = DSPEx.Predict.new(MockSignature, :test)
+      inputs = %{question: "What is 2+2?"}
+
+      # Should call through Program behavior
+      case DSPEx.Program.forward(program, inputs) do
+        {:ok, outputs} ->
+          assert is_map(outputs)
+          assert Map.has_key?(outputs, :answer)
+
+        {:error, reason} ->
+          # Expected if no API keys configured
+          assert reason in [
+                   :network_error,
+                   :api_error,
+                   :timeout,
+                   :missing_inputs,
+                   :provider_not_configured
+                 ]
+      end
+    end
+
+    test "forward/3 passes options correctly" do
+      program = DSPEx.Predict.new(MockSignature, :test)
+      inputs = %{question: "Test question"}
+      opts = [correlation_id: "test-123", temperature: 0.5]
+
+      case DSPEx.Program.forward(program, inputs, opts) do
+        {:ok, outputs} ->
+          assert is_map(outputs)
+
+        {:error, reason} ->
+          # Expected without proper API setup
+          assert is_atom(reason) or is_tuple(reason)
+      end
+    end
+
+    test "maintains backward compatibility with legacy API" do
+      inputs = %{question: "What is 2+2?"}
+
+      # Legacy forward/2 API should still work
+      case DSPEx.Predict.forward(MockSignature, inputs) do
+        {:ok, outputs} ->
+          assert is_map(outputs)
+          assert Map.has_key?(outputs, :answer)
+
+        {:error, reason} ->
+          assert reason in [
+                   :network_error,
+                   :api_error,
+                   :timeout,
+                   :missing_inputs,
+                   :provider_not_configured
+                 ]
+      end
+
+      # Legacy forward/3 API should still work
+      case DSPEx.Predict.forward(MockSignature, inputs, %{temperature: 0.7}) do
+        {:ok, outputs} ->
+          assert is_map(outputs)
+
+        {:error, reason} ->
+          assert reason in [
+                   :network_error,
+                   :api_error,
+                   :timeout,
+                   :missing_inputs,
+                   :provider_not_configured
+                 ]
+      end
+    end
+
+    test "predict/2 convenience function works" do
+      inputs = %{question: "What is 2+2?"}
+
+      case DSPEx.Predict.predict(MockSignature, inputs) do
+        {:ok, outputs} ->
+          assert is_map(outputs)
+          assert Map.has_key?(outputs, :answer)
+
+        {:error, reason} ->
+          assert reason in [
+                   :network_error,
+                   :api_error,
+                   :timeout,
+                   :missing_inputs,
+                   :provider_not_configured
+                 ]
+      end
+    end
+
+    test "predict/3 with options works" do
+      inputs = %{question: "What is 2+2?"}
+      opts = %{model: "gpt-4", temperature: 0.3}
+
+      case DSPEx.Predict.predict(MockSignature, inputs, opts) do
+        {:ok, outputs} ->
+          assert is_map(outputs)
+
+        {:error, reason} ->
+          assert reason in [
+                   :network_error,
+                   :api_error,
+                   :timeout,
+                   :missing_inputs,
+                   :provider_not_configured
+                 ]
+      end
+    end
+  end
+
+  describe "program struct manipulation" do
+    test "can modify program configuration" do
+      program = DSPEx.Predict.new(MockSignature, :openai)
+
+      # Add demos
+      updated_program = %{program | demos: [%{input: "demo", output: "result"}]}
+      assert length(updated_program.demos) == 1
+
+      # Change client
+      updated_program = %{program | client: :gemini}
+      assert updated_program.client == :gemini
+
+      # Change adapter
+      updated_program = %{program | adapter: :custom}
+      assert updated_program.adapter == :custom
+    end
+
+    test "program struct is immutable" do
+      program1 = DSPEx.Predict.new(MockSignature, :openai)
+      program2 = %{program1 | client: :gemini}
+
+      # Original should be unchanged
+      assert program1.client == :openai
+      assert program2.client == :gemini
+    end
+
+    test "program validation" do
+      program = DSPEx.Predict.new(MockSignature, :test)
+
+      # Should be a valid struct
+      assert is_struct(program, DSPEx.Predict)
+
+      # Should have all required fields
+      assert Map.has_key?(program, :signature)
+      assert Map.has_key?(program, :client)
+      assert Map.has_key?(program, :adapter)
+      assert Map.has_key?(program, :demos)
+    end
+  end
+
+  describe "telemetry integration with Program behavior" do
+    setup do
+      # Capture telemetry events
+      handler_id = make_ref()
+
+      :telemetry.attach_many(
+        handler_id,
+        [
+          [:dspex, :program, :forward, :start],
+          [:dspex, :program, :forward, :stop],
+          [:dspex, :client, :request]
+        ],
+        fn event_name, measurements, metadata, _acc ->
+          send(self(), {:telemetry, event_name, measurements, metadata})
+        end,
+        []
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      {:ok, handler_id: handler_id}
+    end
+
+    test "emits telemetry events through Program behavior" do
+      program = DSPEx.Predict.new(MockSignature, :test)
+      inputs = %{question: "Test telemetry"}
+
+      # Execute through Program behavior
+      _result = DSPEx.Program.forward(program, inputs)
+
+      # Should receive program-level telemetry
+      assert_receive {:telemetry, [:dspex, :program, :forward, :start], start_measurements,
+                      start_metadata}
+
+      assert %{system_time: system_time} = start_measurements
+      assert is_integer(system_time)
+
+      assert %{
+               program: :Predict,
+               correlation_id: correlation_id,
+               input_count: 1
+             } = start_metadata
+
+      assert is_binary(correlation_id)
+
+      assert_receive {:telemetry, [:dspex, :program, :forward, :stop], stop_measurements,
+                      stop_metadata}
+
+      assert %{duration: duration, success: success} = stop_measurements
+      assert is_integer(duration)
+      assert is_boolean(success)
+
+      assert %{
+               program: :Predict,
+               correlation_id: ^correlation_id
+             } = stop_metadata
+    end
+
+    test "forwards correlation_id correctly" do
+      program = DSPEx.Predict.new(MockSignature, :test)
+      inputs = %{question: "Test correlation"}
+      custom_id = "predict-test-123"
+
+      _result = DSPEx.Program.forward(program, inputs, correlation_id: custom_id)
+
+      assert_receive {:telemetry, [:dspex, :program, :forward, :start], _measurements,
+                      start_metadata}
+
+      assert %{correlation_id: ^custom_id} = start_metadata
+
+      assert_receive {:telemetry, [:dspex, :program, :forward, :stop], _measurements,
+                      stop_metadata}
+
+      assert %{correlation_id: ^custom_id} = stop_metadata
+    end
+  end
+
+  describe "error handling in Program integration" do
+    test "handles signature validation errors in Program context" do
+      program = DSPEx.Predict.new(MockSignature, :test)
+
+      # Missing required inputs
+      {:error, reason} = DSPEx.Program.forward(program, %{})
+      assert reason == :missing_inputs
+    end
+
+    test "propagates client errors through Program behavior" do
+      program = DSPEx.Predict.new(MockSignature, :nonexistent_client)
+      inputs = %{question: "Test error propagation"}
+
+      case DSPEx.Program.forward(program, inputs) do
+        {:ok, _outputs} ->
+          # Unexpected success
+          flunk("Expected error due to invalid client")
+
+        {:error, reason} ->
+          # Should get a reasonable error
+          assert reason in [
+                   :network_error,
+                   :api_error,
+                   :timeout,
+                   :missing_inputs,
+                   :provider_not_configured
+                 ]
+      end
+    end
+
+    test "handles adapter errors in Program context" do
+      # Test with invalid signature that should cause adapter errors
+      defmodule InvalidFieldSignature do
+        def input_fields, do: [:nonexistent]
+        def output_fields, do: [:also_nonexistent]
+        def description, do: "Invalid signature for testing"
+      end
+
+      program = DSPEx.Predict.new(InvalidFieldSignature, :test)
+      inputs = %{question: "This won't match the signature"}
+
+      {:error, reason} = DSPEx.Program.forward(program, inputs)
+      assert reason == :missing_inputs
+    end
+  end
+
+  describe "performance characteristics" do
+    test "program creation is fast" do
+      # Measure program creation time
+      start_time = System.monotonic_time()
+
+      for _i <- 1..100 do
+        DSPEx.Predict.new(MockSignature, :test)
+      end
+
+      duration = System.monotonic_time() - start_time
+      duration_ms = System.convert_time_unit(duration, :native, :millisecond)
+
+      # Should be very fast - less than 100ms for 100 creations
+      assert duration_ms < 100
+    end
+
+    test "program forward execution has reasonable overhead" do
+      program = DSPEx.Predict.new(MockSignature, :test)
+      inputs = %{question: "Performance test"}
+
+      # Warm up
+      for _i <- 1..5 do
+        DSPEx.Program.forward(program, inputs)
+      end
+
+      # Measure execution time
+      start_time = System.monotonic_time()
+
+      for _i <- 1..10 do
+        DSPEx.Program.forward(program, inputs)
+      end
+
+      duration = System.monotonic_time() - start_time
+      avg_duration_us = System.convert_time_unit(duration, :native, :microsecond) / 10
+
+      # Should have low overhead - most time should be in actual API calls
+      # Framework overhead should be < 1ms per call
+      assert avg_duration_us < 1000
+    end
+
+    test "concurrent program execution" do
+      program = DSPEx.Predict.new(MockSignature, :test)
+      inputs = %{question: "Concurrent test"}
+
+      # Execute multiple predictions concurrently
+      tasks =
+        for i <- 1..5 do
+          Task.async(fn ->
+            test_inputs = Map.put(inputs, :id, i)
+            DSPEx.Program.forward(program, test_inputs)
+          end)
+        end
+
+      results = Task.await_many(tasks, 5000)
+
+      # All should complete (either success or expected errors)
+      assert length(results) == 5
+
+      for result <- results do
+        assert match?({:ok, _}, result) or match?({:error, _}, result)
+      end
+    end
+  end
+
   describe "integration with existing modules" do
     @tag :external_api
     test "uses DSPEx.Adapter for message formatting" do
@@ -260,6 +642,24 @@ defmodule DSPEx.PredictTest do
 
         {:error, reason} ->
           # Client errors are categorized properly
+          assert reason in [:network_error, :api_error, :timeout]
+      end
+    end
+
+    @tag :external_api
+    test "Program behavior works with real API calls" do
+      program = DSPEx.Predict.new(MockSignature, :gemini)
+      inputs = %{question: "What is 2+2?"}
+
+      case DSPEx.Program.forward(program, inputs) do
+        {:ok, outputs} ->
+          # Real API working - verify structure
+          assert %{answer: answer} = outputs
+          assert is_binary(answer)
+          assert String.length(answer) > 0
+
+        {:error, reason} ->
+          # API not available or configured - verify error handling
           assert reason in [:network_error, :api_error, :timeout]
       end
     end

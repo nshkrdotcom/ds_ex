@@ -103,17 +103,24 @@ defmodule DSPEx.Adapter do
     end
   end
 
-  @spec validate_inputs([atom()], inputs()) :: {:ok, inputs()} | {:error, :missing_inputs}
+  @spec validate_inputs([atom()], inputs()) ::
+          {:ok, inputs()} | {:error, :missing_inputs | :invalid_input}
   defp validate_inputs(required_fields, inputs) do
     missing_fields =
       Enum.filter(required_fields, fn field ->
         not Map.has_key?(inputs, field)
       end)
 
-    if Enum.empty?(missing_fields) do
-      {:ok, inputs}
-    else
-      {:error, :missing_inputs}
+    # Also check for nil values in required fields
+    nil_fields =
+      Enum.filter(required_fields, fn field ->
+        Map.has_key?(inputs, field) && is_nil(Map.get(inputs, field))
+      end)
+
+    cond do
+      not Enum.empty?(missing_fields) -> {:error, :missing_inputs}
+      not Enum.empty?(nil_fields) -> {:error, :invalid_input}
+      true -> {:ok, inputs}
     end
   end
 

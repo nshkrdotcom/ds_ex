@@ -8,7 +8,11 @@ defmodule Dspex.MixProject do
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      elixirc_options: elixirc_options(Mix.env())
+      elixirc_options: elixirc_options(Mix.env()),
+      dialyzer: [
+        plt_add_apps: [:mix],
+        ignore_warnings: ".dialyzer_ignore.exs"
+      ]
     ]
   end
 

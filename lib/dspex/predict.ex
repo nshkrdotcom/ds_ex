@@ -1,12 +1,24 @@
 defmodule DSPEx.Predict do
   @moduledoc """
-  Core prediction orchestration module with Foundation integration.
+  Core prediction orchestration program with Foundation integration.
 
-  Coordinates between signatures, adapters, and clients to execute
-  language model predictions with comprehensive telemetry, error handling,
+  Implements the DSPEx.Program behavior to provide a structured interface
+  for language model predictions with comprehensive telemetry, error handling,
   and observability through Foundation infrastructure.
 
-  ## Examples
+  ## Usage as a Program
+
+      iex> predict = %DSPEx.Predict{
+      ...>   signature: MySignature,
+      ...>   client: :openai,
+      ...>   adapter: DSPEx.Adapter.Chat
+      ...> }
+      iex> inputs = %{question: "What is 2+2?"}
+      iex> {:ok, outputs} = DSPEx.Program.forward(predict, inputs)
+      iex> outputs
+      %{answer: "4"}
+
+  ## Legacy API (maintained for compatibility)
 
       iex> signature = MySignature  # question -> answer
       iex> inputs = %{question: "What is 2+2?"}
@@ -14,15 +26,18 @@ defmodule DSPEx.Predict do
       iex> outputs
       %{answer: "4"}
 
-      # With custom options and correlation tracking
-      iex> {:ok, outputs} = DSPEx.Predict.forward(signature, inputs, %{
-      ...>   provider: :openai,
-      ...>   temperature: 0.9,
-      ...>   correlation_id: "prediction-123"
-      ...> })
-
   """
 
+  use DSPEx.Program
+
+  defstruct [:signature, :client, :adapter, demos: []]
+
+  @type t :: %__MODULE__{
+          signature: module(),
+          client: atom() | map(),
+          adapter: module() | nil,
+          demos: [map()]
+        }
   @type signature :: module()
   @type inputs :: map()
   @type outputs :: map()
@@ -35,12 +50,168 @@ defmodule DSPEx.Predict do
         }
 
   @doc """
+  Create a new Predict program.
+
+  ## Parameters
+
+  - `signature` - Signature module defining input/output contract
+  - `client` - Client identifier (atom) or client configuration
+  - `opts` - Optional configuration
+
+  ## Options
+
+  - `:adapter` - Adapter module (default: nil, uses DSPEx.Adapter fallback)
+  - `:demos` - List of demonstration examples
+
+  """
+  @spec new(signature(), atom() | map(), keyword() | map()) :: t()
+  def new(signature, client, opts \\ []) do
+    %__MODULE__{
+      signature: signature,
+      client: client,
+      adapter: get_option(opts, :adapter, nil),
+      demos: get_option(opts, :demos, [])
+    }
+  end
+
+  # Helper function to get options from either keyword list or map
+  defp get_option(opts, key, default) when is_list(opts), do: Keyword.get(opts, key, default)
+  defp get_option(opts, key, default) when is_map(opts), do: Map.get(opts, key, default)
+
+  # DSPEx.Program behavior implementation - override the macro-generated defaults
+  @impl DSPEx.Program
+  def forward(program_or_signature, inputs, opts)
+
+  def forward(program, inputs, opts) when is_struct(program, __MODULE__) do
+    correlation_id =
+      Keyword.get(opts, :correlation_id) || Foundation.Utils.generate_correlation_id()
+
+    with {:ok, messages} <- format_messages(program, inputs, correlation_id),
+         {:ok, response} <- make_request(program, messages, opts, correlation_id),
+         {:ok, outputs} <- parse_response(program, response, correlation_id) do
+      {:ok, outputs}
+    else
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # Legacy API for backward compatibility - signature as first argument
+  @doc """
+  Legacy forward API for backward compatibility - signature as first argument.
+
+  Delegates to predict/2 for compatibility with existing code.
+  """
+  def forward(signature, inputs, opts) when is_atom(signature) do
+    case opts do
+      opts when is_map(opts) -> predict(signature, inputs, opts)
+      [] -> predict(signature, inputs)
+      opts when is_list(opts) -> predict(signature, inputs, Enum.into(opts, %{}))
+    end
+  end
+
+  # Private helper functions for Program implementation
+
+  defp format_messages(program, inputs, correlation_id) do
+    start_time = System.monotonic_time()
+
+    :telemetry.execute(
+      [:dspex, :adapter, :format, :start],
+      %{system_time: System.system_time()},
+      %{
+        signature: signature_name(program.signature),
+        correlation_id: correlation_id
+      }
+    )
+
+    # Use adapter to format messages with signature and demos
+    result =
+      if program.adapter && function_exported?(program.adapter, :format_messages, 3) do
+        program.adapter.format_messages(program.signature, program.demos, inputs)
+      else
+        # Fallback to basic adapter
+        DSPEx.Adapter.format_messages(program.signature, inputs)
+      end
+
+    duration = System.monotonic_time() - start_time
+    success = match?({:ok, _}, result)
+
+    :telemetry.execute(
+      [:dspex, :adapter, :format, :stop],
+      %{duration: duration, success: success},
+      %{
+        signature: signature_name(program.signature),
+        correlation_id: correlation_id,
+        adapter: adapter_name(program.adapter)
+      }
+    )
+
+    result
+  end
+
+  defp make_request(program, messages, opts, correlation_id) do
+    # Build client options
+    client_opts =
+      opts
+      |> Keyword.put(:correlation_id, correlation_id)
+      |> Enum.into(%{})
+
+    # Make request through client
+    DSPEx.Client.request(program.client, messages, client_opts)
+  end
+
+  defp parse_response(program, response, correlation_id) do
+    start_time = System.monotonic_time()
+
+    :telemetry.execute(
+      [:dspex, :adapter, :parse, :start],
+      %{system_time: System.system_time()},
+      %{
+        signature: signature_name(program.signature),
+        correlation_id: correlation_id
+      }
+    )
+
+    # Use adapter to parse response
+    result =
+      if program.adapter && function_exported?(program.adapter, :parse_response, 2) do
+        program.adapter.parse_response(program.signature, response)
+      else
+        # Fallback to basic adapter
+        DSPEx.Adapter.parse_response(program.signature, response)
+      end
+
+    duration = System.monotonic_time() - start_time
+    success = match?({:ok, _}, result)
+
+    :telemetry.execute(
+      [:dspex, :adapter, :parse, :stop],
+      %{duration: duration, success: success},
+      %{
+        signature: signature_name(program.signature),
+        correlation_id: correlation_id,
+        adapter: adapter_name(program.adapter)
+      }
+    )
+
+    result
+  end
+
+  defp adapter_name(nil), do: "default"
+
+  defp adapter_name(adapter) when is_atom(adapter) do
+    adapter
+    |> Module.split()
+    |> List.last()
+    |> String.downcase()
+  end
+
+  defp adapter_name(_), do: "unknown"
+
+  @doc """
   Execute a prediction using the given signature and inputs with Foundation observability.
 
-  This is the main entry point for making language model predictions.
-  It orchestrates the full pipeline: input validation, message formatting,
-  HTTP request, response parsing, and output validation with comprehensive
-  telemetry and error tracking.
+  Legacy API for backward compatibility. For new code, prefer creating a DSPEx.Predict
+  struct and using DSPEx.Program.forward/2.
 
   ## Parameters
 
@@ -54,14 +225,14 @@ defmodule DSPEx.Predict do
   - `{:error, reason}` - Error at any stage of the pipeline
 
   """
-  @spec forward(signature(), inputs()) :: {:ok, outputs()} | {:error, atom()}
-  def forward(signature, inputs) do
-    forward(signature, inputs, %{})
+  @spec predict(signature(), inputs()) :: {:ok, outputs()} | {:error, atom()}
+  def predict(signature, inputs) do
+    predict(signature, inputs, %{})
   end
 
-  @spec forward(signature(), inputs(), prediction_options()) ::
+  @spec predict(signature(), inputs(), prediction_options()) ::
           {:ok, outputs()} | {:error, atom()}
-  def forward(signature, inputs, options) do
+  def predict(signature, inputs, options) do
     correlation_id =
       Map.get(options, :correlation_id) || Foundation.Utils.generate_correlation_id()
 
