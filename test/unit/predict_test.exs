@@ -310,6 +310,7 @@ defmodule DSPEx.PredictTest do
       end
     end
 
+    @tag :live_api
     test "maintains backward compatibility with legacy API" do
       inputs = %{question: "What is 2+2?"}
 
@@ -345,6 +346,7 @@ defmodule DSPEx.PredictTest do
       end
     end
 
+    @tag :live_api
     test "predict/2 convenience function works" do
       inputs = %{question: "What is 2+2?"}
 
@@ -364,6 +366,7 @@ defmodule DSPEx.PredictTest do
       end
     end
 
+    @tag :live_api
     test "predict/3 with options works" do
       inputs = %{question: "What is 2+2?"}
       opts = %{model: "gpt-4", temperature: 0.3}

@@ -139,6 +139,7 @@ defmodule DSPEx.ErrorRecoveryTest do
   end
 
   describe "error propagation through pipeline layers" do
+    @tag :live_api
     test "signature validation errors are properly categorized" do
       # Test different signature validation failures
       defmodule InvalidSignature do
