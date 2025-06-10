@@ -67,11 +67,14 @@ defmodule DSPEx.Services.ConfigManager do
   """
   @spec get_with_default(list(atom()) | atom(), term()) :: term()
   def get_with_default(path, default) when is_list(path) do
-    Foundation.Config.get_with_default([:dspex | path], default)
+    case get_from_fallback_config(path) do
+      {:ok, value} -> value
+      {:error, _} -> default
+    end
   end
 
   def get_with_default(key, default) when is_atom(key) do
-    Foundation.Config.get_with_default([:dspex, key], default)
+    get_with_default([key], default)
   end
 
   # Private functions
@@ -90,7 +93,7 @@ defmodule DSPEx.Services.ConfigManager do
 
   @spec get_default_config() :: map()
   defp get_default_config do
-    %{
+    base_config = %{
       providers: %{
         gemini: %{
           api_key: {:system, "GEMINI_API_KEY"},
@@ -134,6 +137,16 @@ defmodule DSPEx.Services.ConfigManager do
         performance_tracking: true
       }
     }
+
+    # Merge with Mix config (config/test.exs, config/dev.exs, etc.)
+    mix_config = Application.get_env(:dspex, :providers, %{})
+    mix_prediction_config = Application.get_env(:dspex, :prediction, %{})
+    mix_telemetry_config = Application.get_env(:dspex, :telemetry, %{})
+
+    base_config
+    |> put_in([:providers], Map.merge(base_config.providers, mix_config))
+    |> put_in([:prediction], Map.merge(base_config.prediction, mix_prediction_config))
+    |> put_in([:telemetry], Map.merge(base_config.telemetry, mix_telemetry_config))
   end
 
   @spec get_from_fallback_config(list(atom())) :: {:ok, term()} | {:error, atom()}
@@ -211,15 +224,18 @@ defmodule DSPEx.Services.ConfigManager do
   defp setup_circuit_breakers do
     # Initialize circuit breakers for each provider (now available in Foundation v0.1.2)
     providers = [:gemini, :openai]
+    fallback_config = get_default_config()
 
     Enum.each(providers, fn provider ->
       circuit_breaker_name = :"dspex_client_#{provider}"
 
+      # Get circuit breaker config directly from fallback config during init
       circuit_config =
-        get_with_default([:providers, provider, :circuit_breaker], %{
-          failure_threshold: 5,
-          recovery_time: 30_000
-        })
+        get_in(fallback_config, [:providers, provider, :circuit_breaker]) ||
+          %{
+            failure_threshold: 5,
+            recovery_time: 30_000
+          }
 
       # Initialize circuit breaker with Foundation's infrastructure service
       case Foundation.Infrastructure.initialize_circuit_breaker(
