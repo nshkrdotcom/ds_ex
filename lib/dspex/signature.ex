@@ -423,6 +423,290 @@ defmodule DSPEx.Signature do
       end
     end
   end
+
+  @doc """
+  Validates compatibility between two signature modules.
+
+  Checks if the output fields of a producer signature are compatible
+  with the input fields of a consumer signature, useful for chaining
+  programs together in optimization workflows.
+
+  ## Parameters
+  - `producer_sig` - Module that produces outputs
+  - `consumer_sig` - Module that consumes inputs
+
+  ## Returns
+  - `:ok` - If signatures are compatible
+  - `{:error, String.t()}` - Description of incompatibility
+
+  ## Examples
+
+      iex> DSPEx.Signature.validate_signature_compatibility(QASignature, ReasoningSignature)
+      :ok
+
+      iex> DSPEx.Signature.validate_signature_compatibility(QASignature, IncompatibleSignature)
+      {:error, "Producer outputs [:answer] do not match consumer inputs [:question, :context]"}
+
+  """
+  @spec validate_signature_compatibility(module(), module()) :: :ok | {:error, String.t()}
+  def validate_signature_compatibility(producer_sig, consumer_sig)
+      when is_atom(producer_sig) and is_atom(consumer_sig) do
+    try do
+      # Validate both modules implement the signature behavior
+      with :ok <- validate_signature_implementation(producer_sig),
+           :ok <- validate_signature_implementation(consumer_sig) do
+        producer_outputs = MapSet.new(producer_sig.output_fields())
+        consumer_inputs = MapSet.new(consumer_sig.input_fields())
+
+        # Check if producer outputs can satisfy consumer inputs
+        missing_inputs = MapSet.difference(consumer_inputs, producer_outputs)
+
+        case MapSet.size(missing_inputs) do
+          0 ->
+            :ok
+
+          _ ->
+            {:error,
+             "Producer outputs #{inspect(MapSet.to_list(producer_outputs))} " <>
+               "do not match consumer inputs #{inspect(MapSet.to_list(consumer_inputs))}. " <>
+               "Missing: #{inspect(MapSet.to_list(missing_inputs))}"}
+        end
+      end
+    rescue
+      error -> {:error, "Compatibility check failed: #{inspect(error)}"}
+    end
+  end
+
+  @doc """
+  Introspects a signature module to return detailed information.
+
+  Returns comprehensive information about a signature including its
+  fields, types, instructions, and other metadata useful for
+  optimization and debugging workflows.
+
+  ## Parameters
+  - `signature_module` - The signature module to introspect
+
+  ## Returns
+  - `{:ok, map()}` - Detailed signature information
+  - `{:error, String.t()}` - Error description
+
+  ## Example Return Value
+
+      {:ok, %{
+        module: QASignature,
+        instructions: "Answer questions with reasoning",
+        inputs: [:question, :context],
+        outputs: [:answer, :confidence],
+        all_fields: [:question, :context, :answer, :confidence],
+        field_count: %{inputs: 2, outputs: 2, total: 4},
+        created_at: ~U[2025-06-10 19:37:00Z]
+      }}
+
+  """
+  @spec introspect(module()) :: {:ok, map()} | {:error, String.t()}
+  def introspect(signature_module) when is_atom(signature_module) do
+    try do
+      case validate_signature_implementation(signature_module) do
+        :ok ->
+          inputs = signature_module.input_fields()
+          outputs = signature_module.output_fields()
+          all_fields = signature_module.fields()
+
+          introspection_data = %{
+            module: signature_module,
+            instructions: signature_module.instructions(),
+            inputs: inputs,
+            outputs: outputs,
+            all_fields: all_fields,
+            field_count: %{
+              inputs: length(inputs),
+              outputs: length(outputs),
+              total: length(all_fields)
+            },
+            introspected_at: DateTime.utc_now()
+          }
+
+          {:ok, introspection_data}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    rescue
+      error -> {:error, "Introspection failed: #{inspect(error)}"}
+    end
+  end
+
+  @doc """
+  Validates that a module properly implements the DSPEx.Signature behavior.
+
+  Checks that the module implements all required callbacks and that
+  the implementation is consistent and functional.
+
+  ## Parameters
+  - `module` - The module to validate
+
+  ## Returns
+  - `:ok` - If implementation is valid
+  - `{:error, String.t()}` - Description of validation failure
+
+  ## Examples
+
+      iex> DSPEx.Signature.validate_signature_implementation(QASignature)
+      :ok
+
+      iex> DSPEx.Signature.validate_signature_implementation(InvalidModule)
+      {:error, "Module does not implement DSPEx.Signature behavior"}
+
+  """
+  @spec validate_signature_implementation(module()) :: :ok | {:error, String.t()}
+  def validate_signature_implementation(module) when is_atom(module) do
+    try do
+      # Check if module exists and is loaded
+      unless Code.ensure_loaded?(module) do
+        {:error, "Module #{inspect(module)} cannot be loaded"}
+      else
+        # Check if module implements the behavior
+        behaviors = module.module_info(:attributes) |> Keyword.get(:behaviour, [])
+
+        unless DSPEx.Signature in behaviors do
+          {:error, "Module does not implement DSPEx.Signature behavior"}
+        else
+          # Check required functions exist
+          required_functions = [
+            {:instructions, 0},
+            {:input_fields, 0},
+            {:output_fields, 0},
+            {:fields, 0}
+          ]
+
+          missing_functions =
+            required_functions
+            |> Enum.reject(fn {func, arity} ->
+              function_exported?(module, func, arity)
+            end)
+
+          unless Enum.empty?(missing_functions) do
+            {:error, "Missing required functions: #{inspect(missing_functions)}"}
+          else
+            # Validate function return types and consistency
+            with :ok <- validate_field_lists(module),
+                 :ok <- validate_instructions(module) do
+              :ok
+            end
+          end
+        end
+      end
+    rescue
+      error -> {:error, "Validation failed: #{inspect(error)}"}
+    end
+  end
+
+  @doc """
+  Returns field statistics for a signature module.
+
+  Provides count information about input and output fields,
+  useful for optimization and analysis workflows.
+
+  ## Parameters
+  - `signature_module` - The signature module to analyze
+
+  ## Returns
+  - `%{input_count: integer(), output_count: integer()}` - Field counts
+
+  ## Examples
+
+      iex> DSPEx.Signature.field_statistics(QASignature)
+      %{input_count: 1, output_count: 1}
+
+  """
+  @spec field_statistics(module()) :: %{input_count: integer(), output_count: integer()}
+  def field_statistics(signature_module) when is_atom(signature_module) do
+    try do
+      input_count = length(signature_module.input_fields())
+      output_count = length(signature_module.output_fields())
+
+      %{
+        input_count: input_count,
+        output_count: output_count
+      }
+    rescue
+      _error ->
+        %{input_count: 0, output_count: 0}
+    end
+  end
+
+  # Private helper functions for validation
+
+  defp validate_field_lists(module) do
+    try do
+      inputs = module.input_fields()
+      outputs = module.output_fields()
+      all_fields = module.fields()
+
+      # Validate return types
+      cond do
+        not (is_list(inputs) and Enum.all?(inputs, &is_atom/1)) ->
+          {:error, "input_fields/0 must return a list of atoms"}
+
+        not (is_list(outputs) and Enum.all?(outputs, &is_atom/1)) ->
+          {:error, "output_fields/0 must return a list of atoms"}
+
+        not (is_list(all_fields) and Enum.all?(all_fields, &is_atom/1)) ->
+          {:error, "fields/0 must return a list of atoms"}
+
+        true ->
+          # Validate consistency
+          expected_all_fields = inputs ++ outputs
+
+          cond do
+            MapSet.new(all_fields) != MapSet.new(expected_all_fields) ->
+              {:error,
+               "fields/0 return value is inconsistent with input_fields/0 + output_fields/0"}
+
+            length(inputs) != length(Enum.uniq(inputs)) ->
+              {:error, "Duplicate fields in input_fields/0"}
+
+            length(outputs) != length(Enum.uniq(outputs)) ->
+              {:error, "Duplicate fields in output_fields/0"}
+
+            true ->
+              # Check for overlap between inputs and outputs
+              input_set = MapSet.new(inputs)
+              output_set = MapSet.new(outputs)
+              overlap = MapSet.intersection(input_set, output_set)
+
+              if MapSet.size(overlap) == 0 do
+                :ok
+              else
+                {:error,
+                 "Fields cannot be both input and output: #{inspect(MapSet.to_list(overlap))}"}
+              end
+          end
+      end
+    rescue
+      error -> {:error, "Field list validation failed: #{inspect(error)}"}
+    end
+  end
+
+  defp validate_instructions(module) do
+    try do
+      instructions = module.instructions()
+
+      cond do
+        not is_binary(instructions) ->
+          {:error, "instructions/0 must return a binary string"}
+
+        String.trim(instructions) == "" ->
+          {:error, "instructions/0 must return a non-empty string"}
+
+        true ->
+          :ok
+      end
+    rescue
+      error -> {:error, "Instructions validation failed: #{inspect(error)}"}
+    end
+  end
 end
 
 defmodule DSPEx.Signature.Parser do

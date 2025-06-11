@@ -1,6 +1,8 @@
 defmodule DSPEx.TestHelpers do
   @moduledoc "Common test utilities for DSPEx tests"
 
+  import ExUnit.Assertions
+
   # Import the new mock helpers
   alias DSPEx.MockHelpers
 

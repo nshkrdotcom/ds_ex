@@ -2,6 +2,9 @@ ExUnit.start()
 
 # Load test support files
 Code.require_file("support/mock_helpers.exs", __DIR__)
+Code.require_file("support/test_helpers.exs", __DIR__)
+Code.require_file("support/simba_test_mocks.exs", __DIR__)
+Code.require_file("support/mock_provider.ex", __DIR__)
 
 # Start Mox for mocking dependencies in tests
 # Note: Only mocking modules that exist in Stage 1

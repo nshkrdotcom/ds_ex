@@ -256,4 +256,130 @@ defmodule DSPEx.Program do
 
   def new(nil, _), do: {:error, {:invalid_program_module, nil}}
   def new(_, _), do: {:error, :invalid_arguments}
+
+  @doc """
+  Determine the type of a program.
+
+  Returns the general category of the program based on its struct type.
+  Useful for optimization and introspection workflows.
+
+  ## Returns
+
+  - `:predict` - For DSPEx.Predict programs
+  - `:optimized` - For DSPEx.OptimizedProgram programs
+  - `:custom` - For other program types
+
+  ## Examples
+
+      iex> predict = %DSPEx.Predict{signature: MySignature, client: :openai}
+      iex> DSPEx.Program.program_type(predict)
+      :predict
+
+      iex> optimized = %DSPEx.OptimizedProgram{program: predict, demos: []}
+      iex> DSPEx.Program.program_type(optimized)
+      :optimized
+
+  """
+  @spec program_type(t()) :: :predict | :optimized | :custom
+  def program_type(program) when is_struct(program) do
+    case program.__struct__ |> Module.split() |> List.last() do
+      "Predict" -> :predict
+      "OptimizedProgram" -> :optimized
+      _ -> :custom
+    end
+  end
+
+  def program_type(_), do: :custom
+
+  @doc """
+  Get sanitized information about a program.
+
+  Returns a map with safe information about the program that doesn't
+  expose sensitive data like API keys or internal prompts.
+
+  ## Parameters
+
+  - `program` - The program struct to introspect
+
+  ## Returns
+
+  Map with keys:
+  - `:type` - Program type (see `program_type/1`)
+  - `:has_demos` - Whether the program has demonstration examples
+  - `:name` - Human-readable program name
+  - `:signature` - Signature module name (if available)
+  - `:demo_count` - Number of demonstrations (if applicable)
+
+  """
+  @spec safe_program_info(t()) :: %{
+          type: atom(),
+          has_demos: boolean(),
+          name: String.t(),
+          signature: atom() | nil,
+          demo_count: integer()
+        }
+  def safe_program_info(program) do
+    type = program_type(program)
+    demo_count = demo_count(program)
+
+    %{
+      type: type,
+      has_demos: has_demos?(program),
+      name: program_name(program) |> Atom.to_string(),
+      signature: get_signature_module(program),
+      demo_count: demo_count
+    }
+  end
+
+  @doc """
+  Check if a program has demonstration examples.
+
+  Returns true if the program contains demonstration examples that can
+  be used for few-shot learning or optimization.
+
+  ## Examples
+
+      iex> predict = %DSPEx.Predict{signature: MySignature, client: :openai, demos: []}
+      iex> DSPEx.Program.has_demos?(predict)
+      false
+
+      iex> predict_with_demos = %DSPEx.Predict{signature: MySignature, client: :openai, demos: [%{}]}
+      iex> DSPEx.Program.has_demos?(predict_with_demos)
+      true
+
+  """
+  @spec has_demos?(t()) :: boolean()
+  def has_demos?(program) do
+    demo_count(program) > 0
+  end
+
+  # Private helper functions
+
+  defp demo_count(program) do
+    cond do
+      is_struct(program) and Map.has_key?(program, :demos) and is_list(program.demos) ->
+        length(program.demos)
+
+      true ->
+        0
+    end
+  end
+
+  defp get_signature_module(program) when is_struct(program) do
+    cond do
+      # For Predict programs
+      Map.has_key?(program, :signature) and is_atom(program.signature) ->
+        program.signature
+
+      # For OptimizedProgram wrapping Predict
+      Map.has_key?(program, :program) and is_struct(program.program) and
+          Map.has_key?(program.program, :signature) ->
+        program.program.signature
+
+      true ->
+        nil
+    end
+  end
+
+  defp get_signature_module(_), do: nil
 end

@@ -360,4 +360,63 @@ defmodule DSPEx.MockClientManager do
 
     :telemetry.execute([:dspex, :client_manager, :request], measurements, metadata)
   end
+
+  ## Additional functions for SIMBA test infrastructure
+
+  @doc """
+  Sets mock responses for a specific provider.
+
+  This allows tests to configure specific responses that will be returned
+  for requests to a given provider.
+  """
+  @spec set_mock_responses(atom(), list()) :: :ok
+  def set_mock_responses(provider, responses) do
+    # Store in a simple ETS table or process registry for now
+    # This is a basic implementation for test support
+    key = {:mock_responses, provider}
+    :persistent_term.put(key, responses)
+    :ok
+  end
+
+  @doc """
+  Gets the configured mock responses for a provider.
+  """
+  @spec get_mock_responses(atom()) :: list()
+  def get_mock_responses(provider) do
+    key = {:mock_responses, provider}
+    :persistent_term.get(key, [])
+  catch
+    :error, :badarg -> []
+  end
+
+  @doc """
+  Clears mock responses for a specific provider.
+  """
+  @spec clear_mock_responses(atom()) :: :ok
+  def clear_mock_responses(provider) do
+    key = {:mock_responses, provider}
+    :persistent_term.erase(key)
+    :ok
+  catch
+    :error, :badarg -> :ok
+  end
+
+  @doc """
+  Clears all mock responses.
+  """
+  @spec clear_all_mock_responses() :: :ok
+  def clear_all_mock_responses() do
+    # Get all persistent_term keys and clear mock-related ones
+    :persistent_term.get()
+    |> Enum.each(fn
+      {{:mock_responses, _provider}, _value} = key_value ->
+        {key, _} = key_value
+        :persistent_term.erase(key)
+
+      _ ->
+        :ok
+    end)
+
+    :ok
+  end
 end
