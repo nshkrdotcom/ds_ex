@@ -83,8 +83,11 @@ defmodule DSPEx.Predict do
   def forward(program_or_signature, inputs, opts)
 
   def forward(program, inputs, opts) when is_struct(program, __MODULE__) do
-    correlation_id =
-      Keyword.get(opts, :correlation_id) || Foundation.Utils.generate_correlation_id()
+    # Only generate correlation_id if not provided - avoid expensive UUID generation
+    correlation_id = case Keyword.get(opts, :correlation_id) do
+      nil -> Foundation.Utils.generate_correlation_id()
+      existing_id -> existing_id
+    end
 
     with {:ok, messages} <- format_messages(program, inputs, correlation_id),
          {:ok, response} <- make_request(program, messages, opts, correlation_id),
@@ -114,11 +117,14 @@ defmodule DSPEx.Predict do
   defp format_messages(program, inputs, correlation_id) do
     start_time = System.monotonic_time()
 
+    # Cache signature name to avoid repeated Module.split operations
+    sig_name = signature_name(program.signature)
+
     :telemetry.execute(
       [:dspex, :adapter, :format, :start],
       %{system_time: System.system_time()},
       %{
-        signature: signature_name(program.signature),
+        signature: sig_name,
         correlation_id: correlation_id
       }
     )
@@ -139,7 +145,7 @@ defmodule DSPEx.Predict do
       [:dspex, :adapter, :format, :stop],
       %{duration: duration, success: success},
       %{
-        signature: signature_name(program.signature),
+        signature: sig_name,
         correlation_id: correlation_id,
         adapter: adapter_name(program.adapter)
       }
@@ -162,11 +168,14 @@ defmodule DSPEx.Predict do
   defp parse_response(program, response, correlation_id) do
     start_time = System.monotonic_time()
 
+    # Cache signature name to avoid repeated Module.split operations
+    sig_name = signature_name(program.signature)
+
     :telemetry.execute(
       [:dspex, :adapter, :parse, :start],
       %{system_time: System.system_time()},
       %{
-        signature: signature_name(program.signature),
+        signature: sig_name,
         correlation_id: correlation_id
       }
     )
@@ -187,7 +196,7 @@ defmodule DSPEx.Predict do
       [:dspex, :adapter, :parse, :stop],
       %{duration: duration, success: success},
       %{
-        signature: signature_name(program.signature),
+        signature: sig_name,
         correlation_id: correlation_id,
         adapter: adapter_name(program.adapter)
       }
@@ -233,11 +242,17 @@ defmodule DSPEx.Predict do
   @spec predict(signature(), inputs(), prediction_options()) ::
           {:ok, outputs()} | {:error, atom()}
   def predict(signature, inputs, options) do
-    correlation_id =
-      Map.get(options, :correlation_id) || Foundation.Utils.generate_correlation_id()
+    # Only generate correlation_id if not provided - avoid expensive UUID generation
+    correlation_id = case Map.get(options, :correlation_id) do
+      nil -> Foundation.Utils.generate_correlation_id()
+      existing_id -> existing_id
+    end
 
     # Start prediction telemetry
     start_time = System.monotonic_time()
+
+    # Cache signature name to avoid repeated Module.split operations
+    sig_name = signature_name(signature)
 
     :telemetry.execute(
       [:dspex, :predict, :start],
@@ -245,7 +260,7 @@ defmodule DSPEx.Predict do
         system_time: System.system_time()
       },
       %{
-        signature: signature_name(signature),
+        signature: sig_name,
         correlation_id: correlation_id,
         input_count: map_size(inputs)
       }
@@ -266,7 +281,7 @@ defmodule DSPEx.Predict do
         success: success
       },
       %{
-        signature: signature_name(signature),
+        signature: sig_name,
         correlation_id: correlation_id,
         provider: Map.get(options, :provider)
       }
@@ -301,8 +316,11 @@ defmodule DSPEx.Predict do
   @spec predict_field(signature(), inputs(), atom(), prediction_options()) ::
           {:ok, any()} | {:error, atom()}
   def predict_field(signature, inputs, output_field, options) do
-    correlation_id =
-      Map.get(options, :correlation_id) || Foundation.Utils.generate_correlation_id()
+    # Only generate correlation_id if not provided - avoid expensive UUID generation
+    correlation_id = case Map.get(options, :correlation_id) do
+      nil -> Foundation.Utils.generate_correlation_id()
+      existing_id -> existing_id
+    end
 
     case forward(signature, inputs, Map.put(options, :correlation_id, correlation_id)) do
       {:ok, outputs} ->

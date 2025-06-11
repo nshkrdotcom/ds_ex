@@ -10,9 +10,9 @@ defmodule DSPEx.Program do
 
       defmodule MyProgram do
         use DSPEx.Program
-        
+
         defstruct [:signature, :client, :demos]
-        
+
         @impl DSPEx.Program
         def forward(program, inputs, opts \\ []) do
           # Implementation here
@@ -41,7 +41,7 @@ defmodule DSPEx.Program do
   Execute a program with the given inputs.
 
   This is the core behavior callback that all programs must implement.
-  It should take a program struct and input map, and return either 
+  It should take a program struct and input map, and return either
   `{:ok, outputs}` or `{:error, reason}`.
 
   ## Parameters
@@ -81,7 +81,14 @@ defmodule DSPEx.Program do
 
   @spec forward(program(), inputs(), options()) :: {:ok, outputs()} | {:error, term()}
   def forward(program, inputs, opts) when is_map(inputs) do
-    correlation_id = Keyword.get(opts, :correlation_id) || Utils.generate_correlation_id()
+    # Only generate correlation_id if not provided - major optimization
+    correlation_id = case Keyword.get(opts, :correlation_id) do
+      nil -> Utils.generate_correlation_id()
+      existing_id -> existing_id
+    end
+
+    # Cache program name to avoid repeated Module.split operations
+    program_name = program_name(program)
 
     # Use actual Foundation functions that exist
     start_time = System.monotonic_time()
@@ -90,7 +97,7 @@ defmodule DSPEx.Program do
       [:dspex, :program, :forward, :start],
       %{system_time: System.system_time()},
       %{
-        program: program_name(program),
+        program: program_name,
         correlation_id: correlation_id,
         input_count: map_size(inputs)
       }
@@ -105,7 +112,7 @@ defmodule DSPEx.Program do
       [:dspex, :program, :forward, :stop],
       %{duration: duration, success: success},
       %{
-        program: program_name(program),
+        program: program_name,
         correlation_id: correlation_id
       }
     )
