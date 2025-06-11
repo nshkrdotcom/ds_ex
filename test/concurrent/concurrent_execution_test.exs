@@ -7,6 +7,7 @@ defmodule DSPEx.ConcurrentExecutionTest do
   # Some tests need to avoid interference
   use ExUnit.Case, async: false
 
+  @moduletag :phase_1
   @moduletag :concurrent
 
   # Test programs with different concurrency characteristics

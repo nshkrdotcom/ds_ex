@@ -1,6 +1,8 @@
 defmodule DSPEx.OptimizedProgramTest do
   use ExUnit.Case, async: true
 
+  @moduletag :phase_1
+
   alias DSPEx.{OptimizedProgram, Example}
 
   # Mock program for testing

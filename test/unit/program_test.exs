@@ -6,6 +6,8 @@ defmodule DSPEx.ProgramTest do
   """
   use ExUnit.Case, async: true
 
+  @moduletag :phase_1
+
   # Test program implementations for various scenarios
   defmodule ValidProgram do
     use DSPEx.Program

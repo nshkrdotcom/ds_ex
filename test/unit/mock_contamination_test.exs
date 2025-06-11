@@ -12,6 +12,8 @@ defmodule DSPEx.MockContaminationTest do
   # Must be sync to test global state
   use ExUnit.Case, async: false
 
+  @moduletag :phase_1
+
   alias DSPEx.MockHelpers
 
   setup do

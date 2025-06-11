@@ -6,6 +6,7 @@ defmodule DSPEx.ErrorRecoveryTest do
   """
   use ExUnit.Case, async: false
 
+  @moduletag :phase_1
   @moduletag :error_recovery
 
   # Test programs with various error behaviors

@@ -6,6 +6,8 @@ defmodule DSPEx.EvaluateTest do
   """
   use ExUnit.Case, async: true
 
+  @moduletag :phase_1
+
   # Test program implementations for evaluation scenarios
   defmodule MockProgram do
     use DSPEx.Program
@@ -242,7 +244,7 @@ defmodule DSPEx.EvaluateTest do
       examples = [
         # Success
         %{inputs: %{number: 2}, outputs: %{result: 4}},
-        # Success  
+        # Success
         %{inputs: %{number: 3}, outputs: %{result: 6}},
         # Failure - missing number
         %{inputs: %{no_number: true}, outputs: %{result: 0}}
@@ -313,7 +315,7 @@ defmodule DSPEx.EvaluateTest do
 
       low_concurrency_duration = System.monotonic_time() - start_time
 
-      # Test with high concurrency  
+      # Test with high concurrency
       start_time = System.monotonic_time()
 
       {:ok, _result} =

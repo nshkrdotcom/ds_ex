@@ -8,6 +8,8 @@ defmodule DSPEx.FoundationLifecycleTest do
   """
   use ExUnit.Case, async: false
 
+  @moduletag :phase_1
+
   require Logger
 
   @tag :reproduction_test

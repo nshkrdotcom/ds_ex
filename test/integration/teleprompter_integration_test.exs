@@ -1,6 +1,8 @@
 defmodule DSPEx.TeleprompterIntegrationTest do
   use ExUnit.Case, async: true
 
+  @moduletag :phase_1
+
   alias DSPEx.{Example, Teleprompter, Evaluate}
   alias DSPEx.Teleprompter.BootstrapFewShot
 

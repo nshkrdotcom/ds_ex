@@ -5,6 +5,8 @@ defmodule DSPEx.Property.SignatureParserTest do
   """
   use ExUnit.Case, async: true
 
+  @moduletag :phase_1
+
   describe "signature parsing edge cases" do
     test "parsed signatures maintain field order" do
       test_cases = [

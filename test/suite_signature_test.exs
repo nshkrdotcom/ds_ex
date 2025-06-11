@@ -1,6 +1,8 @@
 defmodule DSPEx.SignatureSuiteTest do
   use ExUnit.Case, async: true
 
+  @moduletag :phase_1
+
   describe "signature parsing" do
     test "parses simple input -> output" do
       assert DSPEx.Signature.Parser.parse("question -> answer") ==

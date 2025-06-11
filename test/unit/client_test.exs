@@ -5,6 +5,8 @@ defmodule DSPEx.ClientTest do
   """
   use ExUnit.Case, async: true
 
+  @moduletag :phase_1
+
   alias DSPEx.MockHelpers
 
   describe "mock infrastructure verification" do

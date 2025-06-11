@@ -5,6 +5,8 @@ defmodule DSPEx.Integration.SignatureExampleTest do
   """
   use ExUnit.Case, async: true
 
+  @moduletag :phase_1
+
   alias DSPEx.Example
 
   describe "signature and example integration" do

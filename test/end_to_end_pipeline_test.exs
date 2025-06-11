@@ -6,6 +6,7 @@ defmodule DSPExEndToEndTest do
   """
   use ExUnit.Case, async: false
 
+  @moduletag :phase_1
   @moduletag :end_to_end
 
   # Test signatures for various scenarios

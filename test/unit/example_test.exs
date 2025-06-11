@@ -5,6 +5,8 @@ defmodule DSPEx.Unit.ExampleTest do
   """
   use ExUnit.Case, async: true
 
+  @moduletag :phase_1
+
   alias DSPEx.Example
 
   describe "example creation and basic structure" do
