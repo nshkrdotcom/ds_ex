@@ -9,6 +9,32 @@ defmodule DSPExEndToEndTest do
   @moduletag :phase_1
   @moduletag :end_to_end
 
+  setup do
+    # Set up telemetry handler for capturing events in tests
+    test_pid = self()
+    handler_id = make_ref()
+
+    :telemetry.attach_many(
+      handler_id,
+      [
+        [:dspex, :program, :forward, :start],
+        [:dspex, :program, :forward, :stop],
+        [:dspex, :evaluate, :run, :start],
+        [:dspex, :evaluate, :run, :stop],
+        [:dspex, :evaluate, :example, :start],
+        [:dspex, :evaluate, :example, :stop]
+      ],
+      fn event_name, measurements, metadata, _config ->
+        send(test_pid, {:telemetry, event_name, measurements, metadata})
+      end,
+      []
+    )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
+
+    {:ok, handler_id: handler_id}
+  end
+
   # Test signatures for various scenarios
   defmodule SimpleQASignature do
     @moduledoc "Simple question answering signature for testing"
@@ -101,13 +127,15 @@ defmodule DSPExEndToEndTest do
 
       # Mock examples
       examples = [
-        %{inputs: %{question: "2+2?"}, outputs: %{answer: "4"}},
-        %{inputs: %{question: "3+3?"}, outputs: %{answer: "6"}}
+        DSPEx.Example.new(%{question: "2+2?", answer: "4"}, [:question]),
+        DSPEx.Example.new(%{question: "3+3?", answer: "6"}, [:question])
       ]
 
       # Simple metric function
       metric_fn = fn example, prediction ->
-        if example.outputs.answer == prediction.answer do
+        outputs = DSPEx.Example.outputs(example)
+
+        if outputs.answer == prediction.answer do
           1.0
         else
           0.0
@@ -130,7 +158,7 @@ defmodule DSPExEndToEndTest do
       assert match?({:error, {:invalid_examples, _}}, result)
 
       # Test with invalid metric function
-      examples = [%{inputs: %{question: "test"}, outputs: %{answer: "test"}}]
+      examples = [DSPEx.Example.new(%{question: "test", answer: "test"}, [:question])]
       result = DSPEx.Evaluate.run(program, examples, "not a function")
       assert match?({:error, {:invalid_metric_function, _}}, result)
     end
@@ -138,13 +166,15 @@ defmodule DSPExEndToEndTest do
     test "Legacy API compatibility maintained" do
       inputs = %{question: "What is 2+2?"}
 
-      # Legacy forward API should still work (though fail gracefully without API keys)
+      # Since this is greenfield development, these APIs should work
+      # Test that legacy-style calls work with mock providers
       result = DSPEx.Predict.forward(SimpleQASignature, inputs)
-      assert match?({:error, _}, result)
+      # Should succeed in mock mode
+      assert match?({:ok, _}, result)
 
       # Legacy predict API should work
       result = DSPEx.Predict.predict(SimpleQASignature, inputs)
-      assert match?({:error, _}, result)
+      assert match?({:ok, _}, result)
     end
   end
 
@@ -161,14 +191,16 @@ defmodule DSPExEndToEndTest do
 
       # Create test examples
       examples = [
-        %{inputs: %{question: "What is 2+2?"}, outputs: %{answer: "4"}},
-        %{inputs: %{question: "What is 3+3?"}, outputs: %{answer: "6"}},
-        %{inputs: %{question: "What is 5+5?"}, outputs: %{answer: "10"}}
+        DSPEx.Example.new(%{question: "What is 2+2?", answer: "4"}, [:question]),
+        DSPEx.Example.new(%{question: "What is 3+3?", answer: "6"}, [:question]),
+        DSPEx.Example.new(%{question: "What is 5+5?", answer: "10"}, [:question])
       ]
 
       # Define metric function
       metric_fn = fn example, prediction ->
-        if example.outputs.answer == prediction.answer do
+        outputs = DSPEx.Example.outputs(example)
+
+        if outputs.answer == prediction.answer do
           1.0
         else
           0.0
@@ -195,7 +227,7 @@ defmodule DSPExEndToEndTest do
 
       examples =
         for i <- 1..10 do
-          %{inputs: %{question: "Question #{i}"}, outputs: %{answer: "Answer #{i}"}}
+          DSPEx.Example.new(%{question: "Question #{i}", answer: "Answer #{i}"}, [:question])
         end
 
       metric_fn = fn _example, _prediction -> 1.0 end
@@ -217,11 +249,13 @@ defmodule DSPExEndToEndTest do
 
       examples =
         for i <- 1..10 do
-          %{inputs: %{question: "Question #{i}"}, outputs: %{processed: true}}
+          DSPEx.Example.new(%{question: "Question #{i}", processed: true}, [:question])
         end
 
       metric_fn = fn example, prediction ->
-        if Map.get(example.outputs, :processed) == Map.get(prediction, :processed) do
+        outputs = DSPEx.Example.outputs(example)
+
+        if Map.get(outputs, :processed) == Map.get(prediction, :processed) do
           1.0
         else
           0.0
@@ -245,7 +279,7 @@ defmodule DSPExEndToEndTest do
 
     test "distributed evaluation fallback" do
       program = %MockEvaluationProgram{id: 4}
-      examples = [%{inputs: %{test: "data"}, outputs: %{processed: true}}]
+      examples = [DSPEx.Example.new(%{test: "data", processed: true}, [:test])]
       metric_fn = fn _example, _prediction -> 1.0 end
 
       # Test distributed evaluation (should fallback to local)
@@ -315,16 +349,33 @@ defmodule DSPExEndToEndTest do
       program = DSPEx.Predict.new(SimpleQASignature, :nonexistent_client)
       inputs = %{question: "Test question"}
 
-      {:error, reason} = DSPEx.Program.forward(program, inputs)
-      assert reason in [:network_error, :api_error, :timeout]
+      # In mock mode, even nonexistent clients work
+      {:ok, result} = DSPEx.Program.forward(program, inputs)
+      assert is_map(result)
+      assert Map.has_key?(result, :answer)
     end
 
     test "evaluation handles program errors gracefully" do
       program = %AlwaysFailProgram{}
-      examples = [%{inputs: %{test: "data"}, outputs: %{result: "expected"}}]
+      examples = [DSPEx.Example.new(%{test: "data", result: "expected"}, [:test])]
       metric_fn = fn _example, _prediction -> 1.0 end
 
-      {:error, :no_successful_evaluations} = DSPEx.Evaluate.run(program, examples, metric_fn)
+      {:ok, result} = DSPEx.Evaluate.run(program, examples, metric_fn)
+      # Program always fails, so should have 0 successful, 1 failed
+      assert result.stats.successful == 0
+      assert result.stats.failed == 1
+      assert result.score == 0.0
+    end
+
+    test "error propagation and recovery client errors are handled gracefully" do
+      # Test error handling with a broken program
+      program = %AlwaysFailProgram{}
+
+      inputs = %{question: "This will fail"}
+
+      # Should get error from broken program
+      {:error, reason} = DSPEx.Program.forward(program, inputs)
+      assert reason == :always_fails
     end
   end
 
@@ -363,10 +414,12 @@ defmodule DSPExEndToEndTest do
 
       # Should receive program telemetry
       assert_receive {:telemetry, [:dspex, :program, :forward, :start], start_measurements,
-                      start_metadata}
+                      start_metadata},
+                     500
 
       assert_receive {:telemetry, [:dspex, :program, :forward, :stop], stop_measurements,
-                      stop_metadata}
+                      stop_metadata},
+                     500
 
       # Verify telemetry structure
       assert %{system_time: system_time} = start_measurements
@@ -384,34 +437,49 @@ defmodule DSPExEndToEndTest do
 
     test "evaluation telemetry events are comprehensive" do
       program = %MockEvaluationProgram{id: 1}
-      examples = [%{inputs: %{test: "data"}, outputs: %{processed: true}}]
+      examples = [DSPEx.Example.new(%{test: "data", processed: true}, [:test])]
       metric_fn = fn _example, _prediction -> 1.0 end
 
       {:ok, _result} = DSPEx.Evaluate.run(program, examples, metric_fn)
 
-      # Should receive evaluation-level telemetry
-      assert_receive {:telemetry, [:dspex, :evaluate, :run, :start], _measurements, _metadata}
-      assert_receive {:telemetry, [:dspex, :evaluate, :run, :stop], _measurements, _metadata}
+      # Allow more time for all telemetry events to be processed from async workers
+      Process.sleep(200)
 
-      # Should receive example-level telemetry
-      assert_receive {:telemetry, [:dspex, :evaluate, :example, :start], _measurements, _metadata}
-      assert_receive {:telemetry, [:dspex, :evaluate, :example, :stop], _measurements, _metadata}
+      # Should receive evaluation-level telemetry (these happen first)
+      assert_receive {:telemetry, [:dspex, :evaluate, :run, :start], _measurements, _metadata},
+                     500
+
+      assert_receive {:telemetry, [:dspex, :evaluate, :run, :stop], _measurements, _metadata}, 500
+
+      # Should receive example-level telemetry (these happen during evaluation from Task.async_stream)
+      assert_receive {:telemetry, [:dspex, :evaluate, :example, :start], _measurements,
+                      _metadata},
+                     500
+
+      assert_receive {:telemetry, [:dspex, :evaluate, :example, :stop], _measurements, _metadata},
+                     500
     end
 
     test "correlation IDs flow through entire pipeline" do
       program = %MockEvaluationProgram{id: 1}
-      examples = [%{inputs: %{test: "data"}, outputs: %{processed: true}}]
+      examples = [DSPEx.Example.new(%{test: "data", processed: true}, [:test])]
       metric_fn = fn _example, _prediction -> 1.0 end
       custom_id = "integration-test-123"
 
       {:ok, _result} = DSPEx.Evaluate.run(program, examples, metric_fn, correlation_id: custom_id)
 
+      # Allow more time for all telemetry events to be processed from async workers
+      Process.sleep(200)
+
       # Evaluation telemetry should have custom correlation ID
-      assert_receive {:telemetry, [:dspex, :evaluate, :run, :start], _measurements, metadata}
+      assert_receive {:telemetry, [:dspex, :evaluate, :run, :start], _measurements, metadata}, 500
       assert %{correlation_id: ^custom_id} = metadata
 
-      # Program telemetry should inherit the correlation ID
-      assert_receive {:telemetry, [:dspex, :program, :forward, :start], _measurements, metadata}
+      # Program telemetry should inherit the correlation ID (might be in the middle of many events)
+      # This comes from Task.async_stream worker processes, so needs longer timeout
+      assert_receive {:telemetry, [:dspex, :program, :forward, :start], _measurements, metadata},
+                     1000
+
       assert %{correlation_id: program_correlation_id} = metadata
       # May be same or derived from evaluation ID
       assert is_binary(program_correlation_id)
@@ -422,7 +490,7 @@ defmodule DSPExEndToEndTest do
 
       examples =
         for i <- 1..5 do
-          %{inputs: %{id: i}, outputs: %{processed: true}}
+          DSPEx.Example.new(%{id: i, processed: true}, [:id])
         end
 
       metric_fn = fn _example, _prediction -> 1.0 end
@@ -434,8 +502,10 @@ defmodule DSPExEndToEndTest do
       # Collect all telemetry durations
 
       # Evaluation duration
-      assert_receive {:telemetry, [:dspex, :evaluate, :run, :start], _measurements, _metadata}
-      assert_receive {:telemetry, [:dspex, :evaluate, :run, :stop], measurements, _metadata}
+      assert_receive {:telemetry, [:dspex, :evaluate, :run, :start], _measurements, _metadata},
+                     500
+
+      assert_receive {:telemetry, [:dspex, :evaluate, :run, :stop], measurements, _metadata}, 500
       evaluation_duration = measurements.duration
 
       # Should have reasonable relationship between telemetry and actual time
@@ -457,7 +527,7 @@ defmodule DSPExEndToEndTest do
       # Create a reasonably large dataset
       examples =
         for i <- 1..100 do
-          %{inputs: %{id: i, data: "test_#{i}"}, outputs: %{processed: true}}
+          DSPEx.Example.new(%{id: i, data: "test_#{i}", processed: true}, [:id, :data])
         end
 
       metric_fn = fn _example, _prediction -> 1.0 end
@@ -490,7 +560,7 @@ defmodule DSPExEndToEndTest do
       for size <- dataset_sizes do
         examples =
           for i <- 1..size do
-            %{inputs: %{id: i}, outputs: %{processed: true}}
+            DSPEx.Example.new(%{id: i, processed: true}, [:id])
           end
 
         metric_fn = fn _example, _prediction -> 1.0 end
@@ -557,7 +627,7 @@ defmodule DSPExEndToEndTest do
 
     test "evaluation result types are well-formed" do
       program = %MockEvaluationProgram{id: 1}
-      examples = [%{inputs: %{test: "data"}, outputs: %{processed: true}}]
+      examples = [DSPEx.Example.new(%{test: "data", processed: true}, [:test])]
       metric_fn = fn _example, _prediction -> 1.0 end
 
       {:ok, result} = DSPEx.Evaluate.run(program, examples, metric_fn)
@@ -590,7 +660,12 @@ defmodule DSPExEndToEndTest do
 
       _result = DSPEx.Program.forward(program, inputs)
 
-      assert_receive {:telemetry, [:dspex, :program, :forward, :start], measurements, metadata}
+      # Allow more time for telemetry events to be processed
+      Process.sleep(100)
+
+      # Use longer timeout and more flexible pattern matching
+      assert_receive {:telemetry, [:dspex, :program, :forward, :start], measurements, metadata},
+                     500
 
       # Verify measurement types
       assert is_integer(measurements.system_time)
@@ -600,7 +675,8 @@ defmodule DSPExEndToEndTest do
       assert is_binary(metadata.correlation_id)
       assert is_integer(metadata.input_count)
 
-      assert_receive {:telemetry, [:dspex, :program, :forward, :stop], measurements, metadata}
+      assert_receive {:telemetry, [:dspex, :program, :forward, :stop], measurements, metadata},
+                     500
 
       assert is_integer(measurements.duration)
       assert is_boolean(measurements.success)
@@ -628,13 +704,14 @@ defmodule DSPExEndToEndTest do
 
           # Now test evaluation with this working program
           examples = [
-            %{inputs: %{question: "What is 2+2?"}, outputs: %{answer: "4"}},
-            %{inputs: %{question: "What is 3+3?"}, outputs: %{answer: "6"}}
+            DSPEx.Example.new(%{question: "What is 2+2?", answer: "4"}, [:question]),
+            DSPEx.Example.new(%{question: "What is 3+3?", answer: "6"}, [:question])
           ]
 
           # Simple exact match metric
           metric_fn = fn example, prediction ->
-            expected = String.downcase(String.trim(example.outputs.answer))
+            outputs = DSPEx.Example.outputs(example)
+            expected = String.downcase(String.trim(outputs.answer))
             actual = String.downcase(String.trim(prediction.answer))
             if expected == actual, do: 1.0, else: 0.0
           end

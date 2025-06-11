@@ -27,7 +27,7 @@ defmodule DSPEx.Evaluate do
       iex> {:ok, result} = DSPEx.Evaluate.run(program, examples, metric_fn)
       iex> result.score
       1.0
-      
+
       # With custom options
       iex> {:ok, result} = DSPEx.Evaluate.run(program, examples, metric_fn,
       ...>   max_concurrency: 50,
@@ -377,7 +377,14 @@ defmodule DSPEx.Evaluate do
 
     result =
       try do
-        case DSPEx.Program.forward(program, example.inputs) do
+        # Extract inputs based on example format
+        inputs =
+          case example do
+            %DSPEx.Example{} -> DSPEx.Example.inputs(example)
+            %{inputs: inputs} -> inputs
+          end
+
+        case DSPEx.Program.forward(program, inputs) do
           {:ok, prediction} ->
             try do
               score = metric_fn.(example, prediction)
@@ -447,9 +454,12 @@ defmodule DSPEx.Evaluate do
     do: {:error, {:invalid_metric_function, "Metric function must accept 2 arguments"}}
 
   @dialyzer {:nowarn_function, valid_example?: 1}
+  # Accept both old format and new DSPEx.Example format
   defp valid_example?(%{inputs: inputs, outputs: outputs})
        when is_map(inputs) and is_map(outputs),
        do: true
+
+  defp valid_example?(%DSPEx.Example{} = _example), do: true
 
   defp valid_example?(_), do: false
 
@@ -485,7 +495,7 @@ defmodule DSPEx.Evaluate do
 
     if Enum.empty?(scores) do
       # No successful evaluations - return success with zero score for now
-      # TODO: Determine when to return error vs zero score based on error types  
+      # TODO: Determine when to return error vs zero score based on error types
       total_examples = length(errors)
 
       # Calculate throughput even for failed operations

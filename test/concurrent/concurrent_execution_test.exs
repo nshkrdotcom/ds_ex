@@ -239,7 +239,7 @@ defmodule DSPEx.ConcurrentExecutionTest do
 
       examples =
         for j <- 1..5 do
-          %{inputs: %{question: "Question #{j}"}, outputs: %{processed: true}}
+          DSPEx.Example.new(%{question: "Question #{j}", processed: true}, [:question])
         end
 
       metric_fn = fn _example, prediction ->
@@ -291,7 +291,7 @@ defmodule DSPEx.ConcurrentExecutionTest do
       try do
         # Longer delay
         program = DSPEx.ConcurrentExecutionTest.DelayedProgram.new(:telemetry_test, 50, 10)
-        examples = [%{inputs: %{test: "data"}, outputs: %{processed: true}}]
+        examples = [DSPEx.Example.new(%{test: "data", processed: true}, [:test])]
         metric_fn = fn _example, _prediction -> 1.0 end
 
         # Start collecting events before running
@@ -374,7 +374,7 @@ defmodule DSPEx.ConcurrentExecutionTest do
 
       examples =
         for i <- 1..10 do
-          %{inputs: %{id: i}, outputs: %{processed: true}}
+          DSPEx.Example.new(%{id: i, processed: true}, [:id])
         end
 
       metric_fn = fn _example, _prediction -> 1.0 end

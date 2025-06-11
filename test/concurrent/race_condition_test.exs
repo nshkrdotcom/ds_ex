@@ -398,8 +398,8 @@ defmodule DSPEx.RaceConditionTest do
         end
 
       examples = [
-        %{inputs: %{question: "Test 1"}, outputs: %{answer: "Response 1"}},
-        %{inputs: %{question: "Test 2"}, outputs: %{answer: "Response 2"}}
+        DSPEx.Example.new(%{question: "Test 1", answer: "Response 1"}, [:question]),
+        DSPEx.Example.new(%{question: "Test 2", answer: "Response 2"}, [:question])
       ]
 
       # Run evaluations concurrently
@@ -436,12 +436,13 @@ defmodule DSPEx.RaceConditionTest do
       # Create many examples to force chunking
       examples =
         for i <- 1..50 do
-          %{inputs: %{id: i}, outputs: %{expected: i * 2}}
+          DSPEx.Example.new(%{id: i, expected: i * 2}, [:id])
         end
 
       metric_fn = fn example, prediction ->
         # Simple metric that should be deterministic
-        expected = example.outputs.expected
+        outputs = DSPEx.Example.outputs(example)
+        expected = outputs.expected
         actual = Map.get(prediction, :id, 0) * 2
         if expected == actual, do: 1.0, else: 0.0
       end

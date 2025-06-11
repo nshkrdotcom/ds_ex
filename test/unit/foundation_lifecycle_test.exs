@@ -18,6 +18,9 @@ defmodule DSPEx.FoundationLifecycleTest do
     # Test scenario: Multiple concurrent telemetry events during test shutdown
     # SUCCESS CRITERIA: Either reproduce the race condition OR confirm our defensive workaround prevented it
 
+    # Trap exits so :kill doesn't crash the test process
+    Process.flag(:trap_exit, true)
+
     # Capture any crashes or race conditions
     error_collector = Agent.start_link(fn -> [] end)
     {:ok, error_agent} = error_collector
@@ -123,6 +126,10 @@ defmodule DSPEx.FoundationLifecycleTest do
     # Both outcomes validate our system:
     # 1. Race conditions detected = reproduction capability confirmed
     # 2. No race conditions = defensive workaround effectiveness confirmed
+
+    # Restore original trap_exit setting
+    Process.flag(:trap_exit, false)
+
     assert true,
            "Race condition test completed. Race conditions detected: #{race_condition_detected}. Errors captured: #{inspect(detected_errors)}"
   end
@@ -157,16 +164,31 @@ defmodule DSPEx.FoundationLifecycleTest do
       %{}
     )
 
-    # Ensure cleanup happens
+    # Ensure cleanup happens - but be defensive about process state
     on_exit(fn ->
+      # Defensive telemetry cleanup
       try do
         :telemetry.detach(handler_id)
       rescue
-        # May already be detached due to crashes
+        # May already be detached due to crashes or process death
         _ -> :ok
+      catch
+        # Handle any exit signals during cleanup
+        :exit, _ -> :ok
       end
 
-      Agent.stop(crash_agent)
+      # Defensive agent cleanup - check if process is still alive
+      try do
+        if Process.alive?(crash_agent) do
+          Agent.stop(crash_agent)
+        end
+      rescue
+        # Agent may have crashed or been killed
+        _ -> :ok
+      catch
+        # Handle any exit signals during cleanup
+        :exit, _ -> :ok
+      end
     end)
 
     # Emit events that will cause crashes during potential cleanup
@@ -220,6 +242,9 @@ defmodule DSPEx.FoundationLifecycleTest do
   test "reproduces elixir_config process death during test shutdown" do
     # Test scenario: Foundation cleanup interferes with Elixir's config system
     # SUCCESS CRITERIA: Confirm we can simulate process death scenarios and handle them
+
+    # Trap exits so :brutal_kill doesn't crash the test process
+    Process.flag(:trap_exit, true)
 
     killed_tasks = Agent.start_link(fn -> [] end)
     {:ok, killed_agent} = killed_tasks
@@ -302,12 +327,53 @@ defmodule DSPEx.FoundationLifecycleTest do
 
     Process.sleep(50)
 
-    # Collect results
-    killed_count = length(Agent.get(killed_agent, & &1))
-    error_count = length(Agent.get(error_agent, & &1))
+    # Collect results - but handle potentially dead agents defensively
+    killed_count =
+      try do
+        if Process.alive?(killed_agent) do
+          length(Agent.get(killed_agent, & &1))
+        else
+          0
+        end
+      rescue
+        _ -> 0
+      catch
+        :exit, _ -> 0
+      end
 
-    Agent.stop(killed_agent)
-    Agent.stop(error_agent)
+    error_count =
+      try do
+        if Process.alive?(error_agent) do
+          length(Agent.get(error_agent, & &1))
+        else
+          0
+        end
+      rescue
+        _ -> 0
+      catch
+        :exit, _ -> 0
+      end
+
+    # Defensive agent cleanup
+    try do
+      if Process.alive?(killed_agent) do
+        Agent.stop(killed_agent)
+      end
+    rescue
+      _ -> :ok
+    catch
+      :exit, _ -> :ok
+    end
+
+    try do
+      if Process.alive?(error_agent) do
+        Agent.stop(error_agent)
+      end
+    rescue
+      _ -> :ok
+    catch
+      :exit, _ -> :ok
+    end
 
     # Count how many tasks were killed vs completed
     killed_results =
@@ -324,6 +390,10 @@ defmodule DSPEx.FoundationLifecycleTest do
     # Both outcomes are valid test results:
     # 1. Processes killed = stress testing successful
     # 2. Everything completed = system resilience demonstrated
+
+    # Restore original trap_exit setting
+    Process.flag(:trap_exit, false)
+
     assert true,
            "Process stress test completed: #{total_kills} processes killed, #{error_count} config errors, final_result: #{inspect(final_result)}"
   end
@@ -333,6 +403,9 @@ defmodule DSPEx.FoundationLifecycleTest do
   test "high concurrency telemetry stress test" do
     # High-concurrency test to trigger the race condition
     # This attempts to overwhelm the telemetry system and cause timing issues
+
+    # Trap exits so :kill doesn't crash the test process
+    Process.flag(:trap_exit, true)
 
     num_processes = 20
     events_per_process = 100
@@ -405,6 +478,10 @@ defmodule DSPEx.FoundationLifecycleTest do
     end
 
     Process.sleep(50)
+
+    # Restore original trap_exit setting
+    Process.flag(:trap_exit, false)
+
     assert true
   end
 end
