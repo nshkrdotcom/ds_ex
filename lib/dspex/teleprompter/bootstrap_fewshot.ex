@@ -153,17 +153,21 @@ defmodule DSPEx.Teleprompter.BootstrapFewShot do
             config.progress_callback.(progress)
           end
 
-          result
+          # Return tuple of original example and demo for evaluation
+          case result do
+            {:ok, demo} -> {:ok, {example, demo}}
+            error -> error
+          end
         end,
         max_concurrency: config.max_concurrency,
         timeout: config.timeout,
         on_timeout: :kill_task
       )
       |> Stream.filter(fn
-        {:ok, {:ok, _demo}} -> true
+        {:ok, {:ok, _pair}} -> true
         _ -> false
       end)
-      |> Stream.map(fn {:ok, {:ok, demo}} -> demo end)
+      |> Stream.map(fn {:ok, {:ok, pair}} -> pair end)
       |> Enum.to_list()
 
     if Enum.empty?(candidates) do
@@ -210,11 +214,17 @@ defmodule DSPEx.Teleprompter.BootstrapFewShot do
       candidates
       |> Stream.with_index()
       |> Task.async_stream(
-        fn {demo, index} ->
-          # Use demo directly as example and get outputs for prediction
-          outputs = Example.outputs(demo)
+        fn {{original_example, demo}, index} ->
+          # Extract teacher's prediction from the demo (everything that's not input)
+          input_keys = original_example.input_keys
 
-          score = metric_fn.(demo, outputs)
+          demo_outputs =
+            demo.data
+            |> Map.drop(MapSet.to_list(input_keys))
+            |> Map.drop([:__generated_by, :__teacher, :__original_example_id, :__timestamp])
+
+          # Call metric function with original example and teacher's prediction
+          score = metric_fn.(original_example, demo_outputs)
 
           # Report progress if callback provided
           if config.progress_callback do

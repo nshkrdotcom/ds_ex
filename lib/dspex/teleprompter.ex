@@ -115,4 +115,58 @@ defmodule DSPEx.Teleprompter do
         false
     end
   end
+
+  @doc """
+  Validates that a student program is properly configured for teleprompter use.
+  """
+  @spec validate_student(program()) :: :ok | {:error, term()}
+  def validate_student(program) do
+    cond do
+      not is_struct(program) ->
+        {:error, :invalid_student_program}
+
+      not DSPEx.Program.implements_program?(program.__struct__) ->
+        {:error, :student_does_not_implement_program_behavior}
+
+      true ->
+        :ok
+    end
+  end
+
+  @doc """
+  Validates that a teacher program is properly configured for teleprompter use.
+  """
+  @spec validate_teacher(program()) :: :ok | {:error, term()}
+  def validate_teacher(program) do
+    cond do
+      not is_struct(program) ->
+        {:error, :invalid_teacher_program}
+
+      not DSPEx.Program.implements_program?(program.__struct__) ->
+        {:error, :teacher_does_not_implement_program_behavior}
+
+      true ->
+        :ok
+    end
+  end
+
+  @doc """
+  Validates that a training dataset is properly formatted for teleprompter use.
+  """
+  @spec validate_trainset(trainset()) :: :ok | {:error, term()}
+  def validate_trainset(trainset) do
+    cond do
+      not is_list(trainset) ->
+        {:error, :trainset_must_be_list}
+
+      Enum.empty?(trainset) ->
+        {:error, :trainset_cannot_be_empty}
+
+      not Enum.all?(trainset, &is_struct(&1, Example)) ->
+        {:error, :trainset_must_contain_examples}
+
+      true ->
+        :ok
+    end
+  end
 end

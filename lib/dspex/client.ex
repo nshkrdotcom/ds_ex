@@ -214,7 +214,7 @@ defmodule DSPEx.Client do
   defp get_preset_or_contextual_response(provider, content) do
     # Try to get preset responses from MockClientManager
     provider_responses =
-      [provider, :gemini, :openai, :gpt4, :gpt3_5, :teacher, :student]
+      [provider, :gemini, :openai, :gpt4, :gpt3_5, :teacher, :student, :test]
       |> Enum.find_value([], fn p ->
         responses = :persistent_term.get({:mock_responses, p}, [])
         if Enum.empty?(responses), do: nil, else: responses

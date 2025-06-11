@@ -13,29 +13,29 @@ This diagram shows the main layers of your Elixir implementation, highlighting t
 
 ```mermaid
 graph TD
-    subgraph User Application
+    subgraph UA["User Application"]
         A["DSPEx Program - Predict and future ReAct"]
     end
 
-    subgraph "DSPEx Framework (BEAM Native)"
-        subgraph "Services - OTP Applications"
+    subgraph DSP["DSPEx Framework (BEAM Native)"]
+        subgraph SOA["Services - OTP Applications"]
             S1["services/config_manager.ex<br><b>ConfigManager GenServer</b>"]
             S2["services/telemetry_setup.ex<br><b>TelemetrySetup GenServer</b>"]
             S3["<b>Finch HTTP Pool</b>"]
         end
 
-        subgraph "Programming and Execution"
+        subgraph PAE["Programming and Execution"]
             P["predict.ex<br><b>DSPEx.Predict</b>"]
             PROG["program.ex<br><b>DSPEx.Program Behaviour</b>"]
         end
 
-        subgraph "Optimization - Teleprompter"
+        subgraph OT["Optimization - Teleprompter"]
             T["teleprompter/bootstrap_fewshot.ex<br><b>BootstrapFewShot</b>"]
             T_TODO["<b>More Teleprompters</b><br>MIPRO, SIMBA, etc"]
             EVAL["evaluate.ex<br><b>DSPEx.Evaluate</b>"]
         end
 
-        subgraph "Client and Adapter Layer"
+        subgraph CAL["Client and Adapter Layer"]
             CM["client_manager.ex<br><b>ClientManager GenServer</b>"]
             ADP["adapter.ex<br><b>DSPEx.Adapter</b>"]
             CM_CACHE["<b>Cachex Todo</b><br>Response Caching"]
@@ -43,7 +43,7 @@ graph TD
         end
     end
 
-    subgraph External Services
+    subgraph ES["External Services"]
         LLM["LLM API: Gemini, OpenAI"]
     end
 
@@ -70,6 +70,7 @@ graph TD
     classDef processNode fill:#b89ce0,stroke:#4e2a8e,stroke-width:2px,color:#24292e
     classDef resultNode fill:#d4c5ec,stroke:#4e2a8e,stroke-width:1px,color:#24292e
     classDef aggregationPhase fill:#f5f5f5,stroke:#666,stroke-width:2px,color:#24292e
+    classDef subgraphTitleTop fill:#e6e0f0,stroke:#b89ce0,stroke-width:2px,color:#24292e
 
     class A setupPhase
     class S1,S2,S3 concurrentEngine
@@ -78,6 +79,7 @@ graph TD
     class CM,ADP resultNode
     class T_TODO,CM_CACHE,CM_FUSE aggregationPhase
     class LLM processNode
+    class UA,DSP,SOA,PAE,OT,CAL,ES subgraphTitleTop
 ```
 
 **Architectural Insights & Todos:**
@@ -98,13 +100,13 @@ This diagram shows how you've used Elixir's metaprogramming capabilities to crea
 
 ```mermaid
 graph TD
-    subgraph "Compile-Time"
+    subgraph CT["Compile-Time"]
         A["<b>use DSPEx.Signature</b>, question to answer"]
         B["signature.ex<br><b>DSPEx.Signature.Parser</b>"]
         C["Metaprogramming<br>Macro Expansion"]
     end
 
-    subgraph "Runtime"
+    subgraph RT["Runtime"]
         D["<b>QASignature Module</b><br>Generated Struct and Functions"]
         E["predict.ex<br><b>DSPEx.Predict</b>"]
         F["program.ex<br><b>DSPEx.Program Behaviour</b>"]
@@ -112,7 +114,7 @@ graph TD
         EXTEND_TODO["<b>Signature.extend/2 Todo</b><br>For ChainOfThought and ReAct"]
     end
 
-    subgraph "Future Programs - Todo"
+    subgraph FP["Future Programs - Todo"]
         COT_TODO["<b>DSPEx.ChainOfThought</b>"]
         REACT_TODO["<b>DSPEx.ReAct</b>"]
     end
@@ -136,12 +138,14 @@ graph TD
     classDef processNode fill:#b89ce0,stroke:#4e2a8e,stroke-width:2px,color:#24292e
     classDef resultNode fill:#d4c5ec,stroke:#4e2a8e,stroke-width:1px,color:#24292e
     classDef aggregationPhase fill:#f5f5f5,stroke:#666,stroke-width:2px,color:#24292e
+    classDef subgraphTitleTop fill:#e6e0f0,stroke:#b89ce0,stroke-width:2px,color:#24292e
 
     class A setupPhase
     class B,C concurrentEngine
     class D,E,F taskNode
     class EXTEND_TODO aggregationPhase
     class COT_TODO,REACT_TODO processNode
+    class CT,RT,FP subgraphTitleTop
 ```
 
 **Architectural Insights & Todos:**
@@ -204,14 +208,14 @@ This diagram illustrates how your teleprompter leverages BEAM's concurrency for 
 
 ```mermaid
 graph TD
-    subgraph Inputs
+    subgraph IN["Inputs"]
         A["Student Program"]
         B["Teacher Program"]
         C["Trainset"]
         D["Metric Function"]
     end
 
-    subgraph "Teleprompter: BootstrapFewShot.compile/5"
+    subgraph TP["Teleprompter: BootstrapFewShot.compile/5"]
         E["Start Compilation"] --> F["<b>Task.async_stream trainset</b><br>Generate Bootstrap Candidates<br><i>Massively Concurrent</i>"]
         F --> G["For each example call teacher.forward"]
         G --> H["<b>Task.async_stream candidates</b><br>Evaluate Demonstrations"]
@@ -221,7 +225,7 @@ graph TD
         K --> L["Create new OptimizedProgram with selected demos"]
     end
 
-    subgraph Output
+    subgraph OUT["Output"]
         M["<b>DSPEx.OptimizedProgram</b><br>Student plus Demos"]
     end
 
@@ -235,6 +239,7 @@ graph TD
     classDef processNode fill:#b89ce0,stroke:#4e2a8e,stroke-width:2px,color:#24292e
     classDef resultNode fill:#d4c5ec,stroke:#4e2a8e,stroke-width:1px,color:#24292e
     classDef aggregationPhase fill:#f5f5f5,stroke:#666,stroke-width:2px,color:#24292e
+    classDef subgraphTitleTop fill:#e6e0f0,stroke:#b89ce0,stroke-width:2px,color:#24292e
 
     class A,B,C,D setupPhase
     class E taskNode
@@ -242,6 +247,7 @@ graph TD
     class G,I,J,K processNode
     class L resultNode
     class M aggregationPhase
+    class IN,TP,OUT subgraphTitleTop
 ```
 **Architectural Insights & Todos:**
 

@@ -39,6 +39,7 @@ defmodule DSPEx.Test.SimbaMockProvider do
 
     MockClientManager.set_mock_responses(:gpt4, responses_with_metadata)
     MockClientManager.set_mock_responses(:teacher, responses_with_metadata)
+    MockClientManager.set_mock_responses(:test, responses_with_metadata)
 
     :ok
   end
@@ -68,6 +69,7 @@ defmodule DSPEx.Test.SimbaMockProvider do
       end)
 
     MockClientManager.set_mock_responses(:instruction_model, instruction_mocks)
+    MockClientManager.set_mock_responses(:test, instruction_mocks)
 
     :ok
   end
@@ -99,6 +101,7 @@ defmodule DSPEx.Test.SimbaMockProvider do
       end)
 
     MockClientManager.set_mock_responses(:evaluator, evaluation_responses)
+    MockClientManager.set_mock_responses(:test, evaluation_responses)
 
     :ok
   end
@@ -148,7 +151,16 @@ defmodule DSPEx.Test.SimbaMockProvider do
   @spec reset_all_simba_mocks() :: :ok
   def reset_all_simba_mocks() do
     # Reset all known mock providers
-    providers = [:gpt4, :gpt3_5, :teacher, :student, :evaluator, :optimizer, :instruction_model]
+    providers = [
+      :gpt4,
+      :gpt3_5,
+      :teacher,
+      :student,
+      :evaluator,
+      :optimizer,
+      :instruction_model,
+      :test
+    ]
 
     Enum.each(providers, fn provider ->
       MockClientManager.clear_mock_responses(provider)
@@ -189,6 +201,7 @@ defmodule DSPEx.Test.SimbaMockProvider do
     # Setup mocks for concurrent scenarios
     MockClientManager.set_mock_responses(:concurrent_teacher, concurrent_responses)
     MockClientManager.set_mock_responses(:concurrent_student, concurrent_responses)
+    MockClientManager.set_mock_responses(:test, concurrent_responses)
 
     :ok
   end
