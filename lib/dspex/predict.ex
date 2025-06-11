@@ -83,20 +83,64 @@ defmodule DSPEx.Predict do
   def forward(program_or_signature, inputs, opts)
 
   def forward(program, inputs, opts) when is_struct(program, __MODULE__) do
-    # Only generate correlation_id if not provided - avoid expensive UUID generation
+    # PREDICT PERFORMANCE INSTRUMENTATION
+    _predict_start = System.monotonic_time()
+
+    # Step 1: Correlation ID (optimized)
+    correlation_start = System.monotonic_time()
+
     correlation_id =
       case Keyword.get(opts, :correlation_id) do
-        nil -> Foundation.Utils.generate_correlation_id()
-        existing_id -> existing_id
+        nil ->
+          # Use fast UUID generation to avoid crypto cold start
+          node_hash = :erlang.phash2(node(), 65536)
+          timestamp = System.unique_integer([:positive])
+          random = :erlang.unique_integer([:positive])
+          "predict-#{node_hash}-#{timestamp}-#{random}"
+
+        existing_id ->
+          existing_id
       end
 
-    with {:ok, messages} <- format_messages(program, inputs, correlation_id),
-         {:ok, response} <- make_request(program, messages, opts, correlation_id),
-         {:ok, outputs} <- parse_response(program, response, correlation_id) do
-      {:ok, outputs}
-    else
-      {:error, reason} -> {:error, reason}
-    end
+    _correlation_duration =
+      System.convert_time_unit(System.monotonic_time() - correlation_start, :native, :microsecond)
+
+    # Step 2: Format messages
+    format_start = System.monotonic_time()
+    format_result = format_messages(program, inputs, correlation_id)
+
+    _format_duration =
+      System.convert_time_unit(System.monotonic_time() - format_start, :native, :microsecond)
+
+    # Step 3: Make request
+    request_start = System.monotonic_time()
+
+    request_result =
+      case format_result do
+        {:ok, messages} -> make_request(program, messages, opts, correlation_id)
+        error -> error
+      end
+
+    _request_duration =
+      System.convert_time_unit(System.monotonic_time() - request_start, :native, :microsecond)
+
+    # Step 4: Parse response
+    parse_start = System.monotonic_time()
+
+    final_result =
+      case request_result do
+        {:ok, response} -> parse_response(program, response, correlation_id)
+        error -> error
+      end
+
+    _parse_duration =
+      System.convert_time_unit(System.monotonic_time() - parse_start, :native, :microsecond)
+
+    # Performance instrumentation (disabled for production)
+    # total_duration = System.convert_time_unit(System.monotonic_time() - predict_start, :native, :microsecond)
+    # IO.puts("  🎯 DSPEx.Predict.forward [#{total_duration}µs]: Correlation=#{correlation_duration}µs, Format=#{format_duration}µs, Request=#{request_duration}µs, Parse=#{parse_duration}µs")
+
+    final_result
   end
 
   # Legacy API for backward compatibility - signature as first argument
@@ -157,13 +201,25 @@ defmodule DSPEx.Predict do
 
   defp make_request(program, messages, opts, correlation_id) do
     # Build client options
+    opts_start = System.monotonic_time()
+
     client_opts =
       opts
       |> Keyword.put(:correlation_id, correlation_id)
       |> Enum.into(%{})
 
+    _opts_duration =
+      System.convert_time_unit(System.monotonic_time() - opts_start, :native, :microsecond)
+
     # Make request through client
-    DSPEx.Client.request(program.client, messages, client_opts)
+    request_start = System.monotonic_time()
+    result = DSPEx.Client.request(program.client, messages, client_opts)
+
+    _request_duration =
+      System.convert_time_unit(System.monotonic_time() - request_start, :native, :microsecond)
+
+    # IO.puts("    📡 make_request breakdown: Opts=#{_opts_duration}µs, Client.request=#{_request_duration}µs")
+    result
   end
 
   defp parse_response(program, response, correlation_id) do

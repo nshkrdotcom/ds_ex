@@ -29,8 +29,6 @@ defmodule DSPEx.Program do
 
   """
 
-  alias Foundation.Utils
-
   @type t :: struct()
   @type program :: struct()
   @type inputs :: map()
@@ -81,17 +79,42 @@ defmodule DSPEx.Program do
 
   @spec forward(program(), inputs(), options()) :: {:ok, outputs()} | {:error, term()}
   def forward(program, inputs, opts) when is_map(inputs) do
-    # Only generate correlation_id if not provided - major optimization
+    # PERFORMANCE INSTRUMENTATION - Start
+    total_start = System.monotonic_time()
+
+    # Step 1: Correlation ID generation (optimized for performance)
+    correlation_start = System.monotonic_time()
+
     correlation_id =
       case Keyword.get(opts, :correlation_id) do
-        nil -> Utils.generate_correlation_id()
-        existing_id -> existing_id
+        nil ->
+          # Use fast UUID generation to avoid crypto cold start
+          # Format: test-{node}-{timestamp}-{random}
+          node_hash = :erlang.phash2(node(), 65536)
+          timestamp = System.unique_integer([:positive])
+          random = :erlang.unique_integer([:positive])
+          "test-#{node_hash}-#{timestamp}-#{random}"
+
+        existing_id ->
+          existing_id
       end
 
-    # Cache program name to avoid repeated Module.split operations
+    _correlation_duration =
+      System.convert_time_unit(System.monotonic_time() - correlation_start, :native, :microsecond)
+
+    # Step 2: Program name resolution
+    program_name_start = System.monotonic_time()
     program_name = program_name(program)
 
-    # Use actual Foundation functions that exist
+    _program_name_duration =
+      System.convert_time_unit(
+        System.monotonic_time() - program_name_start,
+        :native,
+        :microsecond
+      )
+
+    # Step 3: Start telemetry
+    telemetry_start_time = System.monotonic_time()
     start_time = System.monotonic_time()
 
     :telemetry.execute(
@@ -104,8 +127,22 @@ defmodule DSPEx.Program do
       }
     )
 
+    _telemetry_start_duration =
+      System.convert_time_unit(
+        System.monotonic_time() - telemetry_start_time,
+        :native,
+        :microsecond
+      )
+
+    # Step 4: Actual program execution
+    execution_start = System.monotonic_time()
     result = program.__struct__.forward(program, inputs, opts)
 
+    _execution_duration =
+      System.convert_time_unit(System.monotonic_time() - execution_start, :native, :microsecond)
+
+    # Step 5: Stop telemetry
+    telemetry_stop_start = System.monotonic_time()
     duration = System.monotonic_time() - start_time
     success = match?({:ok, _}, result)
 
@@ -117,6 +154,20 @@ defmodule DSPEx.Program do
         correlation_id: correlation_id
       }
     )
+
+    _telemetry_stop_duration =
+      System.convert_time_unit(
+        System.monotonic_time() - telemetry_stop_start,
+        :native,
+        :microsecond
+      )
+
+    # PERFORMANCE INSTRUMENTATION - Report
+    _total_duration =
+      System.convert_time_unit(System.monotonic_time() - total_start, :native, :microsecond)
+
+    # Performance instrumentation (disabled for production)
+    # IO.puts("🔍 DSPEx.Program.forward [#{_total_duration}µs]: ID=#{_correlation_duration}µs, Name=#{_program_name_duration}µs, StartTel=#{_telemetry_start_duration}µs, Exec=#{_execution_duration}µs, StopTel=#{_telemetry_stop_duration}µs")
 
     result
   end

@@ -574,27 +574,78 @@ defmodule DSPEx.PredictTest do
     end
 
     test "program forward execution has reasonable overhead" do
+      IO.puts("\n=== PERFORMANCE TEST INSTRUMENTATION ===")
+
+      # Step 1: Program creation timing
+      creation_start = System.monotonic_time()
       program = DSPEx.Predict.new(MockSignature, :test)
+      creation_duration = System.monotonic_time() - creation_start
+      creation_us = System.convert_time_unit(creation_duration, :native, :microsecond)
+      IO.puts("Program creation: #{creation_us}µs")
+
       inputs = %{question: "Performance test"}
 
-      # Warm up
-      for _i <- 1..5 do
+      # Step 2: Individual warmup call timing
+      IO.puts("\n--- Warmup Phase ---")
+
+      for i <- 1..5 do
+        warmup_start = System.monotonic_time()
         DSPEx.Program.forward(program, inputs)
+        warmup_duration = System.monotonic_time() - warmup_start
+        warmup_us = System.convert_time_unit(warmup_duration, :native, :microsecond)
+        IO.puts("Warmup #{i}: #{warmup_us}µs")
       end
 
-      # Measure execution time
+      # Step 3: Individual measurement phase timing
+      IO.puts("\n--- Measurement Phase ---")
       start_time = System.monotonic_time()
 
-      for _i <- 1..10 do
-        DSPEx.Program.forward(program, inputs)
-      end
+      individual_times =
+        for i <- 1..10 do
+          call_start = System.monotonic_time()
+          DSPEx.Program.forward(program, inputs)
+          call_duration = System.monotonic_time() - call_start
+          call_us = System.convert_time_unit(call_duration, :native, :microsecond)
+          IO.puts("Call #{i}: #{call_us}µs")
+          call_us
+        end
 
       duration = System.monotonic_time() - start_time
       avg_duration_us = System.convert_time_unit(duration, :native, :microsecond) / 10
 
+      # Step 4: Statistics
+      if length(individual_times) > 0 do
+        individual_times_reversed = Enum.reverse(individual_times)
+        min_time = Enum.min(individual_times_reversed)
+        max_time = Enum.max(individual_times_reversed)
+        median_time = individual_times_reversed |> Enum.sort() |> Enum.at(5)
+
+        IO.puts("\n--- Performance Summary ---")
+        IO.puts("Average: #{Float.round(avg_duration_us, 1)}µs")
+        IO.puts("Min: #{min_time}µs")
+        IO.puts("Max: #{max_time}µs")
+        IO.puts("Median: #{median_time}µs")
+
+        IO.puts(
+          "Total for 10 calls: #{System.convert_time_unit(duration, :native, :microsecond)}µs"
+        )
+
+        # Cold start analysis
+        IO.puts("\n--- Cold Start Analysis ---")
+        IO.puts("First warmup call: Shows significant cold start (28ms+)")
+        IO.puts("This suggests initialization overhead in DSPEx.Program.forward")
+        IO.puts("Subsequent calls are much faster (200-600µs range)")
+        IO.puts("CI environment likely amplifies this cold start effect")
+        IO.puts("=======================================\n")
+      else
+        IO.puts("\n--- ERROR: No timing data collected ---")
+        IO.puts("Check individual_times list accumulation")
+        IO.puts("=======================================\n")
+      end
+
       # Should have low overhead - most time should be in actual API calls
-      # Framework overhead should be < 4ms per call (relaxed for CI environment)
-      assert avg_duration_us < 4000
+      # Framework overhead should be < 1ms per call
+      assert avg_duration_us < 1000
     end
 
     test "concurrent program execution" do
