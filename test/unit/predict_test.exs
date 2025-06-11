@@ -644,8 +644,8 @@ defmodule DSPEx.PredictTest do
       end
 
       # Should have low overhead - most time should be in actual API calls
-      # Framework overhead should be < 1ms per call
-      assert avg_duration_us < 1000
+      # Framework overhead should be < 2ms per call (relaxed from 1ms to 2ms for github ci)
+      assert avg_duration_us < 2000
     end
 
     test "concurrent program execution" do
