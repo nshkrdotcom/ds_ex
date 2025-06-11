@@ -4,6 +4,80 @@
 
 DSPEx is a sophisticated Elixir port of [DSPy](https://github.com/stanfordnlp/dspy) (Declarative Self-improving Python), reimagined for the BEAM virtual machine. Rather than being a mere transliteration, DSPEx leverages Elixir's unique strengths in concurrency, fault tolerance, and distributed systems to create a more robust and scalable framework for programming language models.
 
+## Testing DSPEx
+
+DSPEx provides three distinct test modes to accommodate different development and integration scenarios:
+
+### 🟦 Pure Mock Mode (Default)
+```bash
+mix test                  # Default behavior
+mix test.mock            # Explicit pure mock
+mix test.mock test/unit/ # Run specific test directory
+```
+
+**Behavior**: 
+- No network requests made
+- Fast, deterministic execution  
+- Uses contextual mock responses
+- Perfect for unit testing and CI/CD
+
+**When to use**: Daily development, unit tests, CI pipelines
+
+### 🟡 Fallback Mode (Seamless Integration)
+```bash
+mix test.fallback                    # All tests with fallback
+mix test.fallback test/integration/  # Integration tests with fallback
+DSPEX_TEST_MODE=fallback mix test    # Environment variable approach
+```
+
+**Behavior**:
+- Attempts real API calls when API keys available
+- Seamlessly falls back to mock when no keys present
+- Tests work regardless of API key availability
+- Validates both integration and mock logic
+
+**When to use**: Development with optional API access, integration testing
+
+### 🟢 Live API Mode (Strict Integration)
+```bash
+mix test.live                      # Requires API keys for all providers
+mix test.live test/integration/    # Live integration testing only
+DSPEX_TEST_MODE=live mix test      # Environment variable approach
+```
+
+**Behavior**:
+- Requires valid API keys
+- Tests fail if API keys missing
+- Real network requests to live APIs
+- Validates actual API integration and error handling
+
+**When to use**: Pre-deployment validation, debugging API issues, performance testing
+
+### Environment Configuration
+
+**Why MIX_ENV=test?**
+The test environment ensures proper isolation and test-specific configurations. Our mix tasks automatically set `MIX_ENV=test` via `preferred_cli_env` in `mix.exs`, so you don't need to set it manually.
+
+**API Key Setup (Optional for fallback/live modes):**
+```bash
+export GEMINI_API_KEY=your_gemini_key
+export OPENAI_API_KEY=your_openai_key  
+export ANTHROPIC_API_KEY=your_anthropic_key
+```
+
+**Override Test Mode:**
+```bash
+export DSPEX_TEST_MODE=mock     # Force pure mock
+export DSPEX_TEST_MODE=fallback # Force fallback mode  
+export DSPEX_TEST_MODE=live     # Force live mode
+```
+
+**Best Practices:**
+- Use **pure mock** for daily development and CI/CD
+- Use **fallback mode** for integration development
+- Use **live mode** before production deployments and for debugging real API issues
+- Keep API keys in `.env` files or secure environment management
+
 ## Vision & Problem Statement
 
 DSPEx is not a general-purpose agent-building toolkit; it is a specialized **compiler** that uses data and metrics to systematically optimize Language Model (LLM) programs. While interacting with LLMs is becoming easier, achieving consistently high performance remains a manual, unscientific process of "prompt tweaking." DSPEx automates the discovery of optimal prompting strategies, treating prompts as optimizable artifacts rather than static strings.
@@ -241,27 +315,40 @@ DSPEx leverages best-in-class Elixir libraries:
 
 ## Implementation Status & Roadmap
 
-### Current Status: 🚧 Phase 1 Implementation
+### Current Status: ✅ Phase 1 Complete + Phase 2A Teleprompter
 
-**Completed:**
-- ✅ Comprehensive architectural documentation
-- ✅ 6-stage implementation plan with 598+ test cases
-- ✅ Technology stack selection and dependency analysis
-- ✅ Line-by-line mapping to Python DSPy source
+**Phase 1 - Foundation (COMPLETE):**
+- ✅ **DSPEx.Signature** - Complete compile-time parsing with macro expansion and field validation
+- ✅ **DSPEx.Example** - Immutable data structures with Protocol implementations
+- ✅ **DSPEx.Client** - HTTP client with error categorization and Foundation integration
+- ✅ **DSPEx.Adapter** - Message formatting and response parsing for multiple providers  
+- ✅ **DSPEx.Program** - Behavior interface with telemetry integration
+- ✅ **DSPEx.Predict** - Core prediction orchestration with Foundation integration
+- ✅ **DSPEx.Evaluate** - Concurrent evaluation engine using Task.async_stream
 
-**Phase 1 - Foundation (In Progress):**
-- 🚧 DSPEx.Signature (compile-time parsing and validation)
-- 🚧 DSPEx.Example (core data structures)
-- ⬜ DSPEx.Client (resilient HTTP layer)
-- ⬜ DSPEx.Adapter (translation layer)
-- ⬜ DSPEx.Program/Predict (execution engine)
-- ⬜ DSPEx.Evaluate (concurrent evaluation)
-- ⬜ DSPEx.Teleprompter (optimization algorithms)
+**Phase 2A - Optimization Engine (COMPLETE):**
+- ✅ **DSPEx.Teleprompter** - Behavior definition for optimization algorithms
+- ✅ **DSPEx.Teleprompter.BootstrapFewShot** - Complete single-node optimization implementation
+- ✅ **DSPEx.OptimizedProgram** - Container for programs enhanced with demonstrations
+
+**Current Capabilities:**
+- ✅ **Full end-to-end pipeline**: Signature → Adapter → Client → Response working
+- ✅ **Program optimization**: BootstrapFewShot teleprompter for few-shot learning
+- ✅ **Concurrent evaluation**: High-performance evaluation with fault isolation
+- ✅ **Foundation integration**: Telemetry, correlation tracking, and observability
+- ✅ **Multi-provider support**: OpenAI, Anthropic, Gemini adapters functional
+- ✅ **Production readiness**: Comprehensive testing and error handling
 
 ### Planned Features
 
-**Phase 2 - Advanced Programs:**
-- ChainOfThought reasoning
+**Phase 2B - Enhanced Infrastructure (NEXT):**
+- GenServer-based client architecture with supervision
+- Circuit breakers and advanced error handling with Fuse
+- Response caching with Cachex
+- Rate limiting and connection pooling
+
+**Phase 2C - Advanced Programs:**
+- ChainOfThought reasoning programs
 - ReAct (Reasoning + Acting) patterns
 - MultiChainComparison optimization
 - Parallel execution patterns
