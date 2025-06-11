@@ -143,23 +143,6 @@ sequenceDiagram
     
     Predict->>Telemetry: :telemetry.execute([:dspex, :predict, :stop])
     Predict-->>User: {:ok, outputs}
-
-    %% Elixir-inspired styling
-    %%{init: {
-      'theme': 'base',
-      'themeVariables': {
-        'primaryColor': '#4e2a8e',
-        'primaryTextColor': '#fff',
-        'primaryBorderColor': '#24292e',
-        'lineColor': '#4e2a8e',
-        'secondaryColor': '#f5f5f5',
-        'tertiaryColor': '#fdfbf7',
-        'background': '#fff',
-        'mainBkg': '#4e2a8e',
-        'secondBkg': '#b89ce0',
-        'tertiaryBkg': '#d4c5ec'
-      }
-    }}%%
 ```
 
 **Workflow Description:**
