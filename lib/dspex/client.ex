@@ -190,25 +190,8 @@ defmodule DSPEx.Client do
   end
 
   # Seamless fallback that generates mock responses based on message content
-  defp fallback_to_mock_response(messages, provider, _correlation_id, reason) do
-    {emoji, mode_text, description} =
-      case reason do
-        "pure_mock_mode" ->
-          {"🟦", "PURE MOCK", "Pure mock mode - no network attempts"}
-
-        "no_api_key" ->
-          {"🟡", "MOCK FALLBACK", "API key not available - seamless fallback"}
-
-        _ ->
-          {"🟡", "MOCK FALLBACK", "Falling back to mock response"}
-      end
-
-    IO.puts("""
-
-    #{emoji} [#{mode_text}] #{provider} #{description}
-       Mode: No network requests - contextual mock responses
-       Impact: Tests continue seamlessly without real API dependencies
-    """)
+  defp fallback_to_mock_response(messages, provider, _correlation_id, _reason) do
+    IO.write("🔵")
 
     # Generate contextual mock response based on message content
     user_message =
@@ -405,11 +388,24 @@ defmodule DSPEx.Client do
          {:ok, headers} <- build_headers(provider_config) do
       timeout = Map.get(provider_config, :timeout, 30_000)
 
+      # Log request in live/fallback mode
+      log_live_request(body, provider_config, correlation_id)
+
       case Req.post(url, json: body, headers: headers, receive_timeout: timeout) do
         {:ok, %Req.Response{status: 200} = response} ->
+          # Log successful response in live/fallback mode
+          log_live_response(response, provider_config, correlation_id)
           {:ok, response}
 
         {:ok, %Req.Response{status: status, body: error_body}} when status >= 400 ->
+          # Log API error in live/fallback mode
+          log_live_error(
+            :api_error,
+            %{status: status, body: error_body},
+            provider_config,
+            correlation_id
+          )
+
           # Foundation v0.1.3 fixed - re-enabled!
           Foundation.Events.new_event(
             :api_error,
@@ -431,6 +427,14 @@ defmodule DSPEx.Client do
               %{reason: :closed} -> :network_error
               _ -> :network_error
             end
+
+          # Log network error in live/fallback mode
+          log_live_error(
+            :network_error,
+            %{type: error_type, exception: exception},
+            provider_config,
+            correlation_id
+          )
 
           # Foundation v0.1.3 fixed - re-enabled!
           Foundation.Events.new_event(
@@ -564,4 +568,77 @@ defmodule DSPEx.Client do
   defp parse_openai_choice(_choice) do
     %{message: %{role: "assistant", content: ""}}
   end
+
+  # Live logging functions - only log when in live or fallback mode
+
+  defp log_live_request(body, provider_config, correlation_id) do
+    if should_log_live?() do
+      provider = determine_provider_type(provider_config)
+      IO.puts("\n🚀 [LIVE API REQUEST] #{provider} | #{correlation_id}")
+      IO.puts("📤 Request: #{inspect(body, limit: :infinity)}")
+    end
+  end
+
+  defp log_live_response(response, provider_config, correlation_id) do
+    if should_log_live?() do
+      provider = determine_provider_type(provider_config)
+      response_content = extract_response_content(response.body)
+      IO.puts("✅ [LIVE API SUCCESS] #{provider} | #{correlation_id}")
+      IO.puts("📥 Response: #{response_content}")
+    end
+  end
+
+  defp log_live_error(error_type, error_details, provider_config, correlation_id) do
+    if should_log_live?() do
+      provider = determine_provider_type(provider_config)
+      IO.puts("❌ [LIVE API ERROR] #{provider} | #{correlation_id}")
+      IO.puts("⚠️  Error Type: #{error_type}")
+
+      case error_type do
+        :api_error ->
+          IO.puts("📛 HTTP Status: #{error_details.status}")
+          IO.puts("📛 Error Body: #{inspect(error_details.body, limit: 500)}")
+
+        :network_error ->
+          IO.puts("📛 Network Error: #{error_details.type}")
+          IO.puts("📛 Exception: #{Exception.format(:error, error_details.exception)}")
+      end
+    end
+  end
+
+  defp should_log_live?() do
+    case DSPEx.TestModeConfig.get_test_mode() do
+      :live -> true
+      :fallback -> true
+      :mock -> false
+    end
+  end
+
+  defp extract_response_content(body) when is_map(body) do
+    cond do
+      # OpenAI format
+      content = get_in(body, ["choices", Access.at(0), "message", "content"]) ->
+        content
+
+      # Gemini format
+      content =
+          get_in(body, ["candidates", Access.at(0), "content", "parts", Access.at(0), "text"]) ->
+        content
+
+      # Fallback - show abbreviated response structure
+      true ->
+        case body do
+          %{"candidates" => [%{"content" => %{"role" => "model"}} | _]} ->
+            "[Gemini response - content not in expected format]"
+
+          %{"choices" => _} ->
+            "[OpenAI response - content not in expected format]"
+
+          _ ->
+            "[Unknown response format: #{inspect(Map.keys(body))}]"
+        end
+    end
+  end
+
+  defp extract_response_content(body), do: inspect(body, limit: 200)
 end

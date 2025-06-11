@@ -27,7 +27,10 @@ ExUnit.configure(
     :external_api,
     :phase2_features,
     :reproduction_test,
-    :todo_optimize
+    :todo_optimize,
+    :phase5a,
+    :stress_test,
+    :integration_test
   ],
   timeout: 30_000,
   max_failures: 10

@@ -1,4 +1,4 @@
-defmodule DSPEx.Integration.TeleprompterWorkflowTest do
+defmodule DSPEx.Integration.TeleprompterWorkflowAdvancedTest do
   @moduledoc """
   Integration tests for complete teleprompter workflows.
 
@@ -11,7 +11,8 @@ defmodule DSPEx.Integration.TeleprompterWorkflowTest do
   alias DSPEx.{Teleprompter, Example, Predict, OptimizedProgram, Program, Evaluate}
   alias DSPEx.Teleprompter.BootstrapFewShot
 
-  @moduletag :integration_2
+  @moduletag :phase5a
+  @moduletag :integration_test
 
   # Create test signature for workflow testing
   defmodule WorkflowSignature do
@@ -71,36 +72,44 @@ defmodule DSPEx.Integration.TeleprompterWorkflowTest do
   end
 
   describe "complete teleprompter workflow - SIMBA dependency" do
-    test "BootstrapFewShot complete pipeline execution", %{student: student, teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
+    test "BootstrapFewShot complete pipeline execution", %{
+      student: student,
+      teacher: teacher,
+      trainset: trainset,
+      metric_fn: metric_fn
+    } do
       # This is the exact workflow SIMBA will execute
 
       # 1. Create teleprompter with realistic configuration
-      teleprompter = BootstrapFewShot.new(
-        max_bootstrapped_demos: 3,
-        max_labeled_demos: 8,
-        quality_threshold: 0.6,
-        max_concurrency: 10
-      )
+      teleprompter =
+        BootstrapFewShot.new(
+          max_bootstrapped_demos: 3,
+          max_labeled_demos: 8,
+          quality_threshold: 0.6,
+          max_concurrency: 10
+        )
 
       # 2. Execute compilation (optimization)
-      result = BootstrapFewShot.compile(
-        teleprompter,
-        student,
-        teacher,
-        trainset,
-        metric_fn
-      )
+      result =
+        BootstrapFewShot.compile(
+          teleprompter,
+          student,
+          teacher,
+          trainset,
+          metric_fn
+        )
 
       # 3. Validate successful optimization
       assert {:ok, optimized_student} = result
       assert is_struct(optimized_student)
 
       # 4. Verify optimized student has demonstrations
-      demos = case optimized_student do
-        %OptimizedProgram{demos: demos} -> demos
-        %{demos: demos} when is_list(demos) -> demos
-        _ -> []
-      end
+      demos =
+        case optimized_student do
+          %OptimizedProgram{demos: demos} -> demos
+          %{demos: demos} when is_list(demos) -> demos
+          _ -> []
+        end
 
       assert length(demos) > 0, "Optimized student should have demonstrations"
       assert Enum.all?(demos, &is_struct(&1, Example))
@@ -120,7 +129,12 @@ defmodule DSPEx.Integration.TeleprompterWorkflowTest do
       end
     end
 
-    test "student → teacher → optimized student pipeline validation", %{student: student, teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
+    test "student → teacher → optimized student pipeline validation", %{
+      student: student,
+      teacher: teacher,
+      trainset: trainset,
+      metric_fn: metric_fn
+    } do
       # Step-by-step validation of the complete pipeline
 
       # Step 1: Validate all inputs
@@ -132,26 +146,29 @@ defmodule DSPEx.Integration.TeleprompterWorkflowTest do
       # Step 2: Verify teacher can generate demonstrations
       sample_input = %{question: "Sample question for teacher"}
 
-      teacher_result = case Program.forward(teacher, sample_input) do
-        {:ok, teacher_prediction} ->
-          assert %{answer: _} = teacher_prediction
-          :ok
-        {:error, _} ->
-          # Mock mode might fail, which is acceptable
-          :ok
-      end
+      teacher_result =
+        case Program.forward(teacher, sample_input) do
+          {:ok, teacher_prediction} ->
+            assert %{answer: _} = teacher_prediction
+            :ok
+
+          {:error, _} ->
+            # Mock mode might fail, which is acceptable
+            :ok
+        end
 
       # Step 3: Execute teleprompter compilation
       compilation_start = System.monotonic_time()
 
-      {:ok, optimized} = BootstrapFewShot.compile(
-        student,
-        teacher,
-        trainset,
-        metric_fn,
-        max_bootstrapped_demos: 2,
-        quality_threshold: 0.5
-      )
+      {:ok, optimized} =
+        BootstrapFewShot.compile(
+          student,
+          teacher,
+          trainset,
+          metric_fn,
+          max_bootstrapped_demos: 2,
+          quality_threshold: 0.5
+        )
 
       compilation_duration = System.monotonic_time() - compilation_start
       compilation_ms = System.convert_time_unit(compilation_duration, :native, :millisecond)
@@ -180,47 +197,59 @@ defmodule DSPEx.Integration.TeleprompterWorkflowTest do
       IO.puts("✅ Complete pipeline validated in #{compilation_ms}ms")
     end
 
-    test "error handling throughout workflow", %{teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
+    test "error handling throughout workflow", %{
+      teacher: teacher,
+      trainset: trainset,
+      metric_fn: metric_fn
+    } do
       # Test various error conditions in the workflow
 
       # Invalid student
       invalid_student = %{not_a_program: true}
 
-      assert {:error, reason} = BootstrapFewShot.compile(
-        invalid_student,
-        teacher,
-        trainset,
-        metric_fn
-      )
+      assert {:error, reason} =
+               BootstrapFewShot.compile(
+                 invalid_student,
+                 teacher,
+                 trainset,
+                 metric_fn
+               )
+
       assert reason != nil
 
       # Invalid teacher
       invalid_teacher = "not a teacher"
 
-      assert {:error, reason} = BootstrapFewShot.compile(
-        %Predict{signature: WorkflowSignature, client: :test},
-        invalid_teacher,
-        trainset,
-        metric_fn
-      )
+      assert {:error, reason} =
+               BootstrapFewShot.compile(
+                 %Predict{signature: WorkflowSignature, client: :test},
+                 invalid_teacher,
+                 trainset,
+                 metric_fn
+               )
+
       assert reason != nil
 
       # Empty trainset
-      assert {:error, reason} = BootstrapFewShot.compile(
-        %Predict{signature: WorkflowSignature, client: :test},
-        teacher,
-        [],
-        metric_fn
-      )
+      assert {:error, reason} =
+               BootstrapFewShot.compile(
+                 %Predict{signature: WorkflowSignature, client: :test},
+                 teacher,
+                 [],
+                 metric_fn
+               )
+
       assert reason != nil
 
       # Invalid metric function
-      assert {:error, reason} = BootstrapFewShot.compile(
-        %Predict{signature: WorkflowSignature, client: :test},
-        teacher,
-        trainset,
-        "not a function"
-      )
+      assert {:error, reason} =
+               BootstrapFewShot.compile(
+                 %Predict{signature: WorkflowSignature, client: :test},
+                 teacher,
+                 trainset,
+                 "not a function"
+               )
+
       assert reason != nil
     end
 

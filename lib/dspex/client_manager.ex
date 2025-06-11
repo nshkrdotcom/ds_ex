@@ -433,25 +433,8 @@ defmodule DSPEx.ClientManager do
   end
 
   # Seamless fallback that generates mock responses based on message content
-  defp fallback_to_mock_response(messages, provider, _correlation_id, reason) do
-    {emoji, mode_text, description} =
-      case reason do
-        "pure_mock_mode" ->
-          {"🟦", "PURE MOCK", "Pure mock mode - no network attempts"}
-
-        "no_api_key" ->
-          {"🟡", "MOCK FALLBACK", "API key not available - seamless fallback"}
-
-        _ ->
-          {"🟡", "MOCK FALLBACK", "Falling back to mock response"}
-      end
-
-    IO.puts("""
-
-    #{emoji} [#{mode_text}] #{provider} #{description}
-       Mode: No network requests - contextual mock responses
-       Impact: Tests continue seamlessly without real API dependencies
-    """)
+  defp fallback_to_mock_response(messages, _provider, _correlation_id, _reason) do
+    IO.write("🔵")
 
     # Generate contextual mock response based on message content
     user_message =
