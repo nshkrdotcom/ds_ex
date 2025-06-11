@@ -427,6 +427,11 @@ defmodule DSPEx.PredictTest do
     end
   end
 
+  # Named function for telemetry handler - avoids performance penalty
+  def handle_telemetry_event(event_name, measurements, metadata, _acc) do
+    send(self(), {:telemetry, event_name, measurements, metadata})
+  end
+
   describe "telemetry integration with Program behavior" do
     setup do
       # Capture telemetry events
@@ -439,9 +444,7 @@ defmodule DSPEx.PredictTest do
           [:dspex, :program, :forward, :stop],
           [:dspex, :client, :request]
         ],
-        fn event_name, measurements, metadata, _acc ->
-          send(self(), {:telemetry, event_name, measurements, metadata})
-        end,
+        &__MODULE__.handle_telemetry_event/4,
         []
       )
 
