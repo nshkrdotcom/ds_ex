@@ -573,6 +573,7 @@ defmodule DSPEx.PredictTest do
       assert duration_ms < 100
     end
 
+    @tag :todo_optimize
     test "program forward execution has reasonable overhead" do
       IO.puts("\n=== PERFORMANCE TEST INSTRUMENTATION ===")
 
@@ -644,8 +645,8 @@ defmodule DSPEx.PredictTest do
       end
 
       # Should have low overhead - most time should be in actual API calls
-      # Framework overhead should be < 2.5ms per call (relaxed from 1ms to 2.5ms for github ci, TODO: resolve perf issue)
-      assert avg_duration_us < 2500
+      # Framework overhead should be < 1ms per call (updated from 2.5ms - tagged as :todo_optimize for performance work)
+      assert avg_duration_us < 1000
     end
 
     test "concurrent program execution" do

@@ -163,15 +163,15 @@ sequenceDiagram
 ```
 
 **Workflow Description:**
-1.  **Initiation:** A user calls `DSPEx.Predict.forward` with a program instance and input data.
-2.  **Telemetry Start:** The `Predict` module emits a `:start` telemetry event.
-3.  **Format Request:** `Predict` calls `DSPEx.Adapter.format_messages`. The adapter uses the program's `Signature` and any few-shot `demos` to create a list of messages suitable for the LLM API.
-4.  **Client Request:** The formatted messages are passed to `DSPEx.Client.request`.
-5.  **API Call:** The `Client` (or `ClientManager`) handles the HTTP call to the external LLM provider (e.g., Gemini). It manages resilience patterns like circuit breaking and emits its own telemetry events.
-6.  **Receive Response:** The `Client` receives the raw JSON response from the API.
-7.  **Parse Response:** The `Predict` module passes the API response to `DSPEx.Adapter.parse_response`. The adapter extracts the relevant content and structures it according to the `Signature`'s output fields.
-8.  **Telemetry Stop:** A `:stop` telemetry event is emitted with duration and success metrics.
-9.  **Return Result:** The final, structured output map is returned to the user.
+•  **Initiation:** A user calls `DSPEx.Predict.forward` with a program instance and input data.
+•  **Telemetry Start:** The `Predict` module emits a `:start` telemetry event.
+•  **Format Request:** `Predict` calls `DSPEx.Adapter.format_messages`. The adapter uses the program's `Signature` and any few-shot `demos` to create a list of messages suitable for the LLM API.
+•  **Client Request:** The formatted messages are passed to `DSPEx.Client.request`.
+•  **API Call:** The `Client` (or `ClientManager`) handles the HTTP call to the external LLM provider (e.g., Gemini). It manages resilience patterns like circuit breaking and emits its own telemetry events.
+•  **Receive Response:** The `Client` receives the raw JSON response from the API.
+•  **Parse Response:** The `Predict` module passes the API response to `DSPEx.Adapter.parse_response`. The adapter extracts the relevant content and structures it according to the `Signature`'s output fields.
+•  **Telemetry Stop:** A `:stop` telemetry event is emitted with duration and success metrics.
+•  **Return Result:** The final, structured output map is returned to the user.
 
 ---
 
@@ -190,9 +190,9 @@ graph TD
     subgraph CEE["Concurrent Evaluation Engine"]
         A --> B["Task.async_stream<br/>(examples)"]
         B -- for each example --> C("Spawn Concurrent Task")
-        C --> D["1. DSPEx.Program.forward<br/>(program, example.inputs)"]
+        C --> D["DSPEx.Program.forward<br/>(program, example.inputs)"]
         D --> E["Prediction<br/>Result"]
-        C --> F["2. metric_fn<br/>(example, prediction)"]
+        C --> F["metric_fn<br/>(example, prediction)"]
         F --> G["Score<br/>(e.g., 1.0 or 0.0)"]
         E -- used by --> F
     end
@@ -222,14 +222,14 @@ graph TD
 ```
 
 **Workflow Description:**
-1.  **Initiation:** The user calls `DSPEx.Evaluate.run` with a `program` to test, a list of `examples` (each with inputs and expected outputs), and a `metric_fn`.
-2.  **Concurrency:** `Evaluate` uses `Task.async_stream` to process the list of examples in parallel, up to a configurable concurrency limit.
-3.  **Single Example Evaluation (per task):**
-    *   For each example, a task is spawned.
-    *   Inside the task, `DSPEx.Program.forward` is called with the example's inputs to get a `prediction`.
-    *   The `metric_fn` is then called with the original `example` and the new `prediction` to generate a quality `score`.
-4.  **Aggregation:** The main process collects the results (scores or errors) from all completed tasks.
-5.  **Final Report:** The collected scores are aggregated to produce a final `evaluation_result` map, containing the average score and detailed statistics like success rate, duration, and error counts.
+•  **Initiation:** The user calls `DSPEx.Evaluate.run` with a `program` to test, a list of `examples` (each with inputs and expected outputs), and a `metric_fn`.
+•  **Concurrency:** `Evaluate` uses `Task.async_stream` to process the list of examples in parallel, up to a configurable concurrency limit.
+•  **Single Example Evaluation (per task):**
+    •   For each example, a task is spawned.
+    •   Inside the task, `DSPEx.Program.forward` is called with the example's inputs to get a `prediction`.
+    •   The `metric_fn` is then called with the original `example` and the new `prediction` to generate a quality `score`.
+•  **Aggregation:** The main process collects the results (scores or errors) from all completed tasks.
+•  **Final Report:** The collected scores are aggregated to produce a final `evaluation_result` map, containing the average score and detailed statistics like success rate, duration, and error counts.
 
 ---
 
@@ -246,22 +246,22 @@ graph TD
         MF["Metric Function<br/>(fn(ex, pred) -> score)"]
     end
 
-    subgraph OPT["Optimization Process: BootstrapFewShot.compile"]
-        Start("Start") --> P1["1. Generate Candidates<br/>(Concurrent)"]
+    subgraph OPT["Optimization&nbsp;Process:&nbsp;BootstrapFewShot.compile"]
+        Start("Start") --> P1["Generate Candidates<br/>(Concurrent)"]
         P1 -- for each example in DS --> P1a["teacher.forward<br/>(example.inputs)"]
         P1a --> P1b[Create Demonstration Candidate]
         P1b --> Demos["Demonstration<br/>Candidates"]
 
-        Demos --> P2["2. Evaluate Demonstrations<br/>(Concurrent)"]
+        Demos --> P2["Evaluate Demonstrations<br/>(Concurrent)"]
         P2 -- for each demo --> P2a["metric_fn<br/>(demo, demo.outputs)"]
         P2a --> P2b["Score Demo"]
         P2b --> P2c["Filter by<br/>quality_threshold"]
         P2c --> QualityDemos["High-Quality Demos"]
         
-        QualityDemos --> P3["3. Select Best Demos"]
+        QualityDemos --> P3["Select Best Demos"]
         P3 -- sort by score, take N --> SelectedDemos["Selected Demos"]
 
-        SelectedDemos --> P4["4. Create Optimized Student"]
+        SelectedDemos --> P4["Create Optimized Student"]
         S --> P4
         P4 --> OptimizedStudent["Optimized Student Program<br/>(with new demos)"]
     end
@@ -285,11 +285,11 @@ graph TD
 ```
 
 **Workflow Description:**
-1.  **Inputs:** The `compile` function takes a `student` program (to be optimized), a more powerful `teacher` program, a `trainset` of examples, and a `metric_fn`.
-2.  **Generate Candidates:** The teleprompter iterates through the `trainset`. For each example, it uses the `teacher` program to generate a high-quality prediction. This input-output pair becomes a "demonstration candidate." This step is run concurrently.
-3.  **Evaluate Demonstrations:** Each demonstration candidate is evaluated using the `metric_fn`. Since the demonstration's outputs were generated by the teacher, they are treated as both the prediction and the expected output, effectively scoring the internal consistency and quality of the teacher's generation. Candidates that score below a `quality_threshold` are discarded.
-4.  **Select Best Demos:** The surviving high-quality demos are sorted by their score, and the top `N` (e.g., `max_bootstrapped_demos`) are selected.
-5.  **Create Optimized Student:** The selected demonstrations are attached to the `student` program, creating a new, optimized program. If the student program doesn't have a native `:demos` field, it's wrapped in `DSPEx.OptimizedProgram`.
+•  **Inputs:** The `compile` function takes a `student` program (to be optimized), a more powerful `teacher` program, a `trainset` of examples, and a `metric_fn`.
+•  **Generate Candidates:** The teleprompter iterates through the `trainset`. For each example, it uses the `teacher` program to generate a high-quality prediction. This input-output pair becomes a "demonstration candidate." This step is run concurrently.
+•  **Evaluate Demonstrations:** Each demonstration candidate is evaluated using the `metric_fn`. Since the demonstration's outputs were generated by the teacher, they are treated as both the prediction and the expected output, effectively scoring the internal consistency and quality of the teacher's generation. Candidates that score below a `quality_threshold` are discarded.
+•  **Select Best Demos:** The surviving high-quality demos are sorted by their score, and the top `N` (e.g., `max_bootstrapped_demos`) are selected.
+•  **Create Optimized Student:** The selected demonstrations are attached to the `student` program, creating a new, optimized program. If the student program doesn't have a native `:demos` field, it's wrapped in `DSPEx.OptimizedProgram`.
 
 ---
 
@@ -353,10 +353,10 @@ graph TD
 ```
 
 **Workflow Description:**
-1.  **Command:** The developer runs a test command like `mix test.mock` or `mix test.fallback`.
-2.  **Environment Setup:** The corresponding Mix task (`Mix.Tasks.Test.Mock`, etc.) sets the `DSPEX_TEST_MODE` environment variable.
-3.  **Mode Detection:** During the test run, `DSPEx.TestModeConfig` reads this environment variable to determine the active mode.
-4.  **Conditional Logic:** The `DSPEx.Client` and `ClientManager` modules query `TestModeConfig` and adjust their behavior accordingly:
-    *   **:mock:** All API calls are intercepted. A contextual mock response is generated locally without any network requests. This is the default, ensuring tests are fast and don't require credentials.
-    *   **:live:** The client attempts a real API call. If API keys are missing, the call (and thus the test) will fail. This is for strict integration testing.
-    *   **:fallback:** The client first checks for API keys. If present, it attempts a live API call. If not, it "seamlessly" falls back to the mock behavior, allowing tests to pass while still validating live integration when possible.
+•  **Command:** The developer runs a test command like `mix test.mock` or `mix test.fallback`.
+•  **Environment Setup:** The corresponding Mix task (`Mix.Tasks.Test.Mock`, etc.) sets the `DSPEX_TEST_MODE` environment variable.
+•  **Mode Detection:** During the test run, `DSPEx.TestModeConfig` reads this environment variable to determine the active mode.
+•  **Conditional Logic:** The `DSPEx.Client` and `ClientManager` modules query `TestModeConfig` and adjust their behavior accordingly:
+    •   **:mock:** All API calls are intercepted. A contextual mock response is generated locally without any network requests. This is the default, ensuring tests are fast and don't require credentials.
+    •   **:live:** The client attempts a real API call. If API keys are missing, the call (and thus the test) will fail. This is for strict integration testing.
+    •   **:fallback:** The client first checks for API keys. If present, it attempts a live API call. If not, it "seamlessly" falls back to the mock behavior, allowing tests to pass while still validating live integration when possible.
