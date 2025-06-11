@@ -10,6 +10,8 @@ defmodule DSPEx.Concurrent.TeleprompterStressTest do
 
   setup :verify_on_exit!
 
+  @moduletag :group_2
+
   @concurrency_level 25
   # @stress_operations 100
 

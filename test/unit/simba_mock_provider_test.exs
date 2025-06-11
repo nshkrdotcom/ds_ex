@@ -9,7 +9,7 @@ defmodule DSPEx.SimbaMockProviderTest do
 
   alias DSPEx.{Test.SimbaMockProvider, MockClientManager}
 
-  @moduletag :phase_2
+  @moduletag :group_2
 
   setup do
     # Clean up any existing mock state

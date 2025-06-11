@@ -18,7 +18,7 @@ defmodule DSPEx.Performance.RegressionBenchmarksTest do
 
   setup :verify_on_exit!
 
-  @moduletag :phase_2
+  @moduletag :group_2
   @moduletag :performance
   @moduletag :regression
 

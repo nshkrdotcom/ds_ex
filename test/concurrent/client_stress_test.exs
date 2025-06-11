@@ -6,6 +6,8 @@ defmodule DSPEx.Concurrent.ClientStressTest do
   """
   use ExUnit.Case, async: false
 
+  @moduletag :group_2
+
   @concurrency_level 50
   @stress_operations 200
 

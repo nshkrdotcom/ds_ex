@@ -7,7 +7,7 @@ defmodule DSPEx.EvaluationMetricsPropertyTest do
   use ExUnit.Case, async: true
   use PropCheck
 
-  @moduletag :phase_1
+  @moduletag :group_1
   @moduletag :property_tests
 
   # Property test generators

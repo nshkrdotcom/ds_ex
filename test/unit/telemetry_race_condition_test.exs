@@ -7,7 +7,7 @@ defmodule DSPEx.TelemetryRaceConditionTest do
   """
   use ExUnit.Case, async: false
 
-  @moduletag :phase_1
+  @moduletag :group_1
 
   require Logger
 

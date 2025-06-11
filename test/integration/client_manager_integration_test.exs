@@ -20,7 +20,7 @@ defmodule DSPEx.ClientManagerIntegrationTest do
   """
   use ExUnit.Case
 
-  @moduletag :phase_1
+  @moduletag :group_1
 
   alias DSPEx.{ClientManager, Predict, Program, MockHelpers}
 

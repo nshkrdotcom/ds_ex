@@ -20,7 +20,7 @@ defmodule DSPEx.Integration.FullOptimizationWorkflowTest do
 
   setup :verify_on_exit!
 
-  @moduletag :phase_2
+  @moduletag :group_2
   @moduletag :integration
 
   # Workflow test configuration

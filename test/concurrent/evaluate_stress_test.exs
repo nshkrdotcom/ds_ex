@@ -10,6 +10,8 @@ defmodule DSPEx.Concurrent.EvaluateStressTest do
 
   setup :verify_on_exit!
 
+  @moduletag :group_2
+
   @concurrency_level 50
   @stress_operations 200
 

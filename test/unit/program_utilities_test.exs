@@ -10,7 +10,7 @@ defmodule DSPEx.ProgramUtilitiesTest do
 
   alias DSPEx.{Program, Predict, OptimizedProgram, Example}
 
-  @moduletag :phase_2
+  @moduletag :group_2
 
   # Create test signature
   defmodule TestSignature do

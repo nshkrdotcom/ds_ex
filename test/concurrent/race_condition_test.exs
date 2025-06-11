@@ -6,7 +6,7 @@ defmodule DSPEx.RaceConditionTest do
   """
   use ExUnit.Case, async: false
 
-  @moduletag :phase_1
+  @moduletag :group_1
   @moduletag :race_conditions
 
   # Test programs designed to expose race conditions

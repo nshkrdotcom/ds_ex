@@ -18,6 +18,8 @@ Application.ensure_all_started(:propcheck)
 # Test configuration
 ExUnit.configure(
   exclude: [
+    :group_1,
+    :group_2,
     :live_api,
     :integration,
     :end_to_end,
