@@ -382,4 +382,54 @@ defmodule DSPEx.OptimizedProgramTest do
       assert updated.metadata.demo_count == 101
     end
 
-    test "handles nil and invalid metadata gracefully", %{program: program,
+    test "handles nil and invalid metadata gracefully", %{program: program, demos: demos} do
+      # Test with nil metadata
+      optimized = OptimizedProgram.new(program, demos, nil)
+      metadata = OptimizedProgram.get_metadata(optimized)
+
+      # Should have default metadata
+      assert metadata.demo_count == 2
+      assert %DateTime{} = metadata.optimized_at
+
+      # Test with invalid metadata types
+      optimized2 = OptimizedProgram.new(program, demos, "invalid metadata")
+      metadata2 = OptimizedProgram.get_metadata(optimized2)
+
+      # Should merge with defaults gracefully
+      assert is_map(metadata2)
+      assert metadata2.demo_count == 2
+    end
+
+    test "preserves program structure integrity", %{program: program, demos: demos} do
+      optimized = OptimizedProgram.new(program, demos)
+
+      # Original program should be unchanged
+      retrieved_program = OptimizedProgram.get_program(optimized)
+      assert retrieved_program == program
+      assert retrieved_program.signature == program.signature
+      assert retrieved_program.client == program.client
+
+      # Modifications to optimized shouldn't affect original
+      OptimizedProgram.add_demos(optimized, [%Example{data: %{new: "demo"}, input_keys: MapSet.new()}])
+      assert OptimizedProgram.get_program(optimized) == program  # Still unchanged
+    end
+
+    test "handles concurrent access patterns", %{program: program} do
+      optimized = OptimizedProgram.new(program, [])
+
+      # Simulate concurrent demo additions
+      tasks = Task.async_stream(1..10, fn i ->
+        demo = %Example{
+          data: %{question: "Concurrent #{i}", answer: "Answer #{i}"},
+          input_keys: MapSet.new([:question])
+        }
+        OptimizedProgram.add_demos(optimized, [demo])
+      end)
+      |> Enum.to_list()
+
+      # All operations should complete successfully
+      assert length(tasks) == 10
+      assert Enum.all?(tasks, fn {:ok, result} -> is_struct(result, OptimizedProgram) end)
+    end
+  end
+end
