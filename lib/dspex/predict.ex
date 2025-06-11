@@ -84,10 +84,11 @@ defmodule DSPEx.Predict do
 
   def forward(program, inputs, opts) when is_struct(program, __MODULE__) do
     # Only generate correlation_id if not provided - avoid expensive UUID generation
-    correlation_id = case Keyword.get(opts, :correlation_id) do
-      nil -> Foundation.Utils.generate_correlation_id()
-      existing_id -> existing_id
-    end
+    correlation_id =
+      case Keyword.get(opts, :correlation_id) do
+        nil -> Foundation.Utils.generate_correlation_id()
+        existing_id -> existing_id
+      end
 
     with {:ok, messages} <- format_messages(program, inputs, correlation_id),
          {:ok, response} <- make_request(program, messages, opts, correlation_id),
@@ -243,10 +244,11 @@ defmodule DSPEx.Predict do
           {:ok, outputs()} | {:error, atom()}
   def predict(signature, inputs, options) do
     # Only generate correlation_id if not provided - avoid expensive UUID generation
-    correlation_id = case Map.get(options, :correlation_id) do
-      nil -> Foundation.Utils.generate_correlation_id()
-      existing_id -> existing_id
-    end
+    correlation_id =
+      case Map.get(options, :correlation_id) do
+        nil -> Foundation.Utils.generate_correlation_id()
+        existing_id -> existing_id
+      end
 
     # Start prediction telemetry
     start_time = System.monotonic_time()
@@ -317,10 +319,11 @@ defmodule DSPEx.Predict do
           {:ok, any()} | {:error, atom()}
   def predict_field(signature, inputs, output_field, options) do
     # Only generate correlation_id if not provided - avoid expensive UUID generation
-    correlation_id = case Map.get(options, :correlation_id) do
-      nil -> Foundation.Utils.generate_correlation_id()
-      existing_id -> existing_id
-    end
+    correlation_id =
+      case Map.get(options, :correlation_id) do
+        nil -> Foundation.Utils.generate_correlation_id()
+        existing_id -> existing_id
+      end
 
     case forward(signature, inputs, Map.put(options, :correlation_id, correlation_id)) do
       {:ok, outputs} ->

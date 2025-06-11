@@ -82,10 +82,11 @@ defmodule DSPEx.Program do
   @spec forward(program(), inputs(), options()) :: {:ok, outputs()} | {:error, term()}
   def forward(program, inputs, opts) when is_map(inputs) do
     # Only generate correlation_id if not provided - major optimization
-    correlation_id = case Keyword.get(opts, :correlation_id) do
-      nil -> Utils.generate_correlation_id()
-      existing_id -> existing_id
-    end
+    correlation_id =
+      case Keyword.get(opts, :correlation_id) do
+        nil -> Utils.generate_correlation_id()
+        existing_id -> existing_id
+      end
 
     # Cache program name to avoid repeated Module.split operations
     program_name = program_name(program)
