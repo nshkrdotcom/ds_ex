@@ -17,6 +17,7 @@ defmodule DSPEx.Services.TelemetrySetup do
   @doc """
   Initializes the telemetry setup service.
   """
+  @impl GenServer
   @spec init(term()) :: {:ok, map()}
   def init(_opts) do
     # Wait for Foundation to be ready
@@ -77,6 +78,7 @@ defmodule DSPEx.Services.TelemetrySetup do
     :ok
   end
 
+  @impl GenServer
   @spec handle_info(term(), map()) :: {:noreply, map()}
   def handle_info(:prepare_for_shutdown, state) do
     Logger.debug("DSPEx Telemetry: Preparing for graceful shutdown")
@@ -87,6 +89,7 @@ defmodule DSPEx.Services.TelemetrySetup do
     {:noreply, %{state | telemetry_active: false, handlers_attached: false}}
   end
 
+  @impl GenServer
   def handle_info(_msg, state) do
     {:noreply, state}
   end
@@ -106,6 +109,7 @@ defmodule DSPEx.Services.TelemetrySetup do
     :ok
   end
 
+  @impl GenServer
   @spec terminate(term(), map()) :: :ok
   def terminate(_reason, state) do
     if state[:handlers_attached] do
@@ -435,4 +439,11 @@ defmodule DSPEx.Services.TelemetrySetup do
       "Unhandled DSPEx telemetry event: #{inspect(event)}, metadata: #{inspect(metadata)}"
     )
   end
+
+  # Required GenServer callbacks for complete implementation
+  @impl GenServer
+  def handle_call(_msg, _from, state), do: {:reply, :ok, state}
+
+  @impl GenServer
+  def handle_cast(_msg, state), do: {:noreply, state}
 end

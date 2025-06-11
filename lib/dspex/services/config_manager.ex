@@ -18,6 +18,7 @@ defmodule DSPEx.Services.ConfigManager do
   @doc """
   Initializes the configuration manager.
   """
+  @impl GenServer
   @spec init(term()) :: {:ok, map()}
   def init(_opts) do
     # Wait for Foundation to be ready
@@ -157,6 +158,7 @@ defmodule DSPEx.Services.ConfigManager do
     end
   end
 
+  @impl GenServer
   @spec handle_call({:get_config, list(atom())}, GenServer.from(), map()) ::
           {:reply, {:ok, term()} | :error, map()}
   def handle_call({:get_config, path}, _from, %{fallback_config: config} = state) do
@@ -254,4 +256,14 @@ defmodule DSPEx.Services.ConfigManager do
 
     :ok
   end
+
+  # Required GenServer callbacks for complete implementation
+  @impl GenServer
+  def handle_cast(_msg, state), do: {:noreply, state}
+
+  @impl GenServer
+  def handle_info(_msg, state), do: {:noreply, state}
+
+  @impl GenServer
+  def terminate(_reason, _state), do: :ok
 end
