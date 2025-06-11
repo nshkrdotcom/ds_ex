@@ -371,20 +371,51 @@ defmodule DSPEx.ClientManager do
         fallback_to_mock_response(messages, state.provider, correlation_id, "pure_mock_mode")
 
       :allow_api ->
-        # Fallback or live mode - attempt API calls
-        with {:ok, request_body} <- build_request_body(messages, options, state.config),
-             {:ok, http_response} <-
-               make_http_request(request_body, state.config, correlation_id),
-             {:ok, parsed_response} <- parse_response(http_response, state.provider) do
-          {:ok, parsed_response}
-        else
-          {:error, :no_api_key} ->
-            # Seamless fallback to mock response when no API key is available
-            fallback_to_mock_response(messages, state.provider, correlation_id, "no_api_key")
+        # Execute through circuit breaker for resilience
+        circuit_breaker_name = :"dspex_client_#{state.provider}"
 
-          {:error, reason} ->
-            {:error, reason}
-        end
+        # Execute request through circuit breaker protection
+        execute_with_circuit_breaker(circuit_breaker_name, fn ->
+          # Build and execute request within circuit breaker protection
+          with {:ok, request_body} <- build_request_body(messages, options, state.config),
+               {:ok, http_response} <-
+                 make_http_request(request_body, state.config, correlation_id),
+               {:ok, parsed_response} <- parse_response(http_response, state.provider) do
+            {:ok, parsed_response}
+          else
+            {:error, :no_api_key} ->
+              # Seamless fallback to mock response when no API key is available
+              fallback_to_mock_response(
+                messages,
+                state.provider,
+                correlation_id,
+                "no_api_key"
+              )
+
+            {:error, reason} ->
+              {:error, reason}
+          end
+        end)
+    end
+  end
+
+  # Circuit breaker integration
+
+  @spec execute_with_circuit_breaker(atom(), fun()) :: {:ok, term()} | {:error, term()}
+  defp execute_with_circuit_breaker(circuit_breaker_name, function) do
+    # For now, execute directly with circuit breaker preparation
+    # This prepares the infrastructure for future Foundation circuit breaker integration
+    try do
+      result = function.()
+
+      # Log that circuit breaker is being bypassed (temporary)
+      Logger.debug("Executing request for #{circuit_breaker_name} (circuit breaker bypassed)")
+
+      result
+    rescue
+      error ->
+        Logger.error("Request execution failed for #{circuit_breaker_name}: #{inspect(error)}")
+        {:error, :execution_failed}
     end
   end
 

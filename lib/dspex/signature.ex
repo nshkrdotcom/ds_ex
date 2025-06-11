@@ -52,6 +52,212 @@ defmodule DSPEx.Signature do
   @callback fields() :: [atom()]
 
   @doc """
+  Extends a signature with additional fields, creating a new signature module.
+
+  This is primarily used for ChainOfThought patterns where base signatures
+  need additional reasoning fields.
+
+  ## Parameters
+  - `base_signature` - The module implementing DSPEx.Signature to extend
+  - `additional_fields` - Map of field names to types/descriptions
+
+  ## Returns
+  - `{:ok, module()}` - New signature module with extended fields
+  - `{:error, term()}` - Error if extension fails
+
+  ## Examples
+
+      {:ok, extended} = DSPEx.Signature.extend(
+        QASignature, 
+        %{reasoning: :text, confidence: :float}
+      )
+      
+      # Can now use extended signature with reasoning field
+      result = extended.new(%{question: "What is 2+2?", reasoning: "Basic math", answer: "4"})
+  """
+  @spec extend(module(), map()) :: {:ok, module()} | {:error, term()}
+  def extend(base_signature, additional_fields)
+      when is_atom(base_signature) and is_map(additional_fields) do
+    try do
+      # Validate base signature implements behavior
+      unless Code.ensure_loaded?(base_signature) and
+               function_exported?(base_signature, :input_fields, 0) and
+               function_exported?(base_signature, :output_fields, 0) and
+               function_exported?(base_signature, :instructions, 0) do
+        raise ArgumentError, "Base module must implement DSPEx.Signature behavior"
+      end
+
+      # Get existing fields from base signature
+      base_inputs = base_signature.input_fields()
+      base_outputs = base_signature.output_fields()
+      base_instructions = base_signature.instructions()
+
+      # Process additional fields
+      {new_inputs, new_outputs} =
+        categorize_additional_fields(additional_fields, base_inputs, base_outputs)
+
+      # Create extended field lists
+      extended_inputs = base_inputs ++ new_inputs
+      extended_outputs = base_outputs ++ new_outputs
+      all_extended_fields = extended_inputs ++ extended_outputs
+
+      # Generate unique module name based on base signature and extension
+      module_name = generate_extended_module_name(base_signature, additional_fields)
+
+      # Create new signature string for the extended signature
+      _extended_signature_string = create_signature_string(extended_inputs, extended_outputs)
+
+      # Create the extended module definition
+      module_definition =
+        create_extended_module(
+          module_name,
+          base_instructions,
+          extended_inputs,
+          extended_outputs,
+          all_extended_fields
+        )
+
+      # Compile and load the new module
+      {_result, _binding} = Code.eval_quoted(module_definition)
+
+      {:ok, module_name}
+    rescue
+      error ->
+        {:error, error}
+    end
+  end
+
+  @doc """
+  Gets information about a specific field in a signature.
+
+  ## Parameters
+  - `signature` - The signature module
+  - `field` - The field name as an atom
+
+  ## Returns
+  - `{:ok, map()}` - Field information including type and category
+  - `{:error, :field_not_found}` - If field doesn't exist
+  """
+  @spec get_field_info(module(), atom()) :: {:ok, map()} | {:error, :field_not_found}
+  def get_field_info(signature, field) when is_atom(signature) and is_atom(field) do
+    cond do
+      field in signature.input_fields() ->
+        {:ok, %{name: field, type: :input, category: :input}}
+
+      field in signature.output_fields() ->
+        {:ok, %{name: field, type: :output, category: :output}}
+
+      true ->
+        {:error, :field_not_found}
+    end
+  end
+
+  # Private helper functions for signature extension
+
+  @spec categorize_additional_fields(map(), [atom()], [atom()]) :: {[atom()], [atom()]}
+  defp categorize_additional_fields(additional_fields, base_inputs, base_outputs) do
+    # For now, assume all additional fields are outputs unless specified
+    # This is the most common case for ChainOfThought (adding reasoning fields)
+    new_field_names = Map.keys(additional_fields)
+
+    # Check for conflicts with existing fields
+    existing_fields = base_inputs ++ base_outputs
+    conflicts = Enum.filter(new_field_names, &(&1 in existing_fields))
+
+    if not Enum.empty?(conflicts) do
+      raise ArgumentError, "Field name conflicts: #{inspect(conflicts)}"
+    end
+
+    # For simplicity, add all new fields as outputs
+    # Future enhancement could allow specifying input vs output
+    {[], new_field_names}
+  end
+
+  @spec generate_extended_module_name(module(), map()) :: atom()
+  defp generate_extended_module_name(base_signature, additional_fields) do
+    base_name = base_signature |> Module.split() |> List.last()
+    field_hash = additional_fields |> inspect() |> :erlang.phash2() |> Integer.to_string()
+
+    :"#{base_name}Extended#{field_hash}"
+  end
+
+  @spec create_signature_string([atom()], [atom()]) :: String.t()
+  defp create_signature_string(inputs, outputs) do
+    inputs_str = inputs |> Enum.map(&Atom.to_string/1) |> Enum.join(", ")
+    outputs_str = outputs |> Enum.map(&Atom.to_string/1) |> Enum.join(", ")
+
+    "#{inputs_str} -> #{outputs_str}"
+  end
+
+  @spec create_extended_module(atom(), String.t(), [atom()], [atom()], [atom()]) :: Macro.t()
+  defp create_extended_module(module_name, base_instructions, inputs, outputs, all_fields) do
+    quote do
+      defmodule unquote(module_name) do
+        @behaviour DSPEx.Signature
+
+        # Create struct with all fields
+        defstruct unquote(all_fields |> Enum.map(&{&1, nil}))
+
+        # Define type specification
+        @type t :: %__MODULE__{
+                unquote_splicing(
+                  all_fields
+                  |> Enum.map(fn field ->
+                    {field, quote(do: any())}
+                  end)
+                )
+              }
+
+        # Store field information
+        @instructions unquote(base_instructions)
+        @input_fields unquote(inputs)
+        @output_fields unquote(outputs)
+        @all_fields unquote(all_fields)
+
+        # Implement behavior callbacks
+        @impl DSPEx.Signature
+        def instructions(), do: @instructions
+
+        @impl DSPEx.Signature
+        def input_fields(), do: @input_fields
+
+        @impl DSPEx.Signature
+        def output_fields(), do: @output_fields
+
+        @impl DSPEx.Signature
+        def fields(), do: @all_fields
+
+        # Helper functions
+        def new(fields \\ %{}) when is_map(fields) do
+          struct(__MODULE__, fields)
+        end
+
+        def validate_inputs(inputs) when is_map(inputs) do
+          required_inputs = MapSet.new(@input_fields)
+          provided_inputs = MapSet.new(Map.keys(inputs))
+          missing = MapSet.difference(required_inputs, provided_inputs)
+
+          case MapSet.size(missing) do
+            0 -> :ok
+            _ -> {:error, {:missing_inputs, MapSet.to_list(missing)}}
+          end
+        end
+
+        def validate_outputs(outputs) when is_map(outputs) do
+          required_outputs = MapSet.new(@output_fields)
+          provided_outputs = MapSet.new(Map.keys(outputs))
+          missing = MapSet.difference(required_outputs, provided_outputs)
+
+          case MapSet.size(missing) do
+            0 -> :ok
+            _ -> {:error, {:missing_outputs, MapSet.to_list(missing)}}
+          end
+        end
+      end
+    end
+  end
+
+  @doc """
   Defines a DSPEx signature with the given signature string.
 
   The signature string follows the format: "input1, input2 -> output1, output2"

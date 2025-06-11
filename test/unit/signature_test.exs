@@ -171,4 +171,118 @@ defmodule DSPEx.SignatureTest do
       end
     end
   end
+
+  describe "DSPEx.Signature.extend/2" do
+    defmodule QASignature do
+      @moduledoc "Answer questions with detailed reasoning"
+      use DSPEx.Signature, "question -> answer"
+    end
+
+    test "extends a signature with additional output fields" do
+      # Test extending QASignature with reasoning field
+      {:ok, extended_signature} = DSPEx.Signature.extend(QASignature, %{reasoning: :text})
+
+      # Verify the extended signature has all fields
+      assert :question in extended_signature.input_fields()
+      assert :answer in extended_signature.output_fields()
+      assert :reasoning in extended_signature.output_fields()
+
+      # Verify it can create structs with new field
+      instance =
+        extended_signature.new(%{
+          question: "What is 2+2?",
+          answer: "4",
+          reasoning: "Basic arithmetic"
+        })
+
+      assert instance.question == "What is 2+2?"
+      assert instance.answer == "4"
+      assert instance.reasoning == "Basic arithmetic"
+    end
+
+    test "extends signature with multiple additional fields" do
+      {:ok, extended} =
+        DSPEx.Signature.extend(QASignature, %{
+          reasoning: :text,
+          confidence: :float,
+          sources: :list
+        })
+
+      # Verify all new fields are in outputs
+      assert :reasoning in extended.output_fields()
+      assert :confidence in extended.output_fields()
+      assert :sources in extended.output_fields()
+
+      # Original fields still present
+      assert :question in extended.input_fields()
+      assert :answer in extended.output_fields()
+    end
+
+    test "returns error for conflicting field names" do
+      # Try to add field that already exists
+      {:error, error} = DSPEx.Signature.extend(QASignature, %{question: :text})
+
+      assert error.__struct__ == ArgumentError
+      assert error.message =~ "Field name conflicts"
+    end
+
+    test "returns error for non-signature module" do
+      {:error, error} = DSPEx.Signature.extend(String, %{new_field: :text})
+
+      assert error.__struct__ == ArgumentError
+      assert error.message =~ "must implement DSPEx.Signature behavior"
+    end
+
+    test "extended signature maintains original instructions" do
+      {:ok, extended} = DSPEx.Signature.extend(QASignature, %{reasoning: :text})
+
+      # Should maintain the original instructions
+      assert extended.instructions() == QASignature.instructions()
+    end
+
+    test "extended signature validation works correctly" do
+      {:ok, extended} = DSPEx.Signature.extend(QASignature, %{reasoning: :text})
+
+      # Valid inputs
+      assert :ok == extended.validate_inputs(%{question: "test"})
+
+      # Invalid inputs (missing required)
+      {:error, {:missing_inputs, missing}} = extended.validate_inputs(%{})
+      assert :question in missing
+
+      # Valid outputs
+      assert :ok == extended.validate_outputs(%{answer: "test", reasoning: "because"})
+
+      # Invalid outputs (missing required)
+      {:error, {:missing_outputs, missing}} = extended.validate_outputs(%{answer: "test"})
+      assert :reasoning in missing
+    end
+  end
+
+  describe "DSPEx.Signature.get_field_info/2" do
+    defmodule FieldInfoTestSig do
+      use DSPEx.Signature, "question -> answer"
+    end
+
+    test "returns field information for input fields" do
+      {:ok, info} = DSPEx.Signature.get_field_info(FieldInfoTestSig, :question)
+
+      assert info.name == :question
+      assert info.type == :input
+      assert info.category == :input
+    end
+
+    test "returns field information for output fields" do
+      {:ok, info} = DSPEx.Signature.get_field_info(FieldInfoTestSig, :answer)
+
+      assert info.name == :answer
+      assert info.type == :output
+      assert info.category == :output
+    end
+
+    test "returns error for non-existent fields" do
+      assert {:error, :field_not_found} ==
+               DSPEx.Signature.get_field_info(FieldInfoTestSig, :nonexistent)
+    end
+  end
 end
