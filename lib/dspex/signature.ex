@@ -117,6 +117,12 @@ defmodule DSPEx.Signature do
           all_extended_fields
         )
 
+      # Check if module already exists and purge it if necessary
+      if Code.ensure_loaded?(module_name) do
+        :code.purge(module_name)
+        :code.delete(module_name)
+      end
+
       # Compile and load the new module
       {_result, _binding} = Code.eval_quoted(module_definition)
 
@@ -175,10 +181,14 @@ defmodule DSPEx.Signature do
 
   @spec generate_extended_module_name(module(), map()) :: atom()
   defp generate_extended_module_name(base_signature, additional_fields) do
-    base_name = base_signature |> Module.split() |> List.last()
+    # Use full module name instead of just the last part to avoid conflicts
+    full_base_name = base_signature |> Module.split() |> Enum.join(".")
     field_hash = additional_fields |> inspect() |> :erlang.phash2() |> Integer.to_string()
+    # Add timestamp and random component to ensure uniqueness across test runs
+    timestamp = System.system_time(:microsecond) |> Integer.to_string()
+    random_suffix = :rand.uniform(999_999) |> Integer.to_string()
 
-    :"#{base_name}Extended#{field_hash}"
+    :"#{full_base_name}.Extended.#{field_hash}.#{timestamp}.#{random_suffix}"
   end
 
   @spec create_signature_string([atom()], [atom()]) :: String.t()
