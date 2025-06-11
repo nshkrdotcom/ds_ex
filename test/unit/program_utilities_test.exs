@@ -349,6 +349,7 @@ defmodule DSPEx.ProgramUtilitiesTest do
   end
 
   describe "performance characteristics" do
+    @tag :todo_optimize
     test "program_name/1 is efficient for repeated calls" do
       program = %Predict{signature: TestSignature, client: :test}
 
