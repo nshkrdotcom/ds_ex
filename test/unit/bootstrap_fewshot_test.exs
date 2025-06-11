@@ -112,8 +112,8 @@ defmodule DSPEx.Teleprompter.BootstrapFewShotTest do
       {:ok, optimized} =
         BootstrapFewShot.compile(teleprompter, student, teacher, trainset, metric_fn, [])
 
-      # Should have updated the student with demos
-      assert %MockStudentProgram{demos: demos} = optimized
+      # Should have wrapped student in OptimizedProgram with demos
+      assert %DSPEx.OptimizedProgram{program: %MockStudentProgram{}, demos: demos} = optimized
       assert is_list(demos)
       assert length(demos) <= 2
 
@@ -143,8 +143,8 @@ defmodule DSPEx.Teleprompter.BootstrapFewShotTest do
           quality_threshold: 0.5
         )
 
-      # Should have updated the student with demos
-      assert %MockStudentProgram{demos: demos} = optimized
+      # Should have wrapped student in OptimizedProgram with demos
+      assert %DSPEx.OptimizedProgram{program: %MockStudentProgram{}, demos: demos} = optimized
       assert is_list(demos)
       assert length(demos) <= 2
     end
@@ -244,7 +244,7 @@ defmodule DSPEx.Teleprompter.BootstrapFewShotTest do
         )
 
       # Should have no demos due to quality threshold
-      assert %MockStudentProgram{demos: []} = optimized
+      assert %DSPEx.OptimizedProgram{program: %MockStudentProgram{}, demos: []} = optimized
     end
 
     test "limits number of demonstrations", %{
@@ -263,7 +263,7 @@ defmodule DSPEx.Teleprompter.BootstrapFewShotTest do
           max_bootstrapped_demos: 1
         )
 
-      assert %MockStudentProgram{demos: demos} = optimized
+      assert %DSPEx.OptimizedProgram{program: %MockStudentProgram{}, demos: demos} = optimized
       assert length(demos) <= 1
     end
   end
@@ -317,7 +317,7 @@ defmodule DSPEx.Teleprompter.BootstrapFewShotTest do
         )
 
       # Should still succeed but with no demos
-      assert %MockStudentProgram{demos: []} = optimized
+      assert %DSPEx.OptimizedProgram{program: %MockStudentProgram{}, demos: []} = optimized
     end
 
     test "handles concurrent processing limits", %{
@@ -338,7 +338,7 @@ defmodule DSPEx.Teleprompter.BootstrapFewShotTest do
         )
 
       # Should still work with limited concurrency
-      assert %MockStudentProgram{demos: demos} = optimized
+      assert %DSPEx.OptimizedProgram{program: %MockStudentProgram{}, demos: demos} = optimized
       assert is_list(demos)
     end
   end

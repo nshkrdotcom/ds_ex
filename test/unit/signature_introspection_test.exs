@@ -10,6 +10,8 @@ defmodule DSPEx.SignatureIntrospectionTest do
 
   alias DSPEx.Signature
 
+  @moduletag :phase_2
+
   # Create test signatures
   defmodule SimpleSignature do
     use DSPEx.Signature, "question -> answer"

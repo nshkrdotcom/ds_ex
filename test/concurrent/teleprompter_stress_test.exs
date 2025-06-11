@@ -594,15 +594,15 @@ defmodule DSPEx.Concurrent.TeleprompterStressTest do
       # At least 70% as fast, ideally faster
       assert speedup_ratio >= 0.7
 
-      # Both should produce valid optimized programs (MockStudentProgram with demos)
-      assert %MockStudentProgram{demos: seq_demos} = sequential_result
-      assert %MockStudentProgram{demos: conc_demos} = concurrent_result
+      # Both should produce valid optimized programs (OptimizedProgram with demos)
+      assert %DSPEx.OptimizedProgram{program: seq_program, demos: seq_demos} = sequential_result
+      assert %DSPEx.OptimizedProgram{program: conc_program, demos: conc_demos} = concurrent_result
       assert length(seq_demos) > 0
       assert length(conc_demos) > 0
 
-      # Verify both are enhanced properly
-      assert sequential_result.id == :pipeline_student
-      assert concurrent_result.id == :pipeline_student
+      # Verify both wrapped programs are enhanced properly
+      assert %MockStudentProgram{id: :pipeline_student} = seq_program
+      assert %MockStudentProgram{id: :pipeline_student} = conc_program
     end
 
     test "optimization handles mixed success/failure scenarios" do
@@ -644,13 +644,16 @@ defmodule DSPEx.Concurrent.TeleprompterStressTest do
         )
 
       # Should complete despite failures
-      assert %MockStudentProgram{demos: demos} = optimized_program
+      assert %DSPEx.OptimizedProgram{program: program, demos: demos} = optimized_program
 
       # Should have some demos (those that succeeded)
       assert length(demos) > 0
 
+      # Verify wrapped program integrity
+      assert %MockStudentProgram{id: :fault_tolerant_student} = program
+
       # All included demos should meet quality threshold
-      for demo <- optimized_program.demos do
+      for demo <- demos do
         # Demo should be valid
         assert is_map(demo)
       end
@@ -702,11 +705,12 @@ defmodule DSPEx.Concurrent.TeleprompterStressTest do
       assert length(integrity_results) == 10
 
       for {_iteration, optimized_program, test_result} <- integrity_results do
-        # Program should be properly optimized (MockStudentProgram with demos)
-        assert %MockStudentProgram{demos: demos} = optimized_program
+        # Program should be properly optimized (OptimizedProgram wrapping MockStudentProgram)
+        assert %DSPEx.OptimizedProgram{program: program, demos: demos} = optimized_program
 
-        # Should have the original student's ID
-        assert optimized_program.id == original_student.id
+        # Should have the original student's ID in wrapped program
+        assert %MockStudentProgram{id: id} = program
+        assert id == original_student.id
 
         # Should have demos
         assert length(demos) > 0
@@ -762,9 +766,10 @@ defmodule DSPEx.Concurrent.TeleprompterStressTest do
       final_memory = :erlang.memory(:total)
       final_processes = :erlang.system_info(:process_count)
 
-      # Should complete successfully (MockStudentProgram with demos)
-      assert %MockStudentProgram{demos: demos} = optimized_program
+      # Should complete successfully (OptimizedProgram with demos)
+      assert %DSPEx.OptimizedProgram{program: program, demos: demos} = optimized_program
       assert length(demos) > 0
+      assert %MockStudentProgram{id: :resource_student} = program
 
       # Resource usage should be reasonable
       memory_growth = final_memory - initial_memory
@@ -819,9 +824,10 @@ defmodule DSPEx.Concurrent.TeleprompterStressTest do
       # Under 30 seconds
       assert duration_ms < 30_000
 
-      # Should produce valid optimized program (MockStudentProgram with demos)
-      assert %MockStudentProgram{demos: demos} = optimized_program
+      # Should produce valid optimized program (OptimizedProgram with demos)
+      assert %DSPEx.OptimizedProgram{program: program, demos: demos} = optimized_program
       assert length(demos) > 0
+      assert %MockStudentProgram{id: :efficiency_student} = program
     end
 
     test "concurrent optimizations don't interfere" do
@@ -885,12 +891,13 @@ defmodule DSPEx.Concurrent.TeleprompterStressTest do
 
       # Verify isolation - each optimization should be independent
       for {opt_id, optimized_program, test_result} <- optimization_results do
-        # Should be properly optimized (MockStudentProgram with demos)
-        assert %MockStudentProgram{demos: demos} = optimized_program
+        # Should be properly optimized (OptimizedProgram with demos)
+        assert %DSPEx.OptimizedProgram{program: program, demos: demos} = optimized_program
 
         # Should contain the correct original student
         original_student = Enum.at(students, opt_id - 1)
-        assert optimized_program.id == original_student.id
+        assert %MockStudentProgram{id: id} = program
+        assert id == original_student.id
 
         # Should respond correctly
         assert Map.get(test_result, :student_id) == original_student.id

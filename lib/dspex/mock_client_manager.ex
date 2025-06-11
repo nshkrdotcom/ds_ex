@@ -193,8 +193,36 @@ defmodule DSPEx.MockClientManager do
   end
 
   defp generate_success_response(messages, :contextual) do
-    # Generate contextual responses based on message content
-    response_content = generate_contextual_response(messages)
+    # Check if there are predefined responses for this provider first
+    # Try multiple provider keys as fallback
+    {provider_responses, used_provider} =
+      [:gemini, :openai, :gpt4, :gpt3_5, :teacher, :student]
+      |> Enum.find_value({[], nil}, fn provider ->
+        responses = :persistent_term.get({:mock_responses, provider}, [])
+        if Enum.empty?(responses), do: nil, else: {responses, provider}
+      end)
+
+    response_content =
+      if Enum.empty?(provider_responses) do
+        IO.puts("🔍 MockClientManager: No preset responses found, using contextual")
+        # Generate contextual responses based on message content
+        generate_contextual_response(messages)
+      else
+        IO.puts(
+          "🔍 MockClientManager: Using preset responses from #{used_provider} (#{length(provider_responses)} available)"
+        )
+
+        # Use predefined responses, cycling through them
+        index = rem(:rand.uniform(1000), length(provider_responses))
+        response = Enum.at(provider_responses, index)
+
+        case response do
+          %{content: content} -> content
+          content when is_binary(content) -> content
+          _ -> generate_contextual_response(messages)
+        end
+      end
+
     # Return in the same format as real API responses
     {:ok,
      %{
@@ -267,10 +295,28 @@ defmodule DSPEx.MockClientManager do
   defp generate_contextual_response_for_content(content) do
     content_lower = String.downcase(content)
 
+    # Debug: Log what content we're processing
+    # IO.puts("🔍 MockClientManager fallback for content: #{inspect(String.slice(content, 0, 100))}")
+
     cond do
-      # Math questions
+      # Math questions - provide realistic answers
       String.contains?(content_lower, ["2+2", "2 + 2", "what is 2+2"]) ->
         "4"
+
+      String.contains?(content_lower, ["3+3", "3 + 3", "what is 3+3"]) ->
+        "6"
+
+      String.contains?(content_lower, ["25% of 80", "25 percent of 80"]) ->
+        "20"
+
+      String.contains?(content_lower, ["15 apples", "sells 7", "gets 8"]) ->
+        "Starting with 15 apples. After selling 7: 15 - 7 = 8 apples. After getting 8 more: 8 + 8 = 16 apples. The answer is 16."
+
+      String.contains?(content_lower, ["apples", "selling", "getting"]) ->
+        "16"
+
+      String.contains?(content_lower, ["reasoning", "step-by-step", "chain of thought"]) ->
+        "Let me think step by step. First, I need to identify the problem. Then I'll work through each part systematically to reach the correct answer."
 
       String.contains?(content_lower, ["math", "calculate", "sum", "add"]) ->
         "42"
@@ -281,6 +327,14 @@ defmodule DSPEx.MockClientManager do
 
       String.contains?(content_lower, ["capital of", "capital"]) ->
         "The capital city (mock response)"
+
+      # Question answering patterns
+      String.contains?(content_lower, ["question:", "answer:", "qa"]) ->
+        generate_qa_response(content)
+
+      # Chain of thought patterns
+      String.contains?(content_lower, ["reasoning:", "think step", "step by step"]) ->
+        generate_cot_response(content)
 
       # Greetings
       String.contains?(content_lower, ["hello", "hi", "hey"]) ->
@@ -305,6 +359,53 @@ defmodule DSPEx.MockClientManager do
       # Empty content
       true ->
         "Mock response for empty or unrecognized input"
+    end
+  end
+
+  defp generate_qa_response(content) do
+    cond do
+      String.contains?(content, "2+2") ->
+        "4"
+
+      String.contains?(content, "3+3") ->
+        "6"
+
+      String.contains?(content, "capital of France") ->
+        "Paris"
+
+      String.contains?(content, "apples") and String.contains?(content, "reasoning") ->
+        "Starting with 15 apples. After selling 7: 15 - 7 = 8 apples. After getting 8 more: 8 + 8 = 16 apples.\n16"
+
+      String.contains?(content, "apples") ->
+        "16"
+
+      String.contains?(content, "rectangle") and String.contains?(content, "area") ->
+        "Area of rectangle = length × width. Area = 8 × 5 = 40.\n40"
+
+      String.contains?(content, "books") and String.contains?(content, "cost") ->
+        "3 books cost $15 total. Cost per book = $15 ÷ 3 = $5.\n$5"
+
+      true ->
+        "This is a mock answer for testing."
+    end
+  end
+
+  defp generate_cot_response(content) do
+    cond do
+      String.contains?(content, "apples") ->
+        "Starting with 15 apples. After selling 7: 15 - 7 = 8 apples. After getting 8 more: 8 + 8 = 16 apples.\n16"
+
+      String.contains?(content, "25%") ->
+        "25% means 25/100 or 0.25. To find 25% of 80: 80 × 0.25 = 20.\n20"
+
+      String.contains?(content, "rectangle") ->
+        "Area of rectangle = length × width. Area = 8 × 5 = 40.\n40"
+
+      String.contains?(content, "books") ->
+        "3 books cost $15 total. Cost per book = $15 ÷ 3 = $5.\n$5"
+
+      true ->
+        "Let me think about this step by step. First, I'll analyze the problem, then work through each component to reach a logical conclusion.\nGeneric answer"
     end
   end
 

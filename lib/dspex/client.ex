@@ -216,7 +216,7 @@ defmodule DSPEx.Client do
       |> Enum.find(&(&1.role == "user"))
       |> Map.get(:content, "")
 
-    mock_response = generate_contextual_mock_response(user_message)
+    mock_response = get_preset_or_contextual_response(provider, user_message)
 
     # Return in the same format as a real API response
     {:ok,
@@ -225,6 +225,32 @@ defmodule DSPEx.Client do
          %{message: %{role: "assistant", content: mock_response}}
        ]
      }}
+  end
+
+  # Check for preset responses first, then fall back to contextual responses
+  defp get_preset_or_contextual_response(provider, content) do
+    # Try to get preset responses from MockClientManager
+    provider_responses =
+      [provider, :gemini, :openai, :gpt4, :gpt3_5, :teacher, :student]
+      |> Enum.find_value([], fn p ->
+        responses = :persistent_term.get({:mock_responses, p}, [])
+        if Enum.empty?(responses), do: nil, else: responses
+      end)
+
+    if Enum.empty?(provider_responses) do
+      # No preset responses, use contextual generation
+      generate_contextual_mock_response(content)
+    else
+      # Use preset responses, cycling through them
+      index = rem(:rand.uniform(1000), length(provider_responses))
+      response = Enum.at(provider_responses, index)
+
+      case response do
+        %{content: content} -> content
+        content when is_binary(content) -> content
+        _ -> generate_contextual_mock_response(content)
+      end
+    end
   end
 
   # Generate contextual responses based on common patterns

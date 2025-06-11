@@ -28,11 +28,11 @@ defmodule DSPEx.Teleprompter.BootstrapFewShot do
         max_labeled_demos: 16,
         quality_threshold: 0.8
       )
-      
+
       # Optimize student program
       {:ok, optimized_student} = teleprompter.compile(
         student_program,
-        teacher_program, 
+        teacher_program,
         training_examples,
         metric_fn
       )
@@ -66,7 +66,7 @@ defmodule DSPEx.Teleprompter.BootstrapFewShot do
   ## Options
 
   - `:max_bootstrapped_demos` - Maximum bootstrapped demos to generate (default: 4)
-  - `:max_labeled_demos` - Maximum labeled demos to include (default: 16)  
+  - `:max_labeled_demos` - Maximum labeled demos to include (default: 16)
   - `:quality_threshold` - Minimum quality score for demonstrations (default: 0.7)
   - `:max_concurrency` - Maximum concurrent teacher requests (default: 20)
   - `:timeout` - Timeout for teacher requests in ms (default: 30_000)
@@ -268,29 +268,14 @@ defmodule DSPEx.Teleprompter.BootstrapFewShot do
     {:ok, selected}
   end
 
-  defp create_optimized_student(student, selected_demos, _config) do
-    # Update student program with selected demonstrations
-    # This depends on the specific program type
+  defp create_optimized_student(student, selected_demos, config) do
+    # Always wrap in OptimizedProgram for consistency
     optimized =
-      case student do
-        %{demos: _} ->
-          # Program already has demos field
-          %{student | demos: selected_demos}
-
-        _ ->
-          # Try to add demos field if possible
-          try do
-            Map.put(student, :demos, selected_demos)
-          rescue
-            _ ->
-              # Fallback: wrap in a container that includes demos
-              %{
-                program: student,
-                demos: selected_demos,
-                __struct__: DSPEx.OptimizedProgram
-              }
-          end
-      end
+      DSPEx.OptimizedProgram.new(student, selected_demos, %{
+        teleprompter: :bootstrap_fewshot,
+        quality_threshold: config.quality_threshold,
+        optimization_type: :bootstrap_few_shot
+      })
 
     {:ok, optimized}
   end

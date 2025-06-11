@@ -151,7 +151,9 @@ defmodule DSPEx.TeleprompterIntegrationTest do
         )
 
       # Verify optimization results
-      assert %WeakStudentProgram{demos: demos} = optimized_student
+      assert %DSPEx.OptimizedProgram{program: %WeakStudentProgram{}, demos: demos} =
+               optimized_student
+
       assert is_list(demos)
       assert length(demos) > 0
       assert length(demos) <= 3
@@ -274,7 +276,7 @@ defmodule DSPEx.TeleprompterIntegrationTest do
           quality_threshold: 0.5
         )
 
-      assert %WeakStudentProgram{demos: demos1} = optimized1
+      assert %DSPEx.OptimizedProgram{program: %WeakStudentProgram{}, demos: demos1} = optimized1
       assert is_list(demos1)
 
       # Test with custom metric function
@@ -296,7 +298,7 @@ defmodule DSPEx.TeleprompterIntegrationTest do
           quality_threshold: 0.5
         )
 
-      assert %WeakStudentProgram{demos: demos2} = optimized2
+      assert %DSPEx.OptimizedProgram{program: %WeakStudentProgram{}, demos: demos2} = optimized2
       assert is_list(demos2)
     end
 
@@ -319,7 +321,7 @@ defmodule DSPEx.TeleprompterIntegrationTest do
           quality_threshold: 0.1
         )
 
-      assert %WeakStudentProgram{demos: demos} = optimized
+      assert %DSPEx.OptimizedProgram{program: %WeakStudentProgram{}, demos: demos} = optimized
       # Can't have more demos than training examples
       assert length(demos) <= 1
     end
@@ -341,7 +343,7 @@ defmodule DSPEx.TeleprompterIntegrationTest do
         )
 
       # Should have no demos due to quality filtering
-      assert %WeakStudentProgram{demos: []} = optimized
+      assert %DSPEx.OptimizedProgram{program: %WeakStudentProgram{}, demos: []} = optimized
     end
   end
 
