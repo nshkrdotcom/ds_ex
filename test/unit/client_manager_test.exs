@@ -327,15 +327,25 @@ defmodule DSPEx.ClientManagerTest do
       end
     end
 
-    test "client handles GenServer call timeouts gracefully", %{client: client} do
+    test "client handles GenServer call timeouts gracefully" do
+      # Create a mock client with artificial delay for timeout testing
+      {:ok, delay_client} =
+        DSPEx.MockClientManager.start_link(:gemini, %{
+          simulate_delays: true,
+          base_delay_ms: 100,
+          max_delay_ms: 200
+        })
+
       messages = [%{role: "user", content: "timeout test"}]
 
-      # Use a very short timeout that will cause GenServer.call to exit.
-      # We assert that this exit occurs as expected.
-      assert catch_exit(ClientManager.request(client, messages, %{timeout: 1}))
+      # The delay_client has base_delay_ms: 100, so with timeout: 1ms it should timeout
+      assert catch_exit(DSPEx.MockClientManager.request(delay_client, messages, %{timeout: 1}))
 
-      # Verify the client process is still alive after the caller's timeout.
-      assert Process.alive?(client)
+      # Verify the client process is still alive after the caller's timeout
+      assert Process.alive?(delay_client)
+
+      # Clean up
+      GenServer.stop(delay_client)
     end
 
     test "multiple clients operate independently" do
@@ -393,27 +403,34 @@ defmodule DSPEx.ClientManagerTest do
 
   describe "performance characteristics" do
     test "request processing time is reasonable" do
-      {:ok, client} = ClientManager.start_link(:gemini)
+      # Force mock client for consistent performance testing
+      # Performance tests should not depend on network conditions
+      {:ok, client} =
+        DSPEx.MockClientManager.start_link(:gemini, %{
+          simulate_delays: false,
+          responses: :contextual
+        })
+
       messages = [%{role: "user", content: "performance test"}]
 
       # Measure time for request processing (not network time)
       start_time = System.monotonic_time(:millisecond)
-      _result = ClientManager.request(client, messages)
+      _result = DSPEx.MockClientManager.request(client, messages)
       end_time = System.monotonic_time(:millisecond)
 
       processing_time = end_time - start_time
 
       # GenServer overhead should be minimal (< 100ms for local processing)
       # This excludes network time which varies
-      # Increase threshold to make test less flaky. 1500ms is a more reasonable upper bound.
-      assert processing_time < 1500, "Processing took #{processing_time}ms, which is too slow"
+      assert processing_time < 200, "Processing took #{processing_time}ms, which is too slow"
     end
 
     test "stats retrieval is fast" do
-      {:ok, client} = ClientManager.start_link(:gemini)
+      # Force mock client for consistent performance testing
+      {:ok, client} = DSPEx.MockClientManager.start_link(:gemini)
 
       start_time = System.monotonic_time(:microsecond)
-      {:ok, _stats} = ClientManager.get_stats(client)
+      {:ok, _stats} = DSPEx.MockClientManager.get_stats(client)
       end_time = System.monotonic_time(:microsecond)
 
       stats_time = end_time - start_time

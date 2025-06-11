@@ -5,6 +5,42 @@ defmodule DSPEx.ClientTest do
   """
   use ExUnit.Case, async: true
 
+  alias DSPEx.MockHelpers
+
+  describe "mock infrastructure verification" do
+    test "mock helpers provide consistent unified interface" do
+      # Test the unified interface - we don't care if it's mock or real,
+      # just that it provides a working client through consistent functions
+      {client_type, client} = MockHelpers.setup_adaptive_client(:gemini)
+
+      # All adaptive clients should provide valid client info
+      assert client_type in [:mock, :real]
+      assert is_pid(client)
+      assert Process.alive?(client)
+
+      # Test unified interface functions work regardless of client type
+      assert MockHelpers.client_alive?({client_type, client})
+
+      {:ok, stats} = MockHelpers.unified_get_stats({client_type, client})
+      assert is_map(stats.stats)
+      assert is_integer(stats.stats.requests_made)
+
+      extracted_client = MockHelpers.extract_client({client_type, client})
+      assert is_pid(extracted_client)
+      assert Process.alive?(extracted_client)
+    end
+
+    test "api_key_available? returns boolean for all providers" do
+      # Test that the function returns boolean values for all providers
+      assert is_boolean(MockHelpers.api_key_available?(:gemini))
+      assert is_boolean(MockHelpers.api_key_available?(:openai))
+      assert is_boolean(MockHelpers.api_key_available?(:anthropic))
+
+      # Invalid provider should return false
+      refute MockHelpers.api_key_available?(:nonexistent_provider)
+    end
+  end
+
   describe "request/2 message validation" do
     test "rejects empty message list" do
       assert {:error, :invalid_messages} = DSPEx.Client.request([])

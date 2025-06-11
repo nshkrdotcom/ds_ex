@@ -12,6 +12,11 @@ defmodule Dspex.MixProject do
       dialyzer: [
         plt_add_apps: [:mix],
         ignore_warnings: ".dialyzer_ignore.exs"
+      ],
+      preferred_cli_env: [
+        "test.mock": :test,
+        "test.fallback": :test,
+        "test.live": :test
       ]
     ]
   end

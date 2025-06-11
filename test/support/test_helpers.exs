@@ -1,6 +1,9 @@
 defmodule DSPEx.TestHelpers do
   @moduledoc "Common test utilities for DSPEx tests"
 
+  # Import the new mock helpers
+  alias DSPEx.MockHelpers
+
   def create_mock_client(responses) when is_list(responses) do
     Agent.start_link(fn -> responses end)
   end
@@ -66,5 +69,38 @@ defmodule DSPEx.TestHelpers do
     after
       Application.put_all_env([{:dspex, original_config}])
     end
+  end
+
+  @doc """
+  Sets up a test environment with either mock or real clients based on API key availability
+  """
+  def setup_test_environment(provider \\ :gemini) do
+    MockHelpers.setup_adaptive_client(provider)
+  end
+
+  @doc """
+  Helper to skip tests when API keys are not available (for live-only tests)
+  """
+  def skip_if_no_api_key(provider) do
+    unless MockHelpers.api_key_available?(provider) do
+      {:skip, "#{provider} API key not available"}
+    else
+      :ok
+    end
+  end
+
+  @doc """
+  Creates a mock response that matches common test patterns
+  """
+  def create_mock_response(content) when is_binary(content) do
+    {:ok, %{answer: content}}
+  end
+
+  def create_mock_response(:error) do
+    {:error, :mock_api_error}
+  end
+
+  def create_mock_response(:timeout) do
+    {:error, :timeout}
   end
 end
