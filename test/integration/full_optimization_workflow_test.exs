@@ -66,7 +66,9 @@ defmodule DSPEx.Integration.FullOptimizationWorkflowTest do
 
       # Verify optimized program structure
       assert %DSPEx.OptimizedProgram{} = optimized_program
-      assert optimized_program.program == student
+      # The underlying program may have demos added if it supports native demos
+      assert optimized_program.program.signature == student.signature
+      assert optimized_program.program.client == student.client
       assert length(optimized_program.demos) > 0
 
       # 6. Run post-optimization evaluation
