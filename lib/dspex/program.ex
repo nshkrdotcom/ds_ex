@@ -1,10 +1,10 @@
 defmodule DSPEx.Program do
   @moduledoc """
-  Behavior for all DSPEx programs with Foundation integration.
+  Behavior for all DSPEx programs with Foundation integration and SIMBA support.
 
   This module defines the core behavior that all DSPEx programs must implement,
   providing a unified interface for forward execution with built-in telemetry,
-  correlation tracking, and error handling through Foundation infrastructure.
+  correlation tracking, error handling, and enhanced SIMBA optimization support.
 
   ## Example Implementation
 
@@ -82,30 +82,10 @@ defmodule DSPEx.Program do
     # PERFORMANCE INSTRUMENTATION - Start
     total_start = System.monotonic_time()
 
-    # Step 1: Extract timeout option (BEACON critical feature)
-    timeout = Keyword.get(opts, :timeout, 30_000)
+    # Step 1: Extract and validate options (SIMBA critical feature)
+    {timeout, model_config, correlation_id, execution_opts} = extract_execution_options(opts)
 
-    # Step 2: Correlation ID generation (optimized for performance)
-    correlation_start = System.monotonic_time()
-
-    correlation_id =
-      case Keyword.get(opts, :correlation_id) do
-        nil ->
-          # Use fast UUID generation to avoid crypto cold start
-          # Format: test-{node}-{timestamp}-{random}
-          node_hash = :erlang.phash2(node(), 65_536)
-          timestamp = System.unique_integer([:positive])
-          random = :erlang.unique_integer([:positive])
-          "test-#{node_hash}-#{timestamp}-#{random}"
-
-        existing_id ->
-          existing_id
-      end
-
-    _correlation_duration =
-      System.convert_time_unit(System.monotonic_time() - correlation_start, :native, :microsecond)
-
-    # Step 3: Program name resolution
+    # Step 2: Program name resolution
     program_name_start = System.monotonic_time()
     program_name = program_name(program)
 
@@ -116,7 +96,7 @@ defmodule DSPEx.Program do
         :microsecond
       )
 
-    # Step 4: Start telemetry
+    # Step 3: Start telemetry
     telemetry_start_time = System.monotonic_time()
     start_time = System.monotonic_time()
 
@@ -127,7 +107,8 @@ defmodule DSPEx.Program do
         program: program_name,
         correlation_id: correlation_id,
         input_count: map_size(inputs),
-        timeout: timeout
+        timeout: timeout,
+        model_config: model_config
       }
     )
 
@@ -138,7 +119,7 @@ defmodule DSPEx.Program do
         :microsecond
       )
 
-    # Step 5: Actual program execution with optional timeout wrapper (BEACON critical feature)
+    # Step 4: Actual program execution with timeout and model config support
     execution_start = System.monotonic_time()
 
     result =
@@ -147,7 +128,7 @@ defmodule DSPEx.Program do
         task =
           Task.async(fn ->
             try do
-              program.__struct__.forward(program, inputs, opts)
+              execute_with_model_config(program, inputs, model_config, execution_opts)
             catch
               kind, reason ->
                 {:error, {kind, reason}}
@@ -169,13 +150,13 @@ defmodule DSPEx.Program do
         end
       else
         # Default timeout - execute directly for backward compatibility and performance
-        program.__struct__.forward(program, inputs, opts)
+        execute_with_model_config(program, inputs, model_config, execution_opts)
       end
 
     _execution_duration =
       System.convert_time_unit(System.monotonic_time() - execution_start, :native, :microsecond)
 
-    # Step 6: Stop telemetry
+    # Step 5: Stop telemetry
     telemetry_stop_start = System.monotonic_time()
     duration = System.monotonic_time() - start_time
     success = match?({:ok, _}, result)
@@ -187,7 +168,8 @@ defmodule DSPEx.Program do
         program: program_name,
         correlation_id: correlation_id,
         timeout_used: timeout,
-        was_timeout: match?({:error, :timeout}, result)
+        was_timeout: match?({:error, :timeout}, result),
+        model_config: model_config
       }
     )
 
@@ -202,14 +184,72 @@ defmodule DSPEx.Program do
     _total_duration =
       System.convert_time_unit(System.monotonic_time() - total_start, :native, :microsecond)
 
-    # Performance instrumentation (disabled for production)
-    # IO.puts("🔍 DSPEx.Program.forward [#{_total_duration}µs]: ID=#{_correlation_duration}µs, Name=#{_program_name_duration}µs, StartTel=#{_telemetry_start_duration}µs, Exec=#{_execution_duration}µs, StopTel=#{_telemetry_stop_duration}µs")
-
     result
   end
 
   def forward(_, inputs, _) when not is_map(inputs),
     do: {:error, {:invalid_inputs, "inputs must be a map"}}
+
+  # Private function to extract execution options for SIMBA support
+  defp extract_execution_options(opts) do
+    timeout = Keyword.get(opts, :timeout, 30_000)
+
+    # Extract model configuration for SIMBA
+    model_config =
+      %{
+        temperature: Keyword.get(opts, :temperature, 0.7),
+        max_tokens: Keyword.get(opts, :max_tokens),
+        model: Keyword.get(opts, :model),
+        provider: Keyword.get(opts, :provider)
+      }
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+      |> Enum.into(%{})
+
+    correlation_id =
+      case Keyword.get(opts, :correlation_id) do
+        nil ->
+          # Use fast UUID generation to avoid crypto cold start
+          node_hash = :erlang.phash2(node(), 65_536)
+          timestamp = System.unique_integer([:positive])
+          random = :erlang.unique_integer([:positive])
+          "prog-#{node_hash}-#{timestamp}-#{random}"
+
+        existing_id ->
+          existing_id
+      end
+
+    execution_opts =
+      Keyword.drop(opts, [:timeout, :temperature, :max_tokens, :model, :provider, :correlation_id])
+
+    {timeout, model_config, correlation_id, execution_opts}
+  end
+
+  # Enhanced execution function that handles model configuration
+  defp execute_with_model_config(program, inputs, model_config, execution_opts) do
+    # Merge model configuration into execution options
+    enhanced_opts =
+      case program do
+        # For programs that support model configuration directly
+        %{client: _} when map_size(model_config) > 0 ->
+          model_config_list = Map.to_list(model_config)
+          Keyword.merge(execution_opts, model_config_list)
+
+        # For other programs, pass as execution context
+        _ when map_size(model_config) > 0 ->
+          Keyword.put(execution_opts, :model_config, model_config)
+
+        # No model config to apply
+        _ ->
+          execution_opts
+      end
+
+    # Execute the program with enhanced options
+    if function_exported?(program.__struct__, :forward, 3) do
+      program.__struct__.forward(program, inputs, enhanced_opts)
+    else
+      program.__struct__.forward(program, inputs)
+    end
+  end
 
   @doc """
   Macro for implementing program behavior with automatic telemetry setup.
@@ -302,6 +342,7 @@ defmodule DSPEx.Program do
   ## Returns
 
   - `:predict` - For DSPEx.Predict programs
+  - `:predict_structured` - For DSPEx.PredictStructured programs
   - `:optimized` - For DSPEx.OptimizedProgram programs
   - `:custom` - For other program types
 
@@ -316,56 +357,17 @@ defmodule DSPEx.Program do
       :optimized
 
   """
-  @spec program_type(t()) :: :predict | :optimized | :custom
+  @spec program_type(t()) :: :predict | :predict_structured | :optimized | :custom
   def program_type(program) when is_struct(program) do
     case program.__struct__ |> Module.split() |> List.last() do
       "Predict" -> :predict
+      "PredictStructured" -> :predict_structured
       "OptimizedProgram" -> :optimized
       _ -> :custom
     end
   end
 
   def program_type(_), do: :custom
-
-  @doc """
-  Get sanitized information about a program.
-
-  Returns a map with safe information about the program that doesn't
-  expose sensitive data like API keys or internal prompts.
-
-  ## Parameters
-
-  - `program` - The program struct to introspect
-
-  ## Returns
-
-  Map with keys:
-  - `:type` - Program type (see `program_type/1`)
-  - `:has_demos` - Whether the program has demonstration examples
-  - `:name` - Human-readable program name
-  - `:signature` - Signature module name (if available)
-  - `:demo_count` - Number of demonstrations (if applicable)
-
-  """
-  @spec safe_program_info(t()) :: %{
-          type: atom(),
-          has_demos: boolean(),
-          name: String.t(),
-          signature: atom() | nil,
-          demo_count: integer()
-        }
-  def safe_program_info(program) do
-    type = program_type(program)
-    demo_count = demo_count(program)
-
-    %{
-      type: type,
-      has_demos: has_demos?(program),
-      name: program_name(program) |> Atom.to_string(),
-      signature: get_signature_module(program),
-      demo_count: demo_count
-    }
-  end
 
   @doc """
   Check if a program has demonstration examples.
@@ -385,16 +387,185 @@ defmodule DSPEx.Program do
 
   """
   @spec has_demos?(t()) :: boolean()
-  def has_demos?(program) do
-    demo_count(program) > 0
+  def has_demos?(program) when is_struct(program) do
+    cond do
+      # Check OptimizedProgram wrapper
+      Map.has_key?(program, :demos) and is_list(program.demos) ->
+        length(program.demos) > 0
+
+      # Check nested program in OptimizedProgram
+      Map.has_key?(program, :program) and is_struct(program.program) ->
+        has_demos?(program.program)
+
+      true ->
+        false
+    end
   end
+
+  def has_demos?(_), do: false
+
+  @doc """
+  Check if a program supports native instruction field.
+
+  Returns true if the program struct has an instruction field, indicating
+  it can store optimization instructions directly.
+
+  ## Examples
+
+      iex> predict = %DSPEx.Predict{signature: MySignature, client: :openai}
+      iex> DSPEx.Program.supports_native_instruction?(predict)
+      false  # Predict doesn't have instruction field
+
+  """
+  @spec supports_native_instruction?(t()) :: boolean()
+  def supports_native_instruction?(program) when is_struct(program) do
+    Map.has_key?(program, :instruction)
+  end
+
+  def supports_native_instruction?(_), do: false
+
+  @doc """
+  Check if a program supports native demo storage.
+
+  Returns true if the program struct has a demos field, indicating
+  it can store demonstrations directly.
+
+  ## Examples
+
+      iex> predict = %DSPEx.Predict{signature: MySignature, client: :openai, demos: []}
+      iex> DSPEx.Program.supports_native_demos?(predict)
+      true
+
+  """
+  @spec supports_native_demos?(t()) :: boolean()
+  def supports_native_demos?(program) when is_struct(program) do
+    Map.has_key?(program, :demos)
+  end
+
+  def supports_native_demos?(_), do: false
+
+  @doc """
+  Get sanitized information about a program.
+
+  Returns a map with safe information about the program that doesn't
+  expose sensitive data like API keys or internal prompts.
+
+  ## Parameters
+
+  - `program` - The program struct to introspect
+
+  ## Returns
+
+  Map with keys:
+  - `:type` - Program type (see `program_type/1`)
+  - `:has_demos` - Whether the program has demonstration examples
+  - `:name` - Human-readable program name
+  - `:signature` - Signature module name (if available)
+  - `:demo_count` - Number of demonstrations (if applicable)
+  - `:supports_native_demos` - Whether program can store demos natively
+  - `:supports_native_instruction` - Whether program can store instructions natively
+
+  """
+  @spec safe_program_info(t()) :: %{
+          type: atom(),
+          has_demos: boolean(),
+          name: String.t(),
+          signature: atom() | nil,
+          demo_count: integer(),
+          supports_native_demos: boolean(),
+          supports_native_instruction: boolean()
+        }
+  def safe_program_info(program) when is_struct(program) do
+    type = program_type(program)
+    demo_count = demo_count(program)
+
+    %{
+      type: type,
+      has_demos: has_demos?(program),
+      name: program_name(program) |> Atom.to_string(),
+      signature: get_signature_module(program),
+      demo_count: demo_count,
+      supports_native_demos: supports_native_demos?(program),
+      supports_native_instruction: supports_native_instruction?(program)
+    }
+  end
+
+  def safe_program_info(_) do
+    %{
+      type: :unknown,
+      has_demos: false,
+      name: "unknown",
+      signature: nil,
+      demo_count: 0,
+      supports_native_demos: false,
+      supports_native_instruction: false
+    }
+  end
+
+  @doc """
+  Determine SIMBA enhancement strategy for a program.
+
+  Returns the optimal strategy for enhancing a program with SIMBA optimizations:
+  - `:native_full` - Program supports both demos and instructions natively
+  - `:native_demos` - Program supports demos but not instructions natively
+  - `:wrap_optimized` - Program needs OptimizedProgram wrapper for enhancements
+
+  ## Examples
+
+      iex> predict = %DSPEx.Predict{signature: MySignature, client: :openai}
+      iex> DSPEx.Program.simba_enhancement_strategy(predict)
+      :native_demos  # Has demos field but no instruction field
+
+  """
+  @spec simba_enhancement_strategy(t()) :: :native_full | :native_demos | :wrap_optimized
+  def simba_enhancement_strategy(program) when is_struct(program) do
+    cond do
+      supports_native_demos?(program) and supports_native_instruction?(program) ->
+        :native_full
+
+      supports_native_demos?(program) ->
+        :native_demos
+
+      true ->
+        :wrap_optimized
+    end
+  end
+
+  def simba_enhancement_strategy(_), do: :wrap_optimized
+
+  @doc """
+  Check if a program can be executed concurrently.
+
+  Analyzes the program structure to determine if it's safe for concurrent execution.
+  This is critical for SIMBA's trajectory sampling which uses heavy concurrency.
+
+  """
+  @spec concurrent_safe?(t()) :: boolean()
+  def concurrent_safe?(program) when is_struct(program) do
+    # Most DSPEx programs are concurrent-safe by design (immutable)
+    # But we check for obvious issues
+    case program do
+      # Programs with mutable state indicators
+      %{state: _} -> false
+      %{cache: _} when not is_map(program.cache) -> false
+      # Most standard programs are safe
+      _ -> true
+    end
+  end
+
+  def concurrent_safe?(_), do: false
 
   # Private helper functions
 
-  defp demo_count(program) do
+  defp demo_count(program) when is_struct(program) do
     cond do
-      is_struct(program) and Map.has_key?(program, :demos) and is_list(program.demos) ->
+      # Direct demos field
+      Map.has_key?(program, :demos) and is_list(program.demos) ->
         length(program.demos)
+
+      # Nested program in OptimizedProgram
+      Map.has_key?(program, :program) and is_struct(program.program) ->
+        demo_count(program.program)
 
       true ->
         0
@@ -403,19 +574,16 @@ defmodule DSPEx.Program do
 
   defp get_signature_module(program) when is_struct(program) do
     cond do
-      # For Predict programs
+      # Direct signature field
       Map.has_key?(program, :signature) and is_atom(program.signature) ->
         program.signature
 
-      # For OptimizedProgram wrapping Predict
-      Map.has_key?(program, :program) and is_struct(program.program) and
-          Map.has_key?(program.program, :signature) ->
-        program.program.signature
+      # Nested program in OptimizedProgram
+      Map.has_key?(program, :program) and is_struct(program.program) ->
+        get_signature_module(program.program)
 
       true ->
         nil
     end
   end
-
-  defp get_signature_module(_), do: nil
 end

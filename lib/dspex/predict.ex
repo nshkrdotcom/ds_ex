@@ -1,10 +1,11 @@
 defmodule DSPEx.Predict do
   @moduledoc """
-  Core prediction orchestration program with Foundation integration.
+  Core prediction orchestration program with Foundation integration and SIMBA model configuration support.
 
   Implements the DSPEx.Program behavior to provide a structured interface
   for language model predictions with comprehensive telemetry, error handling,
-  and observability through Foundation infrastructure.
+  observability through Foundation infrastructure, and enhanced support for
+  SIMBA's dynamic model configuration requirements.
 
   ## Usage as a Program
 
@@ -17,6 +18,12 @@ defmodule DSPEx.Predict do
       iex> {:ok, outputs} = DSPEx.Program.forward(predict, inputs)
       iex> outputs
       %{answer: "4"}
+
+  ## SIMBA Model Configuration Support
+
+      # SIMBA can dynamically configure model parameters
+      iex> opts = [temperature: 0.9, max_tokens: 200, model: "gpt-4"]
+      iex> {:ok, outputs} = DSPEx.Program.forward(predict, inputs, opts)
 
   ## Legacy API (maintained for compatibility)
 
@@ -31,12 +38,13 @@ defmodule DSPEx.Predict do
   use DSPEx.Program
 
   @enforce_keys [:signature, :client]
-  defstruct [:signature, :client, :adapter, demos: []]
+  defstruct [:signature, :client, :adapter, :instruction, demos: []]
 
   @type t :: %__MODULE__{
           signature: module(),
           client: atom() | map(),
           adapter: module() | nil,
+          instruction: String.t() | nil,
           demos: [map()]
         }
   @type signature :: module()
@@ -47,11 +55,12 @@ defmodule DSPEx.Predict do
           optional(:model) => String.t(),
           optional(:temperature) => float(),
           optional(:max_tokens) => pos_integer(),
-          optional(:correlation_id) => String.t()
+          optional(:correlation_id) => String.t(),
+          optional(:timeout) => pos_integer()
         }
 
   @doc """
-  Create a new Predict program.
+  Create a new Predict program with enhanced SIMBA support.
 
   ## Parameters
 
@@ -63,6 +72,7 @@ defmodule DSPEx.Predict do
 
   - `:adapter` - Adapter module (default: nil, uses DSPEx.Adapter fallback)
   - `:demos` - List of demonstration examples
+  - `:instruction` - Custom instruction text for the program
 
   """
   @spec new(signature(), atom() | map(), keyword() | map()) :: t()
@@ -71,7 +81,8 @@ defmodule DSPEx.Predict do
       signature: signature,
       client: client,
       adapter: get_option(opts, :adapter, nil),
-      demos: get_option(opts, :demos, [])
+      demos: get_option(opts, :demos, []),
+      instruction: get_option(opts, :instruction, nil)
     }
   end
 
@@ -79,7 +90,7 @@ defmodule DSPEx.Predict do
   defp get_option(opts, key, default) when is_list(opts), do: Keyword.get(opts, key, default)
   defp get_option(opts, key, default) when is_map(opts), do: Map.get(opts, key, default)
 
-  # DSPEx.Program behavior implementation - override the macro-generated defaults
+  # DSPEx.Program behavior implementation with SIMBA enhancements
   @impl DSPEx.Program
   def forward(program_or_signature, inputs, opts)
 
@@ -106,31 +117,37 @@ defmodule DSPEx.Predict do
     _correlation_duration =
       System.convert_time_unit(System.monotonic_time() - correlation_start, :native, :microsecond)
 
-    # Step 2: Format messages
+    # Step 2: Extract model configuration for SIMBA support
+    model_config = extract_model_configuration(opts)
+
+    # Step 3: Format messages with enhanced adapter support
     format_start = System.monotonic_time()
-    format_result = format_messages(program, inputs, correlation_id)
+    format_result = format_messages_enhanced(program, inputs, model_config, correlation_id)
 
     _format_duration =
       System.convert_time_unit(System.monotonic_time() - format_start, :native, :microsecond)
 
-    # Step 3: Make request
+    # Step 4: Make request with model configuration
     request_start = System.monotonic_time()
 
     request_result =
       case format_result do
-        {:ok, messages} -> make_request(program, messages, opts, correlation_id)
-        error -> error
+        {:ok, messages} ->
+          make_request_with_config(program, messages, model_config, opts, correlation_id)
+
+        error ->
+          error
       end
 
     _request_duration =
       System.convert_time_unit(System.monotonic_time() - request_start, :native, :microsecond)
 
-    # Step 4: Parse response
+    # Step 5: Parse response
     parse_start = System.monotonic_time()
 
     final_result =
       case request_result do
-        {:ok, response} -> parse_response(program, response, correlation_id)
+        {:ok, response} -> parse_response_enhanced(program, response, correlation_id)
         error -> error
       end
 
@@ -139,7 +156,7 @@ defmodule DSPEx.Predict do
 
     # Performance instrumentation (disabled for production)
     # total_duration = System.convert_time_unit(System.monotonic_time() - predict_start, :native, :microsecond)
-    # IO.puts("  🎯 DSPEx.Predict.forward [#{total_duration}µs]: Correlation=#{correlation_duration}µs, Format=#{format_duration}µs, Request=#{request_duration}µs, Parse=#{parse_duration}µs")
+    # IO.puts("  🎯 DSPEx.Predict.forward [#{total_duration}µs]: Format=#{format_duration}µs, Request=#{request_duration}µs, Parse=#{parse_duration}µs")
 
     final_result
   end
@@ -158,9 +175,22 @@ defmodule DSPEx.Predict do
     end
   end
 
-  # Private helper functions for Program implementation
+  # Private helper functions for Program implementation with SIMBA support
 
-  defp format_messages(program, inputs, correlation_id) do
+  defp extract_model_configuration(opts) do
+    # Extract model configuration parameters that SIMBA passes
+    %{
+      temperature: Keyword.get(opts, :temperature),
+      max_tokens: Keyword.get(opts, :max_tokens),
+      model: Keyword.get(opts, :model),
+      provider: Keyword.get(opts, :provider),
+      timeout: Keyword.get(opts, :timeout)
+    }
+    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+    |> Enum.into(%{})
+  end
+
+  defp format_messages_enhanced(program, inputs, model_config, correlation_id) do
     start_time = System.monotonic_time()
 
     # Cache signature name to avoid repeated Module.split operations
@@ -171,17 +201,19 @@ defmodule DSPEx.Predict do
       %{system_time: System.system_time()},
       %{
         signature: sig_name,
-        correlation_id: correlation_id
+        correlation_id: correlation_id,
+        has_model_config: map_size(model_config) > 0
       }
     )
 
-    # Use adapter to format messages with signature and demos
+    # Use adapter to format messages with signature, demos, and instruction
     result =
       if program.adapter && function_exported?(program.adapter, :format_messages, 3) do
+        # Enhanced adapter that supports demos and instruction
         program.adapter.format_messages(program.signature, program.demos, inputs)
       else
-        # Fallback to basic adapter
-        DSPEx.Adapter.format_messages(program.signature, inputs)
+        # Enhanced fallback adapter with demo and instruction support
+        format_with_enhanced_adapter(program, inputs)
       end
 
     duration = System.monotonic_time() - start_time
@@ -193,37 +225,116 @@ defmodule DSPEx.Predict do
       %{
         signature: sig_name,
         correlation_id: correlation_id,
-        adapter: adapter_name(program.adapter)
+        adapter: adapter_name(program.adapter),
+        demo_count: length(program.demos),
+        has_instruction: not is_nil(program.instruction)
       }
     )
 
     result
   end
 
-  defp make_request(program, messages, opts, correlation_id) do
-    # Build client options
+  defp format_with_enhanced_adapter(program, inputs) do
+    # Enhanced adapter logic that incorporates demos and instruction
+    with {:ok, base_messages} <- DSPEx.Adapter.format_messages(program.signature, inputs) do
+      enhanced_messages = enhance_messages_with_context(base_messages, program)
+      {:ok, enhanced_messages}
+    end
+  end
+
+  defp enhance_messages_with_context(messages, program) do
+    # Add instruction and demos to the messages
+    enhanced_content = build_enhanced_content(messages, program)
+
+    case messages do
+      [%{role: "user", content: _original_content}] ->
+        [%{role: "user", content: enhanced_content}]
+
+      multiple_messages ->
+        # For multi-turn conversations, enhance the last user message
+        List.update_at(multiple_messages, -1, fn last_msg ->
+          %{last_msg | content: enhanced_content}
+        end)
+    end
+  end
+
+  defp build_enhanced_content([%{role: "user", content: original_content} | _], program) do
+    parts = []
+
+    # Add instruction if present
+    parts =
+      if program.instruction do
+        ["Instructions: #{program.instruction}" | parts]
+      else
+        parts
+      end
+
+    # Add demonstrations if present
+    parts =
+      if length(program.demos) > 0 do
+        demo_text = format_demonstrations(program.demos)
+        ["Examples:\n#{demo_text}" | parts]
+      else
+        parts
+      end
+
+    # Add original content
+    parts = [original_content | parts]
+
+    # Combine parts
+    parts
+    |> Enum.reverse()
+    |> Enum.join("\n\n")
+  end
+
+  defp format_demonstrations(demos) do
+    demos
+    |> Enum.with_index(1)
+    |> Enum.map(fn {demo, index} ->
+      inputs = DSPEx.Example.inputs(demo)
+      outputs = DSPEx.Example.outputs(demo)
+
+      input_text = Enum.map_join(inputs, ", ", fn {k, v} -> "#{k}: #{v}" end)
+      output_text = Enum.map_join(outputs, ", ", fn {k, v} -> "#{k}: #{v}" end)
+
+      "Example #{index}:\nInput: #{input_text}\nOutput: #{output_text}"
+    end)
+    |> Enum.join("\n\n")
+  end
+
+  defp make_request_with_config(program, messages, model_config, opts, correlation_id) do
+    # Build client options with model configuration
     opts_start = System.monotonic_time()
 
+    # Merge model configuration with original options
     client_opts =
       opts
       |> Keyword.put(:correlation_id, correlation_id)
+      |> merge_model_config(model_config)
       |> Enum.into(%{})
 
     _opts_duration =
       System.convert_time_unit(System.monotonic_time() - opts_start, :native, :microsecond)
 
-    # Make request through client
+    # Make request through client with enhanced configuration
     request_start = System.monotonic_time()
     result = DSPEx.Client.request(program.client, messages, client_opts)
 
     _request_duration =
       System.convert_time_unit(System.monotonic_time() - request_start, :native, :microsecond)
 
-    # IO.puts("    📡 make_request breakdown: Opts=#{_opts_duration}µs, Client.request=#{_request_duration}µs")
     result
   end
 
-  defp parse_response(program, response, correlation_id) do
+  defp merge_model_config(opts, model_config) when map_size(model_config) > 0 do
+    # Convert model config to keyword list and merge
+    model_config_list = Map.to_list(model_config)
+    Keyword.merge(opts, model_config_list)
+  end
+
+  defp merge_model_config(opts, _model_config), do: opts
+
+  defp parse_response_enhanced(program, response, correlation_id) do
     start_time = System.monotonic_time()
 
     # Cache signature name to avoid repeated Module.split operations

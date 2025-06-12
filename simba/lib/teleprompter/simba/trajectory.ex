@@ -1,10 +1,11 @@
-# dspex/teleprompter/simba/trajectory.ex
 defmodule DSPEx.Teleprompter.SIMBA.Trajectory do
   @moduledoc """
   Represents a single execution trajectory through a program.
 
   A trajectory captures the complete execution context including inputs,
-  outputs, performance score, and execution metadata.
+  outputs, performance score, and execution metadata. This is used by
+  SIMBA to analyze program execution patterns and identify successful
+  strategies for optimization.
   """
 
   @enforce_keys [:program, :example, :inputs, :outputs, :score]

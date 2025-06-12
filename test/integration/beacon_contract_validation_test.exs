@@ -325,9 +325,9 @@ defmodule DSPEx.BEACONContractValidationTest do
       refute OptimizedProgram.supports_native_demos?("invalid")
 
       # Test supports_native_instruction?/1
-      # Neither basic Predict programs support native instructions
-      refute OptimizedProgram.supports_native_instruction?(demo_program)
-      refute OptimizedProgram.supports_native_instruction?(basic_program)
+      # Predict programs now support native instructions (SIMBA enhancement)
+      assert OptimizedProgram.supports_native_instruction?(demo_program)
+      assert OptimizedProgram.supports_native_instruction?(basic_program)
       refute OptimizedProgram.supports_native_instruction?(nil)
 
       # Test with custom program that has instruction field
@@ -345,10 +345,10 @@ defmodule DSPEx.BEACONContractValidationTest do
       basic_program = %Predict{signature: BEACONTestSignature, client: :test}
       demo_program = %Predict{signature: BEACONTestSignature, client: :test, demos: []}
 
-      # Test strategy selection - Predict programs have native demo support
-      assert OptimizedProgram.beacon_enhancement_strategy(demo_program) == :native_demos
-      assert OptimizedProgram.beacon_enhancement_strategy(basic_program) == :native_demos
-      assert OptimizedProgram.beacon_enhancement_strategy(nil) == :wrap_optimized
+      # Test strategy selection - Predict programs have native demo and instruction support (SIMBA enhancement)
+      assert OptimizedProgram.simba_enhancement_strategy(demo_program) == :native_full
+      assert OptimizedProgram.simba_enhancement_strategy(basic_program) == :native_full
+      assert OptimizedProgram.simba_enhancement_strategy(nil) == :wrap_optimized
 
       # Test with program that supports both demos and instructions
       full_support_program = %FullSupportProgram{
@@ -357,11 +357,11 @@ defmodule DSPEx.BEACONContractValidationTest do
         demos: []
       }
 
-      assert OptimizedProgram.beacon_enhancement_strategy(full_support_program) == :native_full
+      assert OptimizedProgram.simba_enhancement_strategy(full_support_program) == :native_full
 
       # Test with program that has no native support
       minimal_program = %BasicProgram{signature: BEACONTestSignature, client: :test}
-      assert OptimizedProgram.beacon_enhancement_strategy(minimal_program) == :wrap_optimized
+      assert OptimizedProgram.simba_enhancement_strategy(minimal_program) == :wrap_optimized
     end
   end
 
@@ -555,7 +555,7 @@ defmodule DSPEx.BEACONContractValidationTest do
       assert String.length(instruction) > 10
 
       # Step 5: Test program enhancement strategy
-      enhancement_strategy = OptimizedProgram.beacon_enhancement_strategy(student)
+      enhancement_strategy = OptimizedProgram.simba_enhancement_strategy(student)
       assert enhancement_strategy in [:native_full, :native_demos, :wrap_optimized]
 
       # Step 6: Test enhanced program creation

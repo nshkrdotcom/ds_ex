@@ -1,87 +1,5 @@
 # DSPEx Development Status & Next Steps
 
-## Current Status: Major Test Debugging Complete - System Highly Stable
-
-The DSPEx foundation has undergone **major debugging and stabilization**. Critical test failures have been resolved through systematic bug fixes. System is now **highly stable** with **651+ tests passing** out of 653 total tests.
-
-**📋 Next Action:** Phase 6 - Critical Contract Validation for SIMBA Integration
-
----
-
-## 🔧 MAJOR DEBUGGING COMPLETION SUMMARY
-
-**Status**: ✅ **Critical Debugging Phase Complete** (651/653 tests passing, 99.7% success rate)
-**Date**: December 12, 2025
-**Execution Time**: ~16 seconds for comprehensive test suite
-
-### Key Issues Resolved:
-
-#### 1. Bootstrap FewShot Algorithm Fixes ✅
-- **Root Cause**: `:no_successful_bootstrap_candidates` errors when quality filtering removed all demonstrations
-- **Fix**: Modified `lib/dspex/teleprompter/bootstrap_fewshot.ex` to handle empty demonstration results gracefully
-- **Impact**: Bootstrap teleprompter now works correctly in both successful and edge case scenarios
-
-#### 2. Program Interface Consistency ✅
-- **Root Cause**: Tests expected specific keys but got extra `:module` key in `safe_program_info/1` output
-- **Fix**: Removed `:module` key from `safe_program_info/1` function in `lib/dspex/program.ex`
-- **Impact**: Clean, consistent program interface ready for SIMBA integration
-
-#### 3. Performance Test Environment ✅
-- **Root Cause**: Performance tests timing out in CI/WSL environment due to overly strict thresholds
-- **Fix**: Increased tolerances and added `@tag :todo_optimize` to isolate performance tests
-- **Impact**: Core functionality tests stable, performance optimization isolated for separate work
-
-#### 4. Mock Infrastructure Reliability ✅
-- **Root Cause**: MockProvider startup conflicts in bootstrap advanced tests
-- **Fix**: Added graceful handling of already-started MockProvider instances
-- **Impact**: Deterministic test execution without infrastructure conflicts
-
-#### 5. Compilation Warning Cleanup ✅
-- **Root Cause**: Module redefinition and unused alias warnings polluting test output
-- **Fix**: Moved test modules to top level and removed unused imports
-- **Impact**: Clean, professional test output ready for production use
-
-### System Health Metrics:
-- **Core Functionality**: 100% stable (teleprompter, bootstrap, program utilities all working)
-- **Mock Infrastructure**: 100% reliable and deterministic
-- **Performance**: Only 2 minor timing tests remain (isolated with tags)
-- **Code Quality**: Zero compilation warnings, clean output
-- **Integration Readiness**: System ready for SIMBA handoff
-
----
-
-## Test Strategy: Phase-Tagged Testing
-
-### Current Test Organization
-
-**All existing tests are tagged `:group_1` and `:group_2` and excluded by default** to streamline the migration process:
-
-```bash
-# Current development workflow (only new/migrated tests)
-mix test                    # Runs only migrated tests (clean development)
-mix format                  # Format code before commits
-mix dialyzer               # Must pass (zero warnings)
-
-# Include foundation tests when needed
-mix test --include group_1 --include group_2  # Runs ALL tests (foundation + migrated)
-```
-
-### Migration Process
-
-As tests are migrated from `TODO_02_PRE_SIMBA/test/` and `test_phase2/`, they will:
-1. **Run by default** with `mix test` (no tags)
-2. **Be fully green** before commit
-3. **Pass dialyzer** before commit
-4. **Be formatted** with `mix format` before commit
-
-**Commit Strategy:**
-- ✅ One commit per migration phase
-- ✅ All migrated tests 100% green
-- ✅ Dialyzer passes with zero warnings  
-- ✅ Code formatted consistently
-
----
-
 ## Quick Reference: Working End-to-End Pipeline
 
 > **Note:** This workflow is fully functional but requires `--include phase_1` to run the tests.
@@ -130,268 +48,6 @@ mix format                         # Code formatting
 
 ---
 
-## Migration Progress Tracking
-
-**Current Phase:** Phase 3 (Critical Concurrent Tests) - Ready to Start
-
-**Completed Phases:**
-- ✅ Phase 0: Pre-Migration Validation (infrastructure setup)
-- ✅ Phase 1: Critical Program Utilities (56 new tests)
-- ✅ Phase 2: Enhanced Test Infrastructure (15 new tests)
-
-**Current Status:**
-- **Total Tests:** 453 tests (vs 382 baseline)
-- **New Tests Added:** 71 tests for SIMBA preparation
-- **All Tests Passing:** 452/453 (1 flaky performance test)
-
-**Next Steps:**
-1. 🚀 Begin Phase 3: Critical concurrent and stress tests
-2. 📊 Migrate high-priority performance validation tests
-3. 🧪 Continue with Phase 4-6 per migration plan
-
-**Success Criteria for Each Phase:**
-- ✅ All migrated tests pass with `mix test`
-- ✅ `mix dialyzer` passes with zero warnings
-- ✅ `mix format` applied before commit
-- ✅ No regressions in existing functionality
-
-**Foundation Status: 🟢 SOLID - Ready for SIMBA preparation! 🚀**
-
----
-
-## Phase 4 Complete! 🚀
-
-**Updated Status:** Phase 4 (End-to-End Workflow Validation) has been successfully completed.
-
-### Summary of Achievements
-
-✅ **All 4 Phase 4 Tasks Completed:**
-1. Performance Benchmark Tests - Migrated comprehensive performance benchmarks establishing SIMBA baselines
-2. Full Optimization Workflow Tests - Created end-to-end integration tests validating complete optimization pipelines
-3. Performance Regression Testing - Built automated regression detection system for performance monitoring
-4. Validation Checkpoint - Verified core system stability with 490+ tests passing
-
-### Key Accomplishments
-
-🏗️ **End-to-End Workflow Validation:**
-- Complete question answering workflow with measurable improvement verification
-- Chain of thought reasoning workflow with step-by-step optimization
-- Multi-step reasoning pipeline with coordinated program execution
-- Statistical significance testing for optimization improvements
-- Error recovery and fault tolerance validation
-
-⚡ **Performance Baselines for SIMBA:**
-- Optimization time scaling characteristics documented
-- Concurrent vs sequential performance benchmarks established
-- Memory usage patterns and cleanup validation completed
-- Cache effectiveness and circuit breaker overhead measured
-- Comprehensive performance regression detection system implemented
-
-🎯 **Critical SIMBA Readiness Validated:**
-- End-to-end optimization workflows operational and tested
-- Performance baselines meet SIMBA requirements for concurrent workloads
-- Full optimization pipeline handles complex reasoning scenarios
-- System architecture validated for SIMBA layer integration
-
-### Updated Test Results
-
-- **Total Tests:** 490+ (vs 490 baseline from Phase 3)
-- **New Test Files Added:** 2 comprehensive test suites for end-to-end workflows
-- **Pass Rate:** 99.4% (487+ passing with consistent performance)
-- **Performance Tests:** ✅ Comprehensive benchmarks and regression detection
-- **System Stability:** ✅ End-to-end workflows validated under load
-
-### Ready for Phase 5
-
-The system now has comprehensive end-to-end workflow validation and performance baselines established for SIMBA integration.
-
-**📋 Next Action:** Begin Phase 5 (Secondary Utility Tests) per `./TODO_02_PRE_SIMBA/TEST_MIGRATION_PLAN.md`
-
-**Foundation Status: 🟢 SIMBA-Ready - End-to-end workflows validated! 🎯**
-
----
-
-## 🚀 Phase 5: Secondary Utility Tests (Days 11-12)
-
-### Overview
-
-Phase 5 focuses on migrating remaining utility and edge case tests that provide comprehensive coverage and debugging capabilities. This phase strengthens the foundation with advanced testing scenarios, edge case handling, and enhanced program introspection capabilities.
-
-### 🎯 Core Objectives
-
-- **Enhanced Program Testing**: Advanced utility functions and program introspection
-- **Edge Case Coverage**: Malformed input handling, resource exhaustion, network failures
-- **Error Recovery**: Graceful degradation and fault tolerance validation
-- **Performance Integration**: Component-level performance validation without duplication
-- **System Robustness**: Comprehensive debugging and diagnostic capabilities
-
-### 📋 Detailed Task Breakdown
-
-#### **Batch 1: Enhanced Program Tests** 🛠️
-
-##### Task 5.1: Advanced Program Utility Tests
-**Migration Source → Destination:**
-```
-TODO_02_PRE_SIMBA/test/unit/optimized_program_2_test.exs → test/unit/optimized_program_advanced_test.exs
-TODO_02_PRE_SIMBA/test/unit/teleprompter_2_test.exs → test/unit/teleprompter_advanced_test.exs
-```
-
-**Implementation Requirements:**
-- ✅ Enhanced program introspection capabilities
-- ✅ Advanced teleprompter state management 
-- ✅ Complex optimization scenario validation
-- ✅ Program lifecycle management edge cases
-
-**Expected Implementation Dependencies:**
-- Additional utility functions based on test requirements
-- Enhanced program struct manipulation capabilities
-- Advanced teleprompter debugging interfaces
-
-#### **Batch 2: Edge Case and Error Handling Tests** ⚠️
-
-##### Task 5.2: System Edge Cases
-**Migration Source → Destination:**
-```
-TODO_02_PRE_SIMBA/test/unit/edge_cases_test.exs → test/unit/system_edge_cases_test.exs
-```
-
-**Critical Edge Case Coverage:**
-- ✅ **Malformed Input Handling**: Invalid signatures, corrupted data structures
-- ✅ **Resource Exhaustion**: Memory limits, timeout scenarios, concurrent resource contention
-- ✅ **Network Failure Simulation**: Client timeout, API rate limiting, connection drops
-- ✅ **Graceful Degradation**: Fallback mechanisms, partial failure recovery
-
-##### Task 5.3: Bootstrap and Teleprompter Edge Cases
-**Migration Source → Destination:**
-```
-TODO_02_PRE_SIMBA/test/unit/bootstrap_fewshot_test.exs → test/unit/bootstrap_advanced_test.exs
-```
-
-**Advanced Bootstrap Scenarios:**
-- ✅ Empty training datasets
-- ✅ Conflicting demonstration examples
-- ✅ Teacher-student program mismatches
-- ✅ Metric function failures and recovery
-- ✅ Few-shot learning edge cases
-
-#### **Batch 3: Integration Test Migrations** 🔄
-
-##### Task 5.4: Performance Integration Tests
-**Migration Source → Destination:**
-```
-TODO_02_PRE_SIMBA/test/performance/ → test/performance/
-```
-
-**Integration Strategy:**
-- ✅ **Merge with Existing**: Integrate with current performance test suite
-- ✅ **Avoid Duplication**: Complement Phase 4 benchmark tests, no overlaps
-- ✅ **Component Focus**: Component-level performance validation vs system-level
-- ✅ **Baseline Extension**: Extend existing performance baselines with component metrics
-
-### 🔧 Implementation Plan
-
-#### Pre-Migration Validation
-```bash
-# Verify current system stability
-mix test --max-failures 1
-mix dialyzer
-mix format --check-formatted
-
-# Validate existing performance baselines
-mix test test/performance/ --include group_2
-```
-
-#### Migration Execution Strategy
-
-**Step 1: Enhanced Program Tests**
-1. Create `test/unit/optimized_program_advanced_test.exs`
-2. Create `test/unit/teleprompter_advanced_test.exs`  
-3. Implement required utility functions as needed
-4. Validate advanced program introspection capabilities
-
-**Step 2: Edge Case Implementation**
-1. Create `test/unit/system_edge_cases_test.exs`
-2. Create `test/unit/bootstrap_advanced_test.exs`
-3. Implement robust error handling scenarios
-4. Add graceful degradation mechanisms
-
-**Step 3: Performance Integration**
-1. Review existing performance tests to avoid duplication
-2. Migrate complementary performance tests
-3. Integrate component-level performance metrics
-4. Validate performance baseline extensions
-
-#### Validation Checkpoints
-
-**After Each Batch:**
-```bash
-mix test test/unit/ --max-failures 1
-mix test test/performance/ --max-failures 1  
-mix dialyzer
-```
-
-**Final Phase 5 Validation:**
-```bash
-mix test # Full system validation
-mix test --include group_1 --include group_2 # All tests including foundation
-mix credo --strict
-mix format
-```
-
-### 📊 Success Criteria
-
-#### **Quantitative Metrics**
-- ✅ **Test Coverage**: 95%+ test coverage maintained across all modules
-- ✅ **Pass Rate**: 99.5%+ (allowing for 1-2 flaky performance tests)
-- ✅ **Performance**: No regression in Phase 4 benchmarks
-- ✅ **Code Quality**: Zero dialyzer warnings, credo compliance
-
-#### **Qualitative Objectives**
-- ✅ **Edge Case Resilience**: System handles malformed inputs gracefully
-- ✅ **Error Recovery**: Comprehensive fault tolerance demonstrated
-- ✅ **Debugging Capabilities**: Advanced introspection tools available
-- ✅ **Documentation**: All advanced scenarios documented with examples
-
-### 🛡️ Risk Management
-
-#### **High-Risk Areas**
-1. **Complex Edge Cases**: May expose fundamental architectural limitations
-   - **Mitigation**: Implement fixes for critical issues, document known limitations
-   - **Fallback**: Defer non-critical edge cases to post-SIMBA if needed
-
-2. **Advanced Utility Dependencies**: May require significant new utility functions
-   - **Mitigation**: Implement minimal viable versions first
-   - **Fallback**: Create placeholder implementations, technical debt documentation
-
-#### **Medium-Risk Areas**
-1. **Performance Test Integration**: Risk of test conflicts or duplication
-   - **Mitigation**: Careful review of existing performance tests before migration
-   - **Resolution**: Rename conflicting tests with `_advanced` suffix
-
-### 📈 Expected Outcomes
-
-Upon completion of Phase 5:
-
-**Enhanced System Robustness:**
-- Comprehensive edge case coverage across all core modules
-- Advanced error recovery and graceful degradation capabilities
-- Enhanced debugging and introspection tools for development
-
-**Extended Performance Validation:**
-- Component-level performance baselines complementing system-level metrics
-- Detailed performance regression detection for individual modules
-- Advanced performance debugging capabilities
-
-**SIMBA Preparation Excellence:**
-- Rock-solid foundation with comprehensive test coverage
-- Advanced diagnostic capabilities for SIMBA integration debugging
-- Proven system resilience under stress and edge case scenarios
-
-**Test Infrastructure Maturity:**
-- Complete migration of critical utility tests
-- Advanced testing patterns and utilities available for SIMBA development
-- Comprehensive test suite supporting confident architectural changes
-
 ### 🔄 Updated Test Command Reference
 
 **Current Development Commands:**
@@ -410,7 +66,7 @@ mix credo --strict         # Code quality
 
 **Phase 5 Specific Commands:**
 ```bash
-# Run only Phase 5A tests (SIMBA critical - slow stress tests)
+# Run only Phase 5A tests (BEACON critical - slow stress tests)
 mix test --include phase5a --max-failures 1
 
 # Run only fast integration tests 
@@ -421,7 +77,7 @@ mix test --include stress_test --max-failures 1
 
 # Run specific Phase 5 test files
 mix test test/integration/client_reliability_stress_test.exs
-mix test test/integration/simba_readiness_test.exs  
+mix test test/integration/beacon_readiness_test.exs  
 mix test test/integration/teleprompter_workflow_advanced_test.exs
 
 # Validate performance integration
@@ -430,257 +86,87 @@ mix test test/performance/ --max-failures 1
 
 ---
 
-# CLAUDE Status: Phase 5C Complete! 🚀
+# CLAUDE Status: SIMBA Foundation Updates Complete! 🚀
 
-**Current Phase:** Phase 5C - Memory Performance Tests **COMPLETE**  
-**Date:** June 11, 2025  
-**Overall Status:** ✅ **ALL TESTS PASSING** - Ready for Phase 6 Handoff
+**Current Phase:** SIMBA Foundation Update  
+**Date:** June 12, 2025  
+**Overall Status:** ✅ **ALL TESTS PASSING** - SIMBA Foundation Enhancements Successfully Integrated
 
-## 🎉 **BREAKTHROUGH: Phase 5C Successfully Completed**
+## 🎉 **BREAKTHROUGH: SIMBA Foundation Enhancements Complete**
 
-**Achievement:** Successfully migrated and implemented memory-focused performance tests for SIMBA preparation
-**Status:** All memory performance tests now passing with excellent memory characteristics
+**Achievement:** Successfully implemented and tested all SIMBA foundation changes across 4 core DSPEx modules
+**Status:** All 794 tests passing - SIMBA-ready foundation with enhanced functionality validated
 
-### **Phase 5C Implementation Status: ✅ COMPLETE**
+### **SIMBA Foundation Updates: ✅ COMPLETE**
 
-**Successfully Added:**
-- ✅ `test/performance/memory_performance_test.exs` - 6 comprehensive memory validation tests
-  - Memory leak detection across teleprompter iterations
-  - Large dataset memory handling validation
-  - Memory stability under repeated optimization cycles
-  - High demo count efficiency testing
-  - Concurrent optimization resource management
-  - Resource cleanup after optimization cycles
+**Successfully Enhanced 4 Core Modules:**
 
-**Memory Performance Validation:**
-- **Memory Leak Detection:** ✅ No significant leaks in 15 optimization iterations
-- **Large Dataset Handling:** ✅ Efficient processing of 500+ examples within 100MB limit
-- **Memory Stability:** ✅ Non-exponential growth across 8 optimization cycles
-- **Resource Cleanup:** ✅ Proper cleanup with <15MB final growth threshold
-- **Concurrent Operations:** ✅ 19+ optimizations/sec with 100% success rate
-- **Demo Scaling:** ✅ Efficient handling up to 100 demonstrations per program
+**1. DSPEx.Client (`lib/dspex/client.ex`)**
+- ✅ Response format normalization for SIMBA stability
+- ✅ Enhanced error categorization and recovery
+- ✅ Model configuration passthrough support
+- ✅ Added `require Logger` for logging functionality
 
-**Test Suite Metrics:**
-- **New Memory Tests:** 6 specialized SIMBA-focused memory validation tests
-- **Total Performance Tests:** 3 test files (optimization, regression, memory)
-- **Memory Thresholds:** All within SIMBA readiness requirements
-- **Performance Baselines:** Comprehensive memory usage patterns documented
-- **Integration:** Clean integration with existing performance test infrastructure
+**2. DSPEx.Program (`lib/dspex/program.ex`)**
+- ✅ Enhanced options handling with model configuration extraction
+- ✅ SIMBA strategy detection: `simba_enhancement_strategy/1`
+- ✅ Enhanced `safe_program_info/1` with native support detection
+- ✅ Concurrent execution safety checks
 
-### **✅ SIMBA Readiness Validation:**
+**3. DSPEx.Predict (`lib/dspex/predict.ex`)**
+- ✅ Added instruction field for SIMBA instruction storage
+- ✅ Model configuration extraction and dynamic parameter support
+- ✅ Enhanced adapter support with demo/instruction integration
+- ✅ SIMBA telemetry integration enhancements
 
-**Memory Performance Characteristics:**
-- Teleprompter iterations: <50MB memory growth limit validated
-- Large datasets: <100MB memory usage for 500-example trainsets
-- Optimization cycles: Non-exponential memory growth confirmed
-- Resource cleanup: <15MB final memory footprint maintained
-- Concurrent operations: Efficient shared resource utilization
+**4. DSPEx.OptimizedProgram (`lib/dspex/optimized_program.ex`)**
+- ✅ Full instruction field support with SIMBA metadata
+- ✅ Enhanced metadata tracking for optimization history
+- ✅ SIMBA enhancement strategy methods: `enhance_with_simba_strategy/4`
+- ✅ Performance comparison utilities for before/after analysis
+- ✅ Updated function name: `beacon_enhancement_strategy` → `simba_enhancement_strategy`
 
-**Performance Benchmarks for SIMBA:**
-- Demo creation rate: 200+ creations/second across varying demo counts
-- Memory efficiency: Stable patterns under repeated optimization workloads
-- Concurrent throughput: 19+ concurrent optimizations/second
-- Resource stability: Zero process leaks, controlled memory growth
-- Cleanup effectiveness: Automatic resource reclamation validated
+**Test Updates Successfully Applied:**
+- ✅ Updated `safe_program_info/1` test expectations with new fields: `supports_native_demos`, `supports_native_instruction`
+- ✅ Fixed BEACON contract validation tests for Predict programs now supporting native instructions
+- ✅ Updated OptimizedProgram advanced tests for enhanced metadata tracking
+- ✅ Updated function references from `beacon_enhancement_strategy` to `simba_enhancement_strategy`
+- ✅ All 794 tests passing with no compilation warnings
 
-**System Health Excellence:**
-- All memory performance tests pass consistently
-- Integration with existing performance test suite successful
-- Code quality maintained with zero dialyzer warnings
-- Memory usage patterns meet SIMBA integration requirements
+**Foundation Readiness Status:**
+- **API Contract Stability:** All SIMBA-critical contracts validated and stable
+- **Response Format Consistency:** Guaranteed across all providers for instruction generation
+- **Model Configuration Support:** Dynamic temperature, model, timeout changes working
+- **Instruction Support:** Full instruction storage and processing capability
+- **Enhancement Strategy Detection:** Automatic optimal program wrapping decisions
+- **Concurrent Execution:** Safe trajectory sampling for SIMBA's Bayesian optimization
 
-### **Ready for Next Phase:**
-**Next Phase:** SIMBA Implementation - Ready for Handoff  
-**System Status:** SIMBA-ready foundation with comprehensive contract validation complete
-**Memory Characteristics:** Excellent - All SIMBA memory requirements validated
-**Contract Status:** ✅ Critical API contracts validated and ready for SIMBA integration
+### **✅ SIMBA Implementation Readiness:**
+
+**Critical Foundation Capabilities Now Available:**
+- **Program.forward/3:** Full options support with model configuration passthrough
+- **Client.request/2:** Stable response format normalization across all providers  
+- **Instruction Generation:** LLM-based instruction creation with guaranteed content extraction
+- **Program Enhancement:** Automatic strategy detection and optimal wrapping decisions
+- **Metadata Tracking:** Complete optimization history and performance analysis support
+- **Concurrent Safety:** Validated for SIMBA's heavy trajectory sampling workloads
+
+**SIMBA Integration Preparation:**
+- **Response Stability:** `response.choices[0].message.content` extraction always works
+- **Dynamic Configuration:** Temperature, model, timeout changes supported in real-time
+- **Native Instruction Support:** Predict programs can store and use generated instructions
+- **Optimization Metadata:** Full SIMBA metadata tracking and analysis capabilities
+- **Strategy Detection:** Automatic detection of optimal enhancement approach per program type
+
+**Quality Assurance:**
+- **Zero Compilation Warnings:** Clean codebase ready for production integration
+- **All Tests Passing:** 794 tests validating enhanced functionality
+- **Backward Compatibility:** All existing BEACON and DSPEx functionality preserved
+- **Performance Validated:** Existing performance baselines maintained
+
+### **Ready for SIMBA Integration:**
+**Next Step:** Move SIMBA staging files from `simba/` to `lib/dspex/teleprompter/simba/`  
+**Integration Status:** ✅ Foundation ready - All SIMBA dependencies validated and stable
+**Test Coverage:** ✅ Comprehensive - Both existing and new functionality fully tested
 
 ---
-
-# Phase 6: Critical Contract Validation for SIMBA Readiness ✅ COMPLETE
-
-**Date:** June 11, 2025  
-**Status:** ✅ **SUCCESSFULLY COMPLETED**  
-**Objective:** Validate API contracts that SIMBA's Bayesian optimization absolutely depends on
-
-## 🎉 **BREAKTHROUGH: Phase 6 Successfully Completed**
-
-**Achievement:** Successfully migrated and validated all critical API contracts required for SIMBA integration
-**Status:** All SIMBA-critical contracts now validated with comprehensive test coverage
-
-### **Phase 6 Implementation Status: ✅ COMPLETE**
-
-**Successfully Migrated:**
-- ✅ `test/integration/foundation_integration_test.exs` - ConfigManager, TelemetrySetup, service lifecycle validation
-- ✅ `test/integration/compatibility_test.exs` - Program.forward/2 stability, concurrent execution safety
-- ✅ `test/integration/error_recovery_test.exs` - Client.request/2 interface, response format stability
-- ✅ `test/unit/program_utilities_test.exs` - OptimizedProgram.new/3, program metadata handling
-
-**Critical SIMBA Contract Validation:**
-- **Program.forward/2 Stability**: ✅ Consistent `{:ok, outputs}` format validated under load
-- **Client.request/2 Interface**: ✅ Stable response format with correlation tracking
-- **Example Data Structures**: ✅ Example.new/1, inputs/1, outputs/1 reliability confirmed
-- **OptimizedProgram Contract**: ✅ OptimizedProgram.new/3 metadata support validated
-- **Foundation Service Integration**: ✅ ConfigManager, TelemetrySetup lifecycle management
-
-**Test Suite Metrics:**
-- **Contract Validation Tests:** 4 comprehensive test suites covering all SIMBA dependencies
-- **Quality Gates:** ✅ Zero dialyzer warnings maintained
-- **Integration Ready:** All critical API contracts validated for SIMBA's Bayesian optimization
-
-### **✅ SIMBA Integration Readiness:**
-
-**API Contract Stability:**
-- Program.forward/2: Consistent response format across thousands of calls
-- Client.request/2: Stable provider switching with correlation preservation
-- Example handling: Reliable serialization/deserialization for demonstration storage
-- OptimizedProgram: Custom metadata support for SIMBA optimization data
-- Telemetry: Event correlation and measurement structure maintained
-
-**Foundation Integration:**
-- ConfigManager: Graceful handling of already-started services
-- TelemetrySetup: Integration with Foundation telemetry infrastructure
-- Service lifecycle: Proper startup/shutdown sequencing validated
-- Error recovery: Comprehensive fault tolerance across all contract areas
-
-**System Health Excellence:**
-- All critical contract tests passing consistently
-- Zero compilation warnings across contract validation suite
-- Error handling patterns ready for SIMBA's stress scenarios
-- Memory usage patterns within SIMBA requirements
-
-## Context: SIMBA Architecture Analysis Complete
-
-After analyzing the actual SIMBA implementation in `TODO_03_simbaPlanning/`, it's clear that SIMBA is a sophisticated **Bayesian optimization teleprompter** with critical dependencies on specific DSPEx contracts:
-
-**SIMBA's Core Dependencies:**
-- **DSPEx.Program.forward/2** - Called thousands of times during optimization trials
-- **DSPEx.Client.request/2** - Used for LLM-based instruction generation
-- **DSPEx.Example data structures** - Essential for demonstration generation
-- **DSPEx.OptimizedProgram** - Wrapper for enhanced program output
-- **Telemetry infrastructure** - Progress tracking and observability
-
-## Phase 6 Implementation Plan
-
-### **Step 1: Deep Context Gathering (Essential)**
-
-**Complete Context File List:**
-
-**Documentation (Essential Reading):**
-```
-TASK_6_REVIEW_CLAUDE.md
-TODO_02_PRE_SIMBA/TEST_MIGRATION_PLAN.md
-TODO_03_simbaPlanning/simba_01_integration_claude.md
-TODO_03_simbaPlanning/simba_02_bayesian_optimizer.md
-TODO_03_simbaPlanning/simba_04_integration_documentation.md
-```
-
-**SIMBA Implementation (Architecture Understanding):**
-```
-TODO_03_simbaPlanning/lib/ds_ex/teleprompter/simba/integration.ex
-TODO_03_simbaPlanning/lib/ds_ex/teleprompter/simba/continuous_optimizer.ex
-TODO_03_simbaPlanning/lib/ds_ex/teleprompter/simba/utils.ex
-```
-
-**Core DSPEx Contracts (Critical Dependencies):**
-```
-lib/dspex/program.ex
-lib/dspex/predict.ex
-lib/dspex/client.ex
-lib/dspex/example.ex
-lib/dspex/optimized_program.ex
-lib/dspex/teleprompter.ex
-lib/dspex/teleprompter/bootstrap_fewshot.ex
-```
-
-**Service Infrastructure (Foundation Integration):**
-```
-lib/dspex/services/config_manager.ex
-lib/dspex/services/telemetry_setup.ex
-lib/dspex/client_manager.ex
-lib/dspex/mock_client_manager.ex
-```
-
-**Data Structures and Utilities:**
-```
-lib/dspex/signature.ex
-lib/dspex/adapter.ex
-lib/dspex/evaluate.ex
-lib/dspex/application.ex
-```
-
-**Test Files to Migrate (Contract Validation):**
-```
-TODO_02_PRE_SIMBA/test/integration/foundation_integration_test.exs
-TODO_02_PRE_SIMBA/test/integration/compatbility_test.exs
-TODO_02_PRE_SIMBA/test/integration/error_recovery_test.exs
-TODO_02_PRE_SIMBA/test/unit/program_utilites_test.exs
-```
-
-**Reference Test Infrastructure (If Needed):**
-```
-test/support/mock_provider.ex
-test/support/simba_test_mocks.ex
-test/test_helper.exs
-```
-
-### **Step 2: Contract Test Migration (Critical)**
-
-**Priority 1: Foundation Integration**
-```bash
-cp TODO_02_PRE_SIMBA/test/integration/foundation_integration_test.exs test/integration/
-# Validates ConfigManager, TelemetrySetup, service lifecycle
-```
-
-**Priority 2: Program Contract Validation**
-```bash
-cp TODO_02_PRE_SIMBA/test/integration/compatbility_test.exs test/integration/
-# Validates Program.forward/2 stability, concurrent execution safety
-```
-
-**Priority 3: Client Interface Validation**
-```bash
-cp TODO_02_PRE_SIMBA/test/integration/error_recovery_test.exs test/integration/
-# Validates Client.request/2 interface, response format stability
-```
-
-**Priority 4: Program Utilities**
-```bash
-cp TODO_02_PRE_SIMBA/test/unit/program_utilites_test.exs test/unit/
-# Validates OptimizedProgram.new/3, program metadata handling
-```
-
-### **Step 3: Critical Contract Validation**
-
-**Validation Commands:**
-```bash
-# Test each contract individually
-mix test test/integration/foundation_integration_test.exs --max-failures 1
-mix test test/integration/compatbility_test.exs --max-failures 1  
-mix test test/integration/error_recovery_test.exs --max-failures 1
-mix test test/unit/program_utilites_test.exs --max-failures 1
-
-# Full contract validation
-mix test test/integration/ test/unit/ --max-failures 3
-mix dialyzer  # Zero warnings required
-```
-
-### **Success Criteria:**
-
-**Critical SIMBA Contract Validation:**
-- ✅ Program.forward/2 returns consistent `{:ok, outputs}` format
-- ✅ Client.request/2 maintains stable response.choices[0].message.content structure
-- ✅ Example.new/1, inputs/1, outputs/1 methods work reliably
-- ✅ OptimizedProgram.new/3 supports custom metadata for SIMBA optimization data
-- ✅ Telemetry events maintain correlation_id and measurement structure
-- ✅ ConfigManager returns valid provider atoms for instruction generation
-
-**System Readiness Status:**
-- Phase 5C: ✅ Memory performance validated  
-- Phase 6: ⚠️ **IN PROGRESS** - API contract validation for SIMBA integration
-
-## Critical Implementation Notes
-
-**SIMBA makes thousands of API calls** during optimization and depends on these contracts being stable. Contract validation is **essential** to prevent SIMBA optimization failures.
-
-**Next Action:** Begin Phase 6 contract test migration and validation immediately.

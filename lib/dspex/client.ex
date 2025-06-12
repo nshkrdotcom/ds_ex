@@ -1,10 +1,12 @@
 defmodule DSPEx.Client do
+  require Logger
+
   @moduledoc """
-  HTTP client for language model API communication with Foundation integration.
+  HTTP client for language model API communication with Foundation integration and SIMBA stability enhancements.
 
   Provides a robust interface for making requests to various language model providers
-  with built-in circuit breakers, rate limiting, telemetry, and error handling via
-  Foundation infrastructure.
+  with built-in circuit breakers, rate limiting, telemetry, error handling, and
+  guaranteed response format stability for SIMBA optimization.
 
   ## Configuration
 
@@ -19,11 +21,12 @@ defmodule DSPEx.Client do
       iex> response.choices
       [%{message: %{content: "Hello! How can I help you?"}}]
 
-      # With custom options
+      # With custom options for SIMBA
       iex> {:ok, response} = DSPEx.Client.request(messages, %{
       ...>   provider: :openai,
       ...>   temperature: 0.9,
-      ...>   correlation_id: "req-123"
+      ...>   correlation_id: "simba-req-123",
+      ...>   timeout: 30_000
       ...> })
 
   ## Type Specifications
@@ -37,7 +40,8 @@ defmodule DSPEx.Client do
           optional(:model) => String.t(),
           optional(:temperature) => float(),
           optional(:max_tokens) => pos_integer(),
-          optional(:correlation_id) => String.t()
+          optional(:correlation_id) => String.t(),
+          optional(:timeout) => pos_integer()
         }
   @type response :: %{choices: [%{message: message()}]}
   @type error_reason ::
@@ -53,7 +57,10 @@ defmodule DSPEx.Client do
           | :unexpected_result
 
   @doc """
-  Make a request to the configured LLM provider with Foundation protection.
+  Make a request to the configured LLM provider with Foundation protection and SIMBA stability.
+
+  This function provides guaranteed response format stability for SIMBA optimization,
+  ensuring that instruction generation and evaluation work reliably across providers.
 
   ## Parameters
 
@@ -62,7 +69,7 @@ defmodule DSPEx.Client do
 
   ## Returns
 
-  - `{:ok, response}` - Successful response with choices
+  - `{:ok, response}` - Successful response with guaranteed format: %{choices: [%{message: %{content: string}}]}
   - `{:error, reason}` - Error with categorized reason
 
   ## Examples
@@ -89,7 +96,7 @@ defmodule DSPEx.Client do
       # This is a managed client PID - call it directly
       DSPEx.ClientManager.request(client_id, messages, options)
     else
-      # This is a client_id atom - use normal flow
+      # This is a client_id atom - use normal flow with SIMBA stability enhancements
       # Validate messages before proceeding
       if not valid_messages?(messages) do
         {:error, :invalid_messages}
@@ -100,17 +107,17 @@ defmodule DSPEx.Client do
         # Determine provider from client_id or options
         provider = resolve_provider(client_id, options)
 
-        # Execute the request with proper error handling
-        do_protected_request(messages, options, provider, correlation_id)
+        # Execute the request with proper error handling and response normalization
+        do_protected_request_with_stability(messages, options, provider, correlation_id)
       end
     end
   end
 
-  # Private functions
+  # Private functions with SIMBA stability enhancements
 
-  @spec do_protected_request([message()], request_options(), atom(), binary()) ::
+  @spec do_protected_request_with_stability([message()], request_options(), atom(), binary()) ::
           {:ok, response()} | {:error, error_reason()}
-  defp do_protected_request(messages, options, provider, correlation_id) do
+  defp do_protected_request_with_stability(messages, options, provider, correlation_id) do
     # Emit telemetry start event
     start_time = System.monotonic_time()
 
@@ -122,12 +129,14 @@ defmodule DSPEx.Client do
       %{
         provider: provider,
         correlation_id: correlation_id,
-        message_count: length(messages)
+        message_count: length(messages),
+        temperature: Map.get(options, :temperature),
+        simba_request: Map.get(options, :simba_request, false)
       }
     )
 
-    # Execute request directly for now (Foundation contract issues)
-    result = do_request(messages, options, provider, correlation_id)
+    # Execute request with stability guarantees
+    result = do_request_with_normalization(messages, options, provider, correlation_id)
 
     # Emit telemetry stop event
     duration = System.monotonic_time() - start_time
@@ -141,16 +150,17 @@ defmodule DSPEx.Client do
       },
       %{
         provider: provider,
-        correlation_id: correlation_id
+        correlation_id: correlation_id,
+        simba_request: Map.get(options, :simba_request, false)
       }
     )
 
     result
   end
 
-  @spec do_request([message()], request_options(), atom(), binary()) ::
+  @spec do_request_with_normalization([message()], request_options(), atom(), binary()) ::
           {:ok, response()} | {:error, error_reason()}
-  defp do_request(messages, options, provider, correlation_id) do
+  defp do_request_with_normalization(messages, options, provider, correlation_id) do
     # Check test mode first to avoid unnecessary API attempts
     case get_test_mode_behavior() do
       :force_mock ->
@@ -163,8 +173,9 @@ defmodule DSPEx.Client do
              {:ok, request_body} <- build_request_body(messages, options, provider_config),
              {:ok, http_response} <-
                make_http_request(request_body, provider_config, correlation_id),
-             {:ok, parsed_response} <- parse_response(http_response, provider) do
-          {:ok, parsed_response}
+             {:ok, raw_response} <- parse_response(http_response, provider),
+             {:ok, normalized_response} <- normalize_response_format(raw_response, provider) do
+          {:ok, normalized_response}
         else
           {:error, :no_api_key} ->
             # Seamless fallback to mock response when no API key is available
@@ -175,6 +186,128 @@ defmodule DSPEx.Client do
         end
     end
   end
+
+  @doc """
+  Normalize response format to guarantee SIMBA compatibility.
+
+  This function ensures that all provider responses conform to the expected format:
+  %{choices: [%{message: %{role: string, content: string}}]}
+
+  This is critical for SIMBA's instruction generation which expects to extract
+  content via: response.choices |> List.first() |> get_in([Access.key(:message), Access.key(:content)])
+  """
+  @spec normalize_response_format(map(), atom()) :: {:ok, response()} | {:error, error_reason()}
+  def normalize_response_format(response, provider) when is_map(response) do
+    try do
+      case response do
+        # Already in correct format
+        %{choices: choices} when is_list(choices) ->
+          normalized_choices = Enum.map(choices, &normalize_choice/1)
+          {:ok, %{choices: normalized_choices}}
+
+        # Gemini-style response
+        %{candidates: candidates} when is_list(candidates) ->
+          normalized_choices = Enum.map(candidates, &normalize_gemini_candidate/1)
+          {:ok, %{choices: normalized_choices}}
+
+        # Single message response (some providers)
+        %{message: message} when is_map(message) ->
+          normalized_choice = normalize_choice(%{message: message})
+          {:ok, %{choices: [normalized_choice]}}
+
+        # Raw content response
+        %{content: content} when is_binary(content) ->
+          normalized_choice = %{message: %{role: "assistant", content: content}}
+          {:ok, %{choices: [normalized_choice]}}
+
+        # Fallback for unknown format
+        _ ->
+          Logger.warning(
+            "Unknown response format from #{provider}: #{inspect(Map.keys(response))}"
+          )
+
+          # Create minimal valid response
+          {:ok, %{choices: [%{message: %{role: "assistant", content: ""}}]}}
+      end
+    rescue
+      error ->
+        Logger.error("Response normalization failed for #{provider}: #{inspect(error)}")
+        {:error, :invalid_response}
+    end
+  end
+
+  def normalize_response_format(_, _), do: {:error, :invalid_response}
+
+  # Normalize individual choice/candidate to standard format
+  defp normalize_choice(%{message: %{role: role, content: content}})
+       when is_binary(role) and is_binary(content) do
+    %{message: %{role: role, content: content}}
+  end
+
+  defp normalize_choice(%{message: %{content: content}}) when is_binary(content) do
+    %{message: %{role: "assistant", content: content}}
+  end
+
+  defp normalize_choice(%{message: message}) when is_map(message) do
+    %{
+      message: %{
+        role: Map.get(message, :role, "assistant"),
+        content: Map.get(message, :content, "") |> ensure_string()
+      }
+    }
+  end
+
+  defp normalize_choice(choice) when is_map(choice) do
+    # Extract content from various possible locations
+    content = extract_content_from_choice(choice)
+    %{message: %{role: "assistant", content: content}}
+  end
+
+  defp normalize_choice(_), do: %{message: %{role: "assistant", content: ""}}
+
+  # Normalize Gemini candidate to standard format
+  defp normalize_gemini_candidate(%{content: %{parts: parts}}) when is_list(parts) do
+    content =
+      case List.first(parts) do
+        %{text: text} when is_binary(text) -> text
+        %{"text" => text} when is_binary(text) -> text
+        _ -> ""
+      end
+
+    %{message: %{role: "assistant", content: content}}
+  end
+
+  defp normalize_gemini_candidate(%{content: content}) when is_map(content) do
+    text =
+      get_in(content, ["parts", Access.at(0), "text"]) ||
+        get_in(content, [:parts, Access.at(0), :text]) || ""
+
+    %{message: %{role: "assistant", content: ensure_string(text)}}
+  end
+
+  defp normalize_gemini_candidate(candidate) do
+    # Fallback content extraction
+    content = extract_content_from_choice(candidate)
+    %{message: %{role: "assistant", content: content}}
+  end
+
+  # Extract content from various response formats
+  defp extract_content_from_choice(choice) when is_map(choice) do
+    content =
+      choice[:content] || choice["content"] ||
+        get_in(choice, [:message, :content]) || get_in(choice, ["message", "content"]) ||
+        get_in(choice, [:text]) || get_in(choice, ["text"]) ||
+        ""
+
+    ensure_string(content)
+  end
+
+  defp extract_content_from_choice(_), do: ""
+
+  # Ensure value is a string
+  defp ensure_string(value) when is_binary(value), do: value
+  defp ensure_string(value) when is_atom(value), do: Atom.to_string(value)
+  defp ensure_string(value), do: inspect(value)
 
   # Determine whether to force mock or allow API attempts based on test mode
   defp get_test_mode_behavior do
@@ -197,11 +330,14 @@ defmodule DSPEx.Client do
     user_message =
       messages
       |> Enum.find(&(&1.role == "user"))
-      |> Map.get(:content, "")
+      |> case do
+        %{content: content} -> content
+        _ -> ""
+      end
 
     mock_response = get_preset_or_contextual_response(provider, user_message)
 
-    # Return in the same format as a real API response
+    # Return in the normalized format that SIMBA expects
     {:ok,
      %{
        choices: [
@@ -258,6 +394,9 @@ defmodule DSPEx.Client do
 
       String.contains?(content_lower, ["predict", "field"]) ->
         "Field-specific mock answer"
+
+      String.contains?(content_lower, ["instruction", "generate", "create"]) ->
+        "Given the input, provide a clear and accurate response with proper reasoning."
 
       true ->
         "Contextual mock response based on your query"

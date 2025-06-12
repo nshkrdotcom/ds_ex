@@ -1,10 +1,11 @@
-# dspex/teleprompter/simba/bucket.ex
 defmodule DSPEx.Teleprompter.SIMBA.Bucket do
   @moduledoc """
   Represents a bucket of trajectories grouped by performance characteristics.
 
   Buckets are used to identify patterns in program execution and determine
-  which trajectories are suitable for strategy application.
+  which trajectories are suitable for strategy application. Each bucket
+  contains trajectories from the same example but with different program
+  configurations or model settings.
   """
 
   alias DSPEx.Teleprompter.SIMBA.Trajectory

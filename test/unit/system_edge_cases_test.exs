@@ -601,7 +601,9 @@ defmodule DSPEx.SystemEdgeCasesTest do
         -0.0
       ]
 
-      DSPEx.MockClientManager.set_mock_responses(:test, [%{content: "Numeric edge response"}])
+      # Provide sufficient responses for all edge numbers
+      responses = Enum.map(1..length(edge_numbers), fn i -> %{content: "Response #{i}"} end)
+      DSPEx.MockClientManager.set_mock_responses(:test, responses)
 
       results =
         Enum.map(edge_numbers, fn number ->
@@ -654,7 +656,9 @@ defmodule DSPEx.SystemEdgeCasesTest do
 
     test "rapid program creation and destruction" do
       # Test creating and destroying programs rapidly - reduced iterations
-      DSPEx.MockClientManager.set_mock_responses(:test, [%{content: "rapid response"}])
+      # Provide sufficient responses for all concurrent calls
+      responses = Enum.map(1..15, fn i -> %{content: "rapid response #{i}"} end)
+      DSPEx.MockClientManager.set_mock_responses(:test, responses)
 
       creation_tasks =
         Task.async_stream(

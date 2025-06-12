@@ -160,7 +160,16 @@ defmodule DSPEx.ProgramUtilitiesTest do
     test "extracts safe information from Predict programs", %{predict_program: predict} do
       info = Program.safe_program_info(predict)
 
-      expected_keys = [:demo_count, :has_demos, :name, :signature, :type]
+      expected_keys = [
+        :demo_count,
+        :has_demos,
+        :name,
+        :signature,
+        :supports_native_demos,
+        :supports_native_instruction,
+        :type
+      ]
+
       assert Map.keys(info) |> Enum.sort() == expected_keys
 
       assert info.type == :predict
@@ -211,7 +220,16 @@ defmodule DSPEx.ProgramUtilitiesTest do
       info = Program.safe_program_info(sensitive_program)
 
       # Should only contain safe fields
-      expected_keys = [:demo_count, :has_demos, :name, :signature, :type]
+      expected_keys = [
+        :demo_count,
+        :has_demos,
+        :name,
+        :signature,
+        :supports_native_demos,
+        :supports_native_instruction,
+        :type
+      ]
+
       assert Map.keys(info) |> Enum.sort() == expected_keys
 
       # Should not contain sensitive data
@@ -413,7 +431,17 @@ defmodule DSPEx.ProgramUtilitiesTest do
       # 1ms
       assert time < 1000
       assert is_map(info)
-      expected_keys = [:demo_count, :has_demos, :name, :signature, :type]
+
+      expected_keys = [
+        :demo_count,
+        :has_demos,
+        :name,
+        :signature,
+        :supports_native_demos,
+        :supports_native_instruction,
+        :type
+      ]
+
       assert Map.keys(info) |> Enum.sort() == expected_keys
     end
   end

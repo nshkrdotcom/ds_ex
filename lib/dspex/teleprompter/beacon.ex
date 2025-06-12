@@ -476,7 +476,7 @@ defmodule DSPEx.Teleprompter.BEACON do
   end
 
   defp create_test_program(student, config) do
-    case OptimizedProgram.beacon_enhancement_strategy(student) do
+    case OptimizedProgram.simba_enhancement_strategy(student) do
       :native_full ->
         %{student | instruction: config.instruction, demos: config.demos}
 
@@ -527,7 +527,7 @@ defmodule DSPEx.Teleprompter.BEACON do
   end
 
   defp create_optimized_student(student, optimization_result, _config) do
-    case OptimizedProgram.beacon_enhancement_strategy(student) do
+    case OptimizedProgram.simba_enhancement_strategy(student) do
       :native_full ->
         optimized = %{
           student

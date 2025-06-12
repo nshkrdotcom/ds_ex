@@ -238,8 +238,17 @@ defmodule DSPEx.OptimizedProgramAdvancedTest do
       assert updated.program == new_program
       # Preserved
       assert updated.demos == demos
-      # Preserved
-      assert updated.metadata == optimized.metadata
+      # Metadata includes original data plus update tracking
+      assert Map.drop(updated.metadata, [
+               :program_updated_at,
+               :original_program_type,
+               :new_program_type
+             ]) ==
+               optimized.metadata
+
+      assert Map.has_key?(updated.metadata, :program_updated_at)
+      assert updated.metadata.original_program_type == :predict
+      assert updated.metadata.new_program_type == :predict
     end
   end
 
