@@ -301,7 +301,7 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
     Map.update(progress_state, :steps, [step_data], &[step_data | &1])
   end
 
-  defp mock_calculate_improvement(original_program, improved_program, examples, metric_fn) do
+  defp mock_calculate_improvement(_original_program, _improved_program, examples, metric_fn) do
     # Simulate evaluation of both programs
     original_scores = Enum.map(examples, fn _example ->
       metric_fn.(%{}, %{})

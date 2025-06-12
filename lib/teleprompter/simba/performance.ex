@@ -4,12 +4,14 @@ defmodule DSPEx.Teleprompter.SIMBA.Performance do
   Performance tracking and analysis utilities for SIMBA optimization.
   """
 
-  alias DSPEx.Teleprompter.SIMBA.{Trajectory, Bucket}
+  # Note: Bucket and Trajectory are in lib/dspex/teleprompter/simba/ 
+  # Using full module names for clarity during Phase 3
+  # TODO: Update when all modules are moved to final location
 
   @doc """
   Calculate performance statistics for a list of buckets.
   """
-  @spec analyze_buckets([Bucket.t()]) :: map()
+  @spec analyze_buckets([DSPEx.Teleprompter.SIMBA.Bucket.t()]) :: map()
   def analyze_buckets(buckets) do
     if Enum.empty?(buckets) do
       %{
@@ -40,7 +42,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Performance do
         avg_bucket_score: avg_bucket_score,
         max_bucket_score: max_bucket_score,
         improvement_potential: improvement_potential,
-        viable_buckets: Enum.count(buckets, &Bucket.has_improvement_potential?/1)
+        viable_buckets: Enum.count(buckets, &DSPEx.Teleprompter.SIMBA.Bucket.has_improvement_potential?/1)
       }
     end
   end
@@ -48,7 +50,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Performance do
   @doc """
   Track optimization progress over steps.
   """
-  @spec track_progress(map(), integer(), [Bucket.t()], [struct()]) :: map()
+  @spec track_progress(map(), integer(), [DSPEx.Teleprompter.SIMBA.Bucket.t()], [struct()]) :: map()
   def track_progress(progress_state, step, buckets, candidate_programs) do
     bucket_stats = analyze_buckets(buckets)
 
