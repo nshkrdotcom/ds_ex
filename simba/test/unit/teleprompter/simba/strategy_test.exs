@@ -80,7 +80,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
     test "applicable?/2 callback is optional" do
       # TestStrategy implements it
       assert function_exported?(TestStrategy, :applicable?, 2)
-      
+
       # MinimalStrategy doesn't implement it
       refute function_exported?(MinimalStrategy, :applicable?, 2)
     end
@@ -88,7 +88,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
     test "apply/3 returns proper format" do
       bucket = create_test_bucket([0.8])
       program = create_test_program()
-      
+
       # Should return {:ok, program} or {:skip, reason}
       result = TestStrategy.apply(bucket, program, %{})
       assert {:ok, ^program} = result
@@ -97,7 +97,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
     test "apply/3 can skip with reason" do
       bucket = create_test_bucket([0.2])  # Low score
       program = create_test_program()
-      
+
       result = TestStrategy.apply(bucket, program, %{})
       assert {:skip, reason} = result
       assert is_binary(reason)
@@ -114,7 +114,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
     test "strategy can analyze bucket quality" do
       high_quality_bucket = create_test_bucket([0.9, 0.8, 0.7])
       low_quality_bucket = create_test_bucket([0.2, 0.1])
-      
+
       assert TestStrategy.applicable?(high_quality_bucket, %{})
       refute TestStrategy.applicable?(low_quality_bucket, %{})
     end
@@ -122,10 +122,10 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
     test "strategy can handle empty bucket" do
       empty_bucket = create_test_bucket([])
       program = create_test_program()
-      
+
       result = TestStrategy.apply(empty_bucket, program, %{})
       assert {:skip, _reason} = result
-      
+
       refute TestStrategy.applicable?(empty_bucket, %{})
     end
 
@@ -133,7 +133,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
       bucket = create_test_bucket([0.8])
       program = create_test_program()
       opts = %{custom_option: "test_value"}
-      
+
       # Should not crash with custom options
       result = TestStrategy.apply(bucket, program, opts)
       assert {:ok, ^program} = result
@@ -145,7 +145,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
       # This test ensures our test strategies actually implement the behavior
       behaviors = TestStrategy.__info__(:attributes)[:behaviour] || []
       assert DSPEx.Teleprompter.SIMBA.Strategy in behaviors
-      
+
       behaviors = MinimalStrategy.__info__(:attributes)[:behaviour] || []
       assert DSPEx.Teleprompter.SIMBA.Strategy in behaviors
     end
@@ -153,10 +153,10 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
     test "behavior defines required callbacks" do
       # Check that the behavior module defines the expected callbacks
       callbacks = Strategy.behaviour_info(:callbacks)
-      
+
       # Required callback
       assert {:apply, 3} in callbacks
-      
+
       # Optional callback
       optional_callbacks = Strategy.behaviour_info(:optional_callbacks)
       assert {:applicable?, 2} in optional_callbacks
@@ -168,7 +168,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
       # Create a bucket-like structure that might cause issues
       fake_bucket = %{trajectories: nil}
       program = create_test_program()
-      
+
       # Strategy should handle gracefully or raise clear error
       assert_raise(exception when exception in [FunctionClauseError, MatchError, KeyError], fn ->
         TestStrategy.apply(fake_bucket, program, %{})
@@ -177,7 +177,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
 
     test "strategy can handle nil program" do
       bucket = create_test_bucket([0.8])
-      
+
       # Strategy should handle gracefully
       result = TestStrategy.apply(bucket, nil, %{})
       assert {:ok, nil} = result
@@ -196,7 +196,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
     example = Example.new(%{question: "test", answer: "test"})
     inputs = %{question: "test"}
     outputs = %{answer: "test"}
-    
+
     Trajectory.new(program, example, inputs, outputs, score)
   end
 

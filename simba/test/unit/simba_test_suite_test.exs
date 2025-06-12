@@ -10,7 +10,7 @@ defmodule SIMBA.UnitTestSuiteTest do
     # Test that all our unit test files have proper syntax
     test_files = [
       "simba_test.exs",
-      "bucket_test.exs", 
+      "bucket_test.exs",
       "trajectory_test.exs",
       "strategy_test_fixed.exs",
       "append_demo_test.exs",
@@ -60,20 +60,20 @@ defmodule SIMBA.UnitTestSuiteTest do
   test "mock functions return expected formats" do
     # Test our mock functions return proper formats
     bucket_data = %{trajectories: [%{score: 0.8}], max_score: 0.8}
-    
+
     result = mock_strategy_apply(bucket_data, %{predictors: []}, %{})
     assert match?({:ok, _} | {:skip, _}, result)
   end
 
   # Helper functions (copied from our test files)
-  
+
   defp is_successful?(trajectory_data) do
     trajectory_data[:success] != false and trajectory_data[:score] > 0.0
   end
 
   defp mock_strategy_apply(bucket, program, opts) do
     quality_threshold = Map.get(opts, :quality_threshold, 0.5)
-    
+
     if bucket.max_score > quality_threshold do
       {:ok, program}
     else

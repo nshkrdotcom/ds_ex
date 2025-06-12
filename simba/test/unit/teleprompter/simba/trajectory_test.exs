@@ -113,9 +113,9 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
     test "creates demo from successful trajectory" do
       inputs = %{question: "What is the capital of France?", context: "Geography"}
       outputs = %{answer: "Paris", confidence: "high"}
-      trajectory_data = create_test_trajectory_data(0.9, 
-        inputs: inputs, 
-        outputs: outputs, 
+      trajectory_data = create_test_trajectory_data(0.9,
+        inputs: inputs,
+        outputs: outputs,
         success: true
       )
 
@@ -125,7 +125,7 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
       assert demo_data[:context] == "Geography"
       assert demo_data[:answer] == "Paris"
       assert demo_data[:confidence] == "high"
-      
+
       # Input keys should be preserved
       expected_input_keys = [:question, :context]
       assert demo_data[:input_keys] == expected_input_keys
@@ -133,21 +133,21 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
 
     test "fails for unsuccessful trajectory" do
       trajectory_data = create_test_trajectory_data(0.8, success: false)
-      
+
       {:error, reason} = convert_to_demo(trajectory_data)
       assert reason == :trajectory_failed
     end
 
     test "fails for trajectory with low quality score" do
       trajectory_data = create_test_trajectory_data(0.0, success: true)
-      
+
       {:error, reason} = convert_to_demo(trajectory_data)
       assert reason == :low_quality_score
     end
 
     test "fails for trajectory with negative score" do
       trajectory_data = create_test_trajectory_data(-0.1, success: true)
-      
+
       {:error, reason} = convert_to_demo(trajectory_data)
       assert reason == :low_quality_score
     end
@@ -155,9 +155,9 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
     test "creates demo with merged input/output data" do
       inputs = %{question: "Test question"}
       outputs = %{answer: "Test answer", reasoning: "Test reasoning"}
-      trajectory_data = create_test_trajectory_data(0.8, 
-        inputs: inputs, 
-        outputs: outputs, 
+      trajectory_data = create_test_trajectory_data(0.8,
+        inputs: inputs,
+        outputs: outputs,
         success: true
       )
 
@@ -173,9 +173,9 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
       # Output should override input for same key
       inputs = %{key: "input_value", question: "test"}
       outputs = %{key: "output_value", answer: "test"}
-      trajectory_data = create_test_trajectory_data(0.8, 
-        inputs: inputs, 
-        outputs: outputs, 
+      trajectory_data = create_test_trajectory_data(0.8,
+        inputs: inputs,
+        outputs: outputs,
         success: true
       )
 
@@ -219,7 +219,7 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
     test "stores error information" do
       error = "Connection timeout after 30s"
       trajectory_data = create_test_trajectory_data(0.0, error: error, success: false)
-      
+
       assert trajectory_data.error == error
       assert trajectory_data.success == false
     end
@@ -262,14 +262,14 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
     cond do
       trajectory_data.success == false ->
         {:error, :trajectory_failed}
-      
+
       trajectory_data.score <= 0.0 ->
         {:error, :low_quality_score}
-      
+
       true ->
         combined_data = Map.merge(trajectory_data.inputs, trajectory_data.outputs)
         input_keys = Map.keys(trajectory_data.inputs)
-        
+
         demo_data = Map.put(combined_data, :input_keys, input_keys)
         {:ok, demo_data}
     end

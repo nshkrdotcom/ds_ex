@@ -44,7 +44,7 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
       assert stats.total_trajectories == 6  # 2 + 3 + 1
       assert stats.avg_bucket_score == (0.9 + 0.8 + 0.95) / 3  # avg of max scores
       assert stats.max_bucket_score == 0.95
-      
+
       # Improvement potential: avg of max_to_min_gaps
       expected_improvement = ((0.9 - 0.7) + (0.8 - 0.4) + (0.95 - 0.95)) / 3
       assert_in_delta stats.improvement_potential, expected_improvement, 0.01
@@ -53,7 +53,7 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
     test "calculates viable buckets count" do
       # High potential bucket
       high_potential = create_test_bucket_data([0.9, 0.5])  # Large gap
-      # Low potential bucket  
+      # Low potential bucket
       low_potential = create_test_bucket_data([0.8, 0.79])  # Small gap
 
       stats = mock_analyze_buckets([high_potential, low_potential])
@@ -95,7 +95,7 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
       progress2 = mock_track_progress(progress1, 2, step2_buckets, step2_candidates)
 
       assert length(progress2.steps) == 2
-      
+
       # Steps should be in reverse order (newest first)
       [step2_data, step1_data] = progress2.steps
       assert step1_data.step == 1
@@ -109,7 +109,7 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
     test "calculates improvement between programs" do
       original_program = create_test_program_data()
       improved_program = create_test_program_data()
-      
+
       examples = [
         create_test_example_data("Q1", "A1"),
         create_test_example_data("Q2", "A2")
@@ -219,7 +219,7 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
     trajectories = Enum.map(scores, fn score ->
       %{score: score, success: score > 0.0}
     end)
-    
+
     if Enum.empty?(scores) do
       %{
         trajectories: [],
@@ -232,7 +232,7 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
       max_score = Enum.max(scores)
       min_score = Enum.min(scores)
       gap = max_score - min_score
-      
+
       %{
         trajectories: trajectories,
         max_score: max_score,
@@ -306,7 +306,7 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
     original_scores = Enum.map(examples, fn _example ->
       metric_fn.(%{}, %{})
     end)
-    
+
     improved_scores = Enum.map(examples, fn _example ->
       metric_fn.(%{}, %{})
     end)

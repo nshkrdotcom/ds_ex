@@ -40,9 +40,9 @@ defmodule SIMBA.TestHelper do
     example = Keyword.get(opts, :example, create_test_example())
     inputs = Keyword.get(opts, :inputs, %{question: "test"})
     outputs = Keyword.get(opts, :outputs, %{answer: "test"})
-    
+
     trajectory_opts = Keyword.drop(opts, [:program, :example, :inputs, :outputs])
-    
+
     Trajectory.new(program, example, inputs, outputs, score, trajectory_opts)
   end
 
@@ -53,7 +53,7 @@ defmodule SIMBA.TestHelper do
     trajectories = Enum.map(scores, fn score ->
       create_test_trajectory(score, opts)
     end)
-    
+
     bucket_opts = Keyword.take(opts, [:metadata])
     Bucket.new(trajectories, bucket_opts)
   end
@@ -76,7 +76,7 @@ defmodule SIMBA.TestHelper do
   def generate_test_examples(count, opts \\ []) do
     base_question = Keyword.get(opts, :base_question, "What is")
     base_answer = Keyword.get(opts, :base_answer, "answer")
-    
+
     for i <- 1..count do
       create_test_example(%{
         question: "#{base_question} #{i}?",
@@ -92,20 +92,20 @@ defmodule SIMBA.TestHelper do
     case behavior do
       :default ->
         fn _example, _outputs -> 0.8 end
-      
+
       :variable ->
         fn _example, outputs ->
           # Score based on answer length as a simple heuristic
           answer = Map.get(outputs, :answer, "")
           min(String.length(answer) / 10.0, 1.0)
         end
-      
+
       :failing ->
         fn _example, _outputs -> 0.0 end
-      
+
       :random ->
         fn _example, _outputs -> :rand.uniform() end
-      
+
       custom_fn when is_function(custom_fn) ->
         custom_fn
     end
@@ -124,14 +124,14 @@ defmodule SIMBA.TestHelper do
   """
   def assert_valid_statistics(stats) do
     required_keys = [
-      :trajectory_count, :successful_count, :max_score, 
+      :trajectory_count, :successful_count, :max_score,
       :min_score, :avg_score, :score_variance, :improvement_potential
     ]
-    
+
     for key <- required_keys do
       assert Map.has_key?(stats, key), "Missing key: #{key}"
     end
-    
+
     assert is_integer(stats.trajectory_count)
     assert is_integer(stats.successful_count)
     assert is_float(stats.max_score) or is_integer(stats.max_score)

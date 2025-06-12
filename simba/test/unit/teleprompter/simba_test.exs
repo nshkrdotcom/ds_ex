@@ -89,7 +89,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     test "defines expected interface functions" do
       # Test that we expect these functions to exist
       expected_functions = [:new, :compile]
-      
+
       for func <- expected_functions do
         assert is_atom(func)
       end
@@ -103,7 +103,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
         trainset: [],
         metric_fn: fn _ex, _out -> 0.8 end
       }
-      
+
       assert is_map(params.student)
       assert is_map(params.teacher)
       assert is_list(params.trainset)

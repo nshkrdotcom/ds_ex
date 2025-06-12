@@ -234,7 +234,7 @@ defmodule DSPEx.Teleprompter.SIMBA.BucketTest do
 
   defp calculate_bucket_statistics(bucket_data) do
     successful_trajectories = get_successful_trajectories(bucket_data)
-    
+
     score_variance = if length(bucket_data.trajectories) <= 1 do
       0.0
     else

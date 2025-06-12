@@ -13,7 +13,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
     test "implements expected strategy interface" do
       # Test that AppendDemo strategy defines expected interface
       expected_functions = [:apply, :applicable?]
-      
+
       for func <- expected_functions do
         assert is_atom(func)
       end
@@ -23,9 +23,9 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
       # Strategy should implement behavior contract
       behavior_functions = %{
         apply: 3,      # (bucket, source_program, opts)
-        applicable?: 2  # (bucket, opts)  
+        applicable?: 2  # (bucket, opts)
       }
-      
+
       for {func, arity} <- behavior_functions do
         assert is_atom(func) and is_integer(arity)
       end
@@ -50,17 +50,17 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
 
     test "uses custom quality threshold" do
       bucket_data = create_test_bucket_data([0.6])
-      
+
       # Default threshold is 0.7, so should return false
       refute is_applicable?(bucket_data)
-      
+
       # Lower threshold should return true
       assert is_applicable?(bucket_data, %{quality_threshold: 0.5})
     end
 
     test "picks best trajectory from bucket" do
       bucket_data = create_test_bucket_data([0.5, 0.8, 0.6])
-      
+
       # Should use the best trajectory (0.8) which exceeds threshold
       assert is_applicable?(bucket_data)
     end
@@ -70,9 +70,9 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
     test "creates enhanced program from high quality trajectory" do
       bucket_data = create_test_bucket_data([0.9])
       program = create_test_program_data()
-      
+
       {:ok, enhanced_program} = mock_append_demo_apply(bucket_data, program)
-      
+
       assert enhanced_program != program
       assert enhanced_program.enhanced == true
     end
@@ -80,7 +80,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
     test "skips when no high quality trajectory found" do
       bucket_data = create_test_bucket_data([0.5])
       program = create_test_program_data()
-      
+
       {:skip, reason} = mock_append_demo_apply(bucket_data, program)
       assert is_binary(reason)
       assert String.contains?(reason, "quality")
@@ -89,7 +89,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
     test "skips when bucket is empty" do
       bucket_data = create_test_bucket_data([])
       program = create_test_program_data()
-      
+
       {:skip, reason} = mock_append_demo_apply(bucket_data, program)
       assert is_binary(reason)
     end
@@ -97,12 +97,12 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
     test "uses custom options" do
       bucket_data = create_test_bucket_data([0.8])
       program = create_test_program_data()
-      
+
       opts = %{
         max_demos: 2,
         quality_threshold: 0.6
       }
-      
+
       result = mock_append_demo_apply(bucket_data, program, opts)
       assert {:ok, _enhanced_program} = result
     end
@@ -111,7 +111,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
       # Create a bucket that will fail demo conversion
       bucket_data = create_test_bucket_data([0.0])  # Zero score trajectory
       program = create_test_program_data()
-      
+
       {:skip, reason} = mock_append_demo_apply(bucket_data, program, %{quality_threshold: 0.0})
       assert is_binary(reason)
     end
@@ -121,16 +121,16 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
     test "creates demo from successful trajectory" do
       inputs = %{question: "What is 2+2?", context: "math"}
       outputs = %{answer: "4", confidence: "high"}
-      
+
       trajectory_data = %{
         score: 0.9,
         inputs: inputs,
         outputs: outputs,
         success: true
       }
-      
+
       {:ok, demo_data} = mock_create_demo_from_trajectory(trajectory_data)
-      
+
       # Verify demo contains input and output data
       assert demo_data[:question] == "What is 2+2?"
       assert demo_data[:context] == "math"
@@ -141,11 +141,11 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
     test "handles programs with existing demos" do
       existing_demos = [%{question: "old", answer: "old"}]
       program = create_test_program_data(demos: existing_demos)
-      
+
       bucket_data = create_test_bucket_data([0.9])
-      
+
       {:ok, enhanced_program} = mock_append_demo_apply(bucket_data, program)
-      
+
       # Should handle existing demos appropriately
       assert enhanced_program != program
       assert enhanced_program.enhanced == true
@@ -157,11 +157,11 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
         %{question: "q#{i}", answer: "a#{i}"}
       end
       program = create_test_program_data(demos: existing_demos)
-      
+
       bucket_data = create_test_bucket_data([0.9])
-      
+
       {:ok, enhanced_program} = mock_append_demo_apply(bucket_data, program, %{max_demos: 3})
-      
+
       # Implementation should respect max_demos
       assert enhanced_program != program
       assert enhanced_program.max_demos_applied == true
@@ -175,21 +175,21 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
         %{question: "q#{i}", answer: "a#{i}"}
       end
       program = create_test_program_data(demos: existing_demos)
-      
+
       bucket_data = create_test_bucket_data([0.9])
-      
+
       # With max_demos = 3, should drop some existing demos
       {:ok, enhanced_program} = mock_append_demo_apply(bucket_data, program, %{max_demos: 3})
-      
+
       assert enhanced_program != program
       assert enhanced_program.demos_dropped == true
     end
 
     test "handles programs without demos field" do
       program = %{predictors: []}  # No demos field
-      
+
       bucket_data = create_test_bucket_data([0.9])
-      
+
       # Should handle gracefully
       result = mock_append_demo_apply(bucket_data, program)
       assert {:ok, _enhanced_program} = result
@@ -199,7 +199,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
   describe "edge cases" do
     test "handles nil program" do
       bucket_data = create_test_bucket_data([0.9])
-      
+
       # Should handle gracefully or raise clear error
       result = mock_append_demo_apply(bucket_data, nil)
       assert match?({:error, _} | {:skip, _}, result)
@@ -208,7 +208,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
     test "handles malformed bucket" do
       program = create_test_program_data()
       fake_bucket = %{trajectories: nil}
-      
+
       result = mock_append_demo_apply(fake_bucket, program)
       assert match?({:error, _} | {:skip, _}, result)
     end
@@ -216,7 +216,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
     test "handles very high quality threshold" do
       bucket_data = create_test_bucket_data([0.9])
       program = create_test_program_data()
-      
+
       # Threshold higher than any trajectory score
       {:skip, reason} = mock_append_demo_apply(bucket_data, program, %{quality_threshold: 1.1})
       assert is_binary(reason)
@@ -234,7 +234,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
         outputs: %{answer: "test"}
       }
     end)
-    
+
     if Enum.empty?(trajectories) do
       %{
         trajectories: [],
@@ -258,7 +258,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
 
   defp is_applicable?(bucket_data, opts \\ %{}) do
     quality_threshold = Map.get(opts, :quality_threshold, 0.7)
-    
+
     case get_best_trajectory(bucket_data) do
       nil -> false
       trajectory -> trajectory.score >= quality_threshold
@@ -275,20 +275,20 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
   defp mock_append_demo_apply(bucket_data, program, opts \\ %{}) do
     quality_threshold = Map.get(opts, :quality_threshold, 0.7)
     max_demos = Map.get(opts, :max_demos, 4)
-    
+
     cond do
       is_nil(program) ->
         {:error, "nil program"}
-      
+
       not is_list(bucket_data.trajectories) ->
         {:error, "malformed bucket"}
-      
+
       Enum.empty?(bucket_data.trajectories) ->
         {:skip, "empty bucket"}
-      
+
       bucket_data.max_score < quality_threshold ->
         {:skip, "no high quality trajectories found"}
-      
+
       true ->
         enhanced_program = Map.merge(program, %{
           enhanced: true,
