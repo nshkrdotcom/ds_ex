@@ -142,20 +142,24 @@ graph TD
     subgraph OptimizationLayer["DSPEx: The Optimization Compiler"]
         A[DSPEx.Teleprompter]
         B[DSPEx.Evaluate]
-        C[DSPEx.OptimizedProgram<br/>(Contains an optimal Agent configuration)]
+        C["DSPEx.OptimizedProgram
+        (Contains an optimal Agent configuration)"]
     end
 
     subgraph RuntimeEngine["jido_ai: The Runtime Engine"]
         D[Jido.AI.Agent]
         E[Jido.AI.Skill]
-        F[Jido.AI.Actions<br/>(e.g., Langchain, Instructor)]
-        G[Jido.AI.Provider<br/>(Multi-provider backend)]
+        F["Jido.AI.Actions
+        (e.g., Langchain, Instructor)"]
+        G["Jido.AI.Provider
+        (Multi-provider backend)"]
         H[Jido.AI.Prompt]
     end
 
     subgraph External["External Services"]
         LLM[LLM APIs]
-        Tools["Custom Tools<br/>(e.g., DB access)"]
+        Tools["Custom Tools
+        (e.g., DB access)"]
     end
 
     A -- "Uses" --> B

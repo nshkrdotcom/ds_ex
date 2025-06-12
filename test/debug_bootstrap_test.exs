@@ -12,7 +12,15 @@ defmodule DebugBootstrapTest do
   end
 
   setup do
-    {:ok, _pid} = MockProvider.start_link(mode: :contextual)
+    # Handle case where MockProvider is already started
+    case MockProvider.start_link(mode: :contextual) do
+      {:ok, _pid} -> :ok
+      {:error, {:already_started, _pid}} -> :ok
+      {:error, reason} -> flunk("Failed to start MockProvider: #{inspect(reason)}")
+    end
+
+    # Ensure clean state by clearing any existing mock responses
+    DSPEx.MockClientManager.clear_all_mock_responses()
 
     teacher = %Predict{signature: DebugSignature, client: :test}
 
