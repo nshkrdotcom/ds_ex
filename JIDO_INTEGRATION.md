@@ -99,11 +99,11 @@ This diagram illustrates the clear separation of concerns in the proposed archit
 
 ```mermaid
 graph TD
-    subgraph OptimizationLayer["DSPEx: The Optimization Compiler"]
+    subgraph OptimizationLayer["DSPEx:&nbsp;The&nbsp;Optimization&nbsp;Compiler"]
         A[Teleprompter & Evaluate] -- "Produces" --> B["<b>Optimized Agent Template</b><br>(A Map/Struct with config)"]
     end
 
-    subgraph RuntimeLayer["Jido: The Runtime Engine"]
+    subgraph RuntimeLayer["Jido:&nbsp;The&nbsp;Runtime&nbsp;Engine"]
         C["<b>Jido.Agent.Server</b><br>(The supervised GenServer process)"]
         D["<b>Jido.Agent</b><br>(The agent behavior/state)"]
         E["<b>Jido.Skill</b><br>(Reusable capabilities)"]
@@ -123,6 +123,26 @@ graph TD
     D -- "Uses" --> E
     E -- "Provides" --> F
     D -- "Communicates via" --> G
+
+    %% Elixir-inspired styling
+    classDef userLayer fill:#4e2a8e,stroke:#24292e,stroke-width:2px,color:#fff
+    classDef coreAbstraction fill:#7c4dbd,stroke:#4e2a8e,stroke-width:2px,color:#fff
+    classDef keyModule fill:#9b72d0,stroke:#4e2a8e,stroke-width:2px,color:#fff
+    classDef clientLayer fill:#b89ce0,stroke:#4e2a8e,stroke-width:2px,color:#24292e
+    classDef serviceLayer fill:#d4c5ec,stroke:#4e2a8e,stroke-width:1px,color:#24292e
+    classDef externalSystem fill:#f5f5f5,stroke:#666,stroke-width:1px,color:#24292e
+    classDef adapter fill:#fdfbf7,stroke:#4e2a8e,stroke-width:2px,color:#24292e
+    classDef subgraphTitleTop fill:#e6e0f0,stroke:#b89ce0,stroke-width:2px,color:#24292e
+    classDef subgraphTitleNested fill:#f2f0f7,stroke:#d4c5ec,stroke-width:1px,color:#24292e
+
+    class H userLayer
+    class A,C,D,G coreAbstraction
+    class E,F keyModule
+    class B adapter
+    class OptimizationLayer,RuntimeLayer,UserApp subgraphTitleTop
+
+    %% Darker arrow styling for better visibility
+    linkStyle default stroke:#24292e,stroke-width:2px
 ```
 
 **Workflow:**

@@ -127,7 +127,7 @@ graph TD
         A[User triggers optimization via API or CLI]
     end
 
-    subgraph SignalBus["Jido.Signal.Bus (Central Event Hub)"]
+    subgraph SignalBus["Jido.Signal.Bus&nbsp;(Central&nbsp;Event&nbsp;Hub)"]
         direction LR
         Bus
     end
@@ -160,6 +160,25 @@ graph TD
     end
     
     Bus -- "All events" --> E
+
+    %% Elixir-inspired styling
+    classDef userLayer fill:#4e2a8e,stroke:#24292e,stroke-width:2px,color:#fff
+    classDef coreAbstraction fill:#7c4dbd,stroke:#4e2a8e,stroke-width:2px,color:#fff
+    classDef keyModule fill:#9b72d0,stroke:#4e2a8e,stroke-width:2px,color:#fff
+    classDef clientLayer fill:#b89ce0,stroke:#4e2a8e,stroke-width:2px,color:#24292e
+    classDef serviceLayer fill:#d4c5ec,stroke:#4e2a8e,stroke-width:1px,color:#24292e
+    classDef externalSystem fill:#f5f5f5,stroke:#666,stroke-width:1px,color:#24292e
+    classDef adapter fill:#fdfbf7,stroke:#4e2a8e,stroke-width:2px,color:#24292e
+    classDef subgraphTitleTop fill:#e6e0f0,stroke:#b89ce0,stroke-width:2px,color:#24292e
+    classDef subgraphTitleNested fill:#f2f0f7,stroke:#d4c5ec,stroke-width:1px,color:#24292e
+
+    class A userLayer
+    class Bus coreAbstraction
+    class B,C,D,E keyModule
+    class User,SignalBus,Services,GeneralEvents subgraphTitleTop
+
+    %% Darker arrow styling for better visibility
+    linkStyle default stroke:#24292e,stroke-width:2px
 ```
 
 ### Benefits of this Integration
@@ -184,21 +203,21 @@ This architecture is not only more powerful but also a much better fit for the B
 
 ```mermaid
 graph TD
-    subgraph UserInterface["User Interface (CLI, API, LiveView)"]
+    subgraph UserInterface["User&nbsp;Interface&nbsp;(CLI,&nbsp;API,&nbsp;LiveView)"]
         UI
     end
     
-    subgraph ExecutionLayer["Execution Layer (Jido.Exec)"]
+    subgraph ExecutionLayer["Execution&nbsp;Layer&nbsp;(Jido.Exec)"]
         Executor("Jido.Exec.run")
     end
 
-    subgraph ActionLayer["Action Layer (Jido.Action)"]
+    subgraph ActionLayer["Action&nbsp;Layer&nbsp;(Jido.Action)"]
         Predict["DSPEx.PredictAction"]
         Chain["DSPEx.ChainOfThoughtAction"]
         React["DSPEx.ReActAction (Future)"]
     end
 
-    subgraph SignalLayer["Signal Layer (Jido.Signal.Bus)"]
+    subgraph SignalLayer["Signal&nbsp;Layer&nbsp;(Jido.Signal.Bus)"]
         Bus
     end
 
@@ -222,6 +241,25 @@ graph TD
     
     Teleprompter -- "Uses" --> Evaluator
     Evaluator -- "Uses" --> Executor
+
+    %% Elixir-inspired styling
+    classDef userLayer fill:#4e2a8e,stroke:#24292e,stroke-width:2px,color:#fff
+    classDef coreAbstraction fill:#7c4dbd,stroke:#4e2a8e,stroke-width:2px,color:#fff
+    classDef keyModule fill:#9b72d0,stroke:#4e2a8e,stroke-width:2px,color:#fff
+    classDef clientLayer fill:#b89ce0,stroke:#4e2a8e,stroke-width:2px,color:#24292e
+    classDef serviceLayer fill:#d4c5ec,stroke:#4e2a8e,stroke-width:1px,color:#24292e
+    classDef externalSystem fill:#f5f5f5,stroke:#666,stroke-width:1px,color:#24292e
+    classDef adapter fill:#fdfbf7,stroke:#4e2a8e,stroke-width:2px,color:#24292e
+    classDef subgraphTitleTop fill:#e6e0f0,stroke:#b89ce0,stroke-width:2px,color:#24292e
+    classDef subgraphTitleNested fill:#f2f0f7,stroke:#d4c5ec,stroke-width:1px,color:#24292e
+
+    class UI userLayer
+    class Bus,Executor coreAbstraction
+    class Predict,Chain,React,Teleprompter,Validator,Evaluator keyModule
+    class UserInterface,ExecutionLayer,ActionLayer,SignalLayer,Tooling subgraphTitleTop
+
+    %% Darker arrow styling for better visibility
+    linkStyle default stroke:#24292e,stroke-width:2px
 ```
 
 ### Strategic Recommendation
