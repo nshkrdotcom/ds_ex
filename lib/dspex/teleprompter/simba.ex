@@ -43,9 +43,10 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   @behaviour DSPEx.Teleprompter
 
-  alias DSPEx.{Program, Example, OptimizedProgram}
+  alias DSPEx.{Program, Example, OptimizedProgram, Client}
   alias DSPEx.Teleprompter.BootstrapFewShot
   alias DSPEx.Teleprompter.SIMBA.BayesianOptimizer
+  alias DSPEx.Services.ConfigManager
 
   defstruct num_candidates: 20,
             max_bootstrapped_demos: 4,
@@ -263,61 +264,84 @@ defmodule DSPEx.Teleprompter.SIMBA do
     end
   end
 
-  defp generate_instruction_candidates(student, _trainset, config, correlation_id) do
+  defp generate_instruction_candidates(student, trainset, config, correlation_id) do
+    start_time = System.monotonic_time()
+
     emit_telemetry(
       [:dspex, :teleprompter, :simba, :instruction, :start],
       %{system_time: System.system_time()},
       %{correlation_id: correlation_id, num_candidates: config.num_candidates}
     )
 
-    # For now, generate simple instruction variations
-    # This will be enhanced with LLM-based generation in future iterations
-    base_instruction = get_base_instruction(student)
+    # Get the signature from the student program
+    signature = extract_signature(student)
 
-    instruction_candidates =
-      0..(config.num_candidates - 1)
-      |> Enum.map(fn index ->
-        instruction =
-          case index do
-            0 -> base_instruction
-            _ -> "#{base_instruction} (variation #{index})"
+    # Generate instruction candidates using LLM
+    instruction_prompts = build_instruction_generation_prompts(signature, trainset, config)
+
+    candidates =
+      instruction_prompts
+      |> Stream.with_index()
+      |> Task.async_stream(
+        fn {prompt, index} ->
+          case generate_single_instruction(prompt, config, correlation_id) do
+            {:ok, instruction} ->
+              %{
+                id: "inst_#{index}",
+                instruction: instruction,
+                quality_score: nil,
+                metadata: %{
+                  generated_at: DateTime.utc_now(),
+                  prompt_type: Map.get(prompt, :type, :default),
+                  source: :llm_generated
+                }
+              }
+
+            {:error, _reason} ->
+              nil
           end
+        end,
+        max_concurrency: config.max_concurrency,
+        timeout: config.timeout
+      )
+      |> Stream.filter(&match?({:ok, %{}}, &1))
+      |> Stream.map(fn {:ok, candidate} -> candidate end)
+      |> Enum.to_list()
 
-        %{
-          id: "instruction_#{index}",
-          instruction: instruction,
-          # Will be evaluated during optimization
-          quality_score: nil,
-          metadata: %{
-            source: :generated,
-            variation: index,
-            generated_at: DateTime.utc_now()
-          }
-        }
-      end)
+    duration = System.monotonic_time() - start_time
 
     emit_telemetry(
       [:dspex, :teleprompter, :simba, :instruction, :stop],
-      %{duration: System.monotonic_time()},
-      %{correlation_id: correlation_id, candidates_generated: length(instruction_candidates)}
+      %{duration: duration, success: length(candidates) > 0},
+      %{
+        correlation_id: correlation_id,
+        candidates_generated: length(candidates)
+      }
     )
 
-    {:ok, instruction_candidates}
-  end
+    # Ensure we have at least one instruction candidate
+    final_candidates =
+      if Enum.empty?(candidates) do
+        # Fallback to default instruction if LLM generation fails
+        default_instruction = build_default_instruction(signature)
 
-  defp get_base_instruction(program) do
-    case program do
-      %{instruction: instruction} when is_binary(instruction) -> instruction
-      %{signature: signature} -> get_signature_instruction(signature)
-      _ -> "Please solve this task step by step."
-    end
-  end
+        [
+          %{
+            id: "inst_default",
+            instruction: default_instruction,
+            quality_score: nil,
+            metadata: %{
+              generated_at: DateTime.utc_now(),
+              prompt_type: :fallback,
+              source: :default
+            }
+          }
+        ]
+      else
+        candidates
+      end
 
-  defp get_signature_instruction(signature) do
-    case signature do
-      %{instruction: instruction} when is_binary(instruction) -> instruction
-      _ -> "Please solve this task step by step."
-    end
+    {:ok, final_candidates}
   end
 
   defp run_bayesian_optimization(
@@ -530,6 +554,186 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
         {:ok, optimized}
     end
+  end
+
+  # Helper functions for LLM-based instruction generation
+
+  defp extract_signature(student) do
+    case student do
+      %{signature: signature} -> signature
+      %{program: %{signature: signature}} -> signature
+      _ -> nil
+    end
+  end
+
+  defp build_instruction_generation_prompts(signature, trainset, config) do
+    # Get sample examples for context
+    sample_examples = Enum.take(trainset, min(3, length(trainset)))
+
+    # Get signature information
+    {input_fields, output_fields} = get_signature_fields(signature)
+
+    base_prompts = [
+      %{
+        type: :task_description,
+        content: """
+        I need to write an instruction for a language model to perform this task:
+
+        Input fields: #{Enum.join(input_fields, ", ")}
+        Output fields: #{Enum.join(output_fields, ", ")}
+
+        Example data:
+        #{format_examples_for_instruction(sample_examples)}
+
+        Write a clear, concise instruction that tells the model how to transform the inputs into the outputs.
+        Focus on the reasoning process and key considerations.
+        """
+      },
+      %{
+        type: :step_by_step,
+        content: """
+        Create a step-by-step instruction for this task:
+
+        Task: Transform #{Enum.join(input_fields, ", ")} into #{Enum.join(output_fields, ", ")}
+
+        Examples:
+        #{format_examples_for_instruction(sample_examples)}
+
+        Provide a clear instruction that breaks down the reasoning process into steps.
+        """
+      },
+      %{
+        type: :quality_focused,
+        content: """
+        Write an instruction emphasizing quality and accuracy for this task:
+
+        Inputs: #{Enum.join(input_fields, ", ")}
+        Outputs: #{Enum.join(output_fields, ", ")}
+
+        Sample examples:
+        #{format_examples_for_instruction(sample_examples)}
+
+        Focus on accuracy, reasoning, and quality in your instruction.
+        """
+      }
+    ]
+
+    # Add more prompt variations based on config
+    additional_prompts =
+      if config.num_candidates > 3 do
+        generate_additional_prompts(signature, sample_examples, config.num_candidates - 3)
+      else
+        []
+      end
+
+    base_prompts ++ additional_prompts
+  end
+
+  defp get_signature_fields(signature) do
+    input_fields =
+      if signature && function_exported?(signature, :input_fields, 0) do
+        signature.input_fields()
+      else
+        ["input"]
+      end
+
+    output_fields =
+      if signature && function_exported?(signature, :output_fields, 0) do
+        signature.output_fields()
+      else
+        ["output"]
+      end
+
+    {input_fields, output_fields}
+  end
+
+  defp format_examples_for_instruction(examples) do
+    examples
+    |> Enum.with_index(1)
+    |> Enum.map(fn {example, idx} ->
+      inputs = Example.inputs(example)
+      outputs = Example.outputs(example)
+
+      "Example #{idx}:\n  Inputs: #{inspect(inputs)}\n  Outputs: #{inspect(outputs)}"
+    end)
+    |> Enum.join("\n\n")
+  end
+
+  defp generate_additional_prompts(signature, sample_examples, count) do
+    creativity_levels = [
+      "be creative and think outside the box",
+      "be precise and methodical",
+      "be comprehensive and thorough",
+      "focus on clarity and simplicity",
+      "emphasize logical reasoning"
+    ]
+
+    1..count
+    |> Enum.map(fn i ->
+      creativity = Enum.at(creativity_levels, rem(i - 1, length(creativity_levels)))
+
+      %{
+        type: :variant,
+        content: """
+        Create an instruction for this task (#{creativity}):
+
+        Signature: #{signature_name(signature)}
+        Examples: #{format_examples_for_instruction(sample_examples)}
+
+        Write an instruction that helps the model perform this task effectively.
+        """
+      }
+    end)
+  end
+
+  defp signature_name(signature) do
+    if signature do
+      signature.__struct__
+      |> Module.split()
+      |> List.last()
+    else
+      "Unknown"
+    end
+  end
+
+  defp generate_single_instruction(prompt, config, correlation_id) do
+    # Use instruction model if specified, otherwise use default
+    model = config.instruction_model || get_default_instruction_model()
+
+    messages = [
+      %{
+        role: "user",
+        content: prompt.content
+      }
+    ]
+
+    case Client.request(messages, %{provider: model, correlation_id: correlation_id}) do
+      {:ok, response} ->
+        instruction =
+          response.choices
+          |> List.first()
+          |> get_in([Access.key(:message), Access.key(:content)])
+          |> String.trim()
+
+        {:ok, instruction}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp get_default_instruction_model do
+    # Use the ConfigManager to get the default model for instruction generation
+    ConfigManager.get_with_default([:teleprompters, :simba, :default_instruction_model], :gemini)
+  end
+
+  defp build_default_instruction(signature) do
+    {input_fields, output_fields} = get_signature_fields(signature)
+
+    """
+    Given the input fields #{Enum.join(input_fields, ", ")}, provide the output fields #{Enum.join(output_fields, ", ")}.
+    Think step by step and provide accurate, well-reasoned responses.
+    """
   end
 
   # Utility functions
