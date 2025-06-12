@@ -449,7 +449,12 @@ defmodule DSPEx.Services.TelemetrySetup do
   end
 
   # SIMBA telemetry handlers
-  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :start], _measurements, metadata, _config) do
+  defp do_handle_dspex_event(
+         [:dspex, :teleprompter, :simba, :start],
+         _measurements,
+         metadata,
+         _config
+       ) do
     # Track SIMBA optimization start
     Foundation.Telemetry.emit_counter(
       [:dspex, :simba, :optimizations_started],
@@ -461,7 +466,12 @@ defmodule DSPEx.Services.TelemetrySetup do
     )
   end
 
-  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :stop], measurements, metadata, _config) do
+  defp do_handle_dspex_event(
+         [:dspex, :teleprompter, :simba, :stop],
+         measurements,
+         metadata,
+         _config
+       ) do
     # Track SIMBA optimization completion and performance
     Foundation.Telemetry.emit_histogram(
       [:dspex, :performance, :simba_optimization_duration],
@@ -482,7 +492,12 @@ defmodule DSPEx.Services.TelemetrySetup do
     )
   end
 
-  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :optimization, :start], _measurements, metadata, _config) do
+  defp do_handle_dspex_event(
+         [:dspex, :teleprompter, :simba, :optimization, :start],
+         _measurements,
+         metadata,
+         _config
+       ) do
     # Track individual optimization trial start
     Foundation.Telemetry.emit_counter(
       [:dspex, :simba, :trials_started],
@@ -493,7 +508,12 @@ defmodule DSPEx.Services.TelemetrySetup do
     )
   end
 
-  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :optimization, :stop], measurements, metadata, _config) do
+  defp do_handle_dspex_event(
+         [:dspex, :teleprompter, :simba, :optimization, :stop],
+         measurements,
+         metadata,
+         _config
+       ) do
     # Track optimization trial performance
     Foundation.Telemetry.emit_histogram(
       [:dspex, :performance, :simba_trial_duration],
@@ -518,7 +538,12 @@ defmodule DSPEx.Services.TelemetrySetup do
     end
   end
 
-  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :instruction, :start], _measurements, metadata, _config) do
+  defp do_handle_dspex_event(
+         [:dspex, :teleprompter, :simba, :instruction, :start],
+         _measurements,
+         metadata,
+         _config
+       ) do
     # Track instruction generation start
     Foundation.Telemetry.emit_counter(
       [:dspex, :simba, :instruction_generation_started],
@@ -529,7 +554,12 @@ defmodule DSPEx.Services.TelemetrySetup do
     )
   end
 
-  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :instruction, :stop], measurements, metadata, _config) do
+  defp do_handle_dspex_event(
+         [:dspex, :teleprompter, :simba, :instruction, :stop],
+         measurements,
+         metadata,
+         _config
+       ) do
     # Track instruction generation performance
     Foundation.Telemetry.emit_histogram(
       [:dspex, :performance, :simba_instruction_generation_duration],
@@ -542,7 +572,12 @@ defmodule DSPEx.Services.TelemetrySetup do
     )
   end
 
-  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :bayesian, :iteration, :start], _measurements, metadata, _config) do
+  defp do_handle_dspex_event(
+         [:dspex, :teleprompter, :simba, :bayesian, :iteration, :start],
+         _measurements,
+         metadata,
+         _config
+       ) do
     # Track Bayesian optimization iteration start
     Foundation.Telemetry.emit_counter(
       [:dspex, :simba, :bayesian_iterations_started],
@@ -553,7 +588,12 @@ defmodule DSPEx.Services.TelemetrySetup do
     )
   end
 
-  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :bayesian, :iteration, :stop], measurements, metadata, _config) do
+  defp do_handle_dspex_event(
+         [:dspex, :teleprompter, :simba, :bayesian, :iteration, :stop],
+         measurements,
+         metadata,
+         _config
+       ) do
     # Track Bayesian optimization iteration performance
     Foundation.Telemetry.emit_histogram(
       [:dspex, :performance, :simba_bayesian_iteration_duration],
@@ -578,7 +618,12 @@ defmodule DSPEx.Services.TelemetrySetup do
     end
   end
 
-  defp do_handle_dspex_event([:dspex, :program, :forward, :start], _measurements, metadata, _config) do
+  defp do_handle_dspex_event(
+         [:dspex, :program, :forward, :start],
+         _measurements,
+         metadata,
+         _config
+       ) do
     # Track program forward execution start
     Foundation.Telemetry.emit_counter(
       [:dspex, :program, :forward_started],
@@ -614,7 +659,12 @@ defmodule DSPEx.Services.TelemetrySetup do
     end
   end
 
-  defp do_handle_dspex_event([:dspex, :teleprompter, :bootstrap, :start], _measurements, metadata, _config) do
+  defp do_handle_dspex_event(
+         [:dspex, :teleprompter, :bootstrap, :start],
+         _measurements,
+         metadata,
+         _config
+       ) do
     # Track bootstrap teleprompter start
     Foundation.Telemetry.emit_counter(
       [:dspex, :teleprompter, :bootstrap_started],
@@ -625,7 +675,12 @@ defmodule DSPEx.Services.TelemetrySetup do
     )
   end
 
-  defp do_handle_dspex_event([:dspex, :teleprompter, :bootstrap, :stop], measurements, metadata, _config) do
+  defp do_handle_dspex_event(
+         [:dspex, :teleprompter, :bootstrap, :stop],
+         measurements,
+         metadata,
+         _config
+       ) do
     # Track bootstrap teleprompter performance
     Foundation.Telemetry.emit_histogram(
       [:dspex, :performance, :bootstrap_duration],

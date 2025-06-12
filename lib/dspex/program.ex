@@ -141,32 +141,36 @@ defmodule DSPEx.Program do
     # Step 5: Actual program execution with optional timeout wrapper (SIMBA critical feature)
     execution_start = System.monotonic_time()
 
-    result = if timeout != 30_000 do
-      # Custom timeout specified - use task wrapper for timeout support
-      task = Task.async(fn ->
-        try do
-          program.__struct__.forward(program, inputs, opts)
-        catch
-          kind, reason ->
-            {:error, {kind, reason}}
-        end
-      end)
+    result =
+      if timeout != 30_000 do
+        # Custom timeout specified - use task wrapper for timeout support
+        task =
+          Task.async(fn ->
+            try do
+              program.__struct__.forward(program, inputs, opts)
+            catch
+              kind, reason ->
+                {:error, {kind, reason}}
+            end
+          end)
 
-            case Task.yield(task, timeout) do
-        {:ok, {:error, {kind, reason}}} ->
-          # Re-raise the original exception to maintain compatibility
-          :erlang.raise(kind, reason, [])
-        {:ok, program_result} ->
-          program_result
-        nil ->
-          # Timeout occurred - kill the task and return timeout error
-          Task.shutdown(task, :brutal_kill)
-          {:error, :timeout}
+        case Task.yield(task, timeout) do
+          {:ok, {:error, {kind, reason}}} ->
+            # Re-raise the original exception to maintain compatibility
+            :erlang.raise(kind, reason, [])
+
+          {:ok, program_result} ->
+            program_result
+
+          nil ->
+            # Timeout occurred - kill the task and return timeout error
+            Task.shutdown(task, :brutal_kill)
+            {:error, :timeout}
+        end
+      else
+        # Default timeout - execute directly for backward compatibility and performance
+        program.__struct__.forward(program, inputs, opts)
       end
-    else
-      # Default timeout - execute directly for backward compatibility and performance
-      program.__struct__.forward(program, inputs, opts)
-    end
 
     _execution_duration =
       System.convert_time_unit(System.monotonic_time() - execution_start, :native, :microsecond)

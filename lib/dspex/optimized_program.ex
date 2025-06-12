@@ -160,8 +160,10 @@ defmodule DSPEx.OptimizedProgram do
     cond do
       supports_native_demos?(program) and supports_native_instruction?(program) ->
         :native_full
+
       supports_native_demos?(program) ->
         :native_demos
+
       true ->
         :wrap_optimized
     end

@@ -49,13 +49,15 @@ defmodule DSPEx.SIMBAContractValidationTest do
       assert Map.has_key?(outputs, :answer)
 
       # Test correlation_id option
-      assert {:ok, outputs} = Program.forward(program, inputs,
-        correlation_id: correlation_id, timeout: 10_000)
+      assert {:ok, outputs} =
+               Program.forward(program, inputs, correlation_id: correlation_id, timeout: 10_000)
+
       assert Map.has_key?(outputs, :answer)
 
       # Test timeout functionality is available (actual timeout behavior depends on implementation speed)
       # In real scenarios with network calls, this would timeout
       result = Program.forward(program, inputs, timeout: 1)
+
       # Accept either timeout or successful response (test client may be too fast to reliably timeout)
       case result do
         {:error, :timeout} -> :ok
@@ -64,17 +66,20 @@ defmodule DSPEx.SIMBAContractValidationTest do
       end
 
       # Test both options together
-      assert {:ok, outputs} = Program.forward(program, inputs,
-        timeout: 10_000, correlation_id: correlation_id)
+      assert {:ok, outputs} =
+               Program.forward(program, inputs, timeout: 10_000, correlation_id: correlation_id)
+
       assert Map.has_key?(outputs, :answer)
     end
 
     test "Program introspection functions work correctly" do
       student = %Predict{signature: SIMBATestSignature, client: :test}
+
       demo = %Example{
         data: %{question: "test", answer: "response"},
         input_keys: MapSet.new([:question])
       }
+
       optimized = OptimizedProgram.new(student, [demo])
 
       # Test program_type/1
@@ -85,13 +90,14 @@ defmodule DSPEx.SIMBAContractValidationTest do
 
       # Test safe_program_info/1 returns required fields
       info = Program.safe_program_info(student)
+
       assert %{
-        type: :predict,
-        name: "Predict",
-        has_demos: false,
-        signature: SIMBATestSignature,
-        demo_count: 0
-      } = info
+               type: :predict,
+               name: "Predict",
+               has_demos: false,
+               signature: SIMBATestSignature,
+               demo_count: 0
+             } = info
 
       # Test optimized program info
       optimized_info = Program.safe_program_info(optimized)
@@ -109,6 +115,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
         client: :test,
         demos: []
       }
+
       refute Program.has_demos?(student_with_empty_demos)
 
       # Test with program that has demos
@@ -117,6 +124,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
         client: :test,
         demos: [demo]
       }
+
       assert Program.has_demos?(student_with_demos)
     end
 
@@ -148,11 +156,17 @@ defmodule DSPEx.SIMBAContractValidationTest do
         {:error, reason} ->
           # Validate error is categorized as SIMBA expects
           assert is_atom(reason)
-                    # Common error types that SIMBA should handle
+          # Common error types that SIMBA should handle
           _acceptable_errors = [
-            :timeout, :network_error, :api_error, :rate_limited,
-            :no_api_key, :invalid_messages, :provider_not_configured
+            :timeout,
+            :network_error,
+            :api_error,
+            :rate_limited,
+            :no_api_key,
+            :invalid_messages,
+            :provider_not_configured
           ]
+
           # Note: For test provider, we may get other errors, which is fine for this test
       end
     end
@@ -178,7 +192,8 @@ defmodule DSPEx.SIMBAContractValidationTest do
       # Client should accept correlation_id without errors
       case Client.request(messages, %{provider: :test, correlation_id: correlation_id}) do
         {:ok, _response} -> :ok
-        {:error, _reason} -> :ok  # Error is fine, just testing it doesn't crash
+        # Error is fine, just testing it doesn't crash
+        {:error, _reason} -> :ok
       end
     end
   end
@@ -190,28 +205,36 @@ defmodule DSPEx.SIMBAContractValidationTest do
       assert default_provider in [:gemini, :openai, :anthropic, :test]
 
       # Test SIMBA teleprompter config paths
-      instruction_model = ConfigManager.get_with_default(
-        [:teleprompters, :simba, :default_instruction_model],
-        :openai
-      )
+      instruction_model =
+        ConfigManager.get_with_default(
+          [:teleprompters, :simba, :default_instruction_model],
+          :openai
+        )
+
       assert is_atom(instruction_model)
 
-      evaluation_model = ConfigManager.get_with_default(
-        [:teleprompters, :simba, :default_evaluation_model],
-        :gemini
-      )
+      evaluation_model =
+        ConfigManager.get_with_default(
+          [:teleprompters, :simba, :default_evaluation_model],
+          :gemini
+        )
+
       assert is_atom(evaluation_model)
 
-      max_concurrent = ConfigManager.get_with_default(
-        [:teleprompters, :simba, :max_concurrent_operations],
-        20
-      )
+      max_concurrent =
+        ConfigManager.get_with_default(
+          [:teleprompters, :simba, :max_concurrent_operations],
+          20
+        )
+
       assert is_integer(max_concurrent) and max_concurrent > 0
 
-      default_timeout = ConfigManager.get_with_default(
-        [:teleprompters, :simba, :default_timeout],
-        60_000
-      )
+      default_timeout =
+        ConfigManager.get_with_default(
+          [:teleprompters, :simba, :default_timeout],
+          60_000
+        )
+
       assert is_integer(default_timeout) and default_timeout > 0
 
       # Test fallback behavior with nonexistent paths
@@ -225,17 +248,21 @@ defmodule DSPEx.SIMBAContractValidationTest do
 
     test "ConfigManager handles nested SIMBA optimization config" do
       # Test nested optimization configuration
-      max_trials = ConfigManager.get_with_default(
-        [:teleprompters, :simba, :optimization, :max_trials],
-        100
-      )
+      max_trials =
+        ConfigManager.get_with_default(
+          [:teleprompters, :simba, :optimization, :max_trials],
+          100
+        )
+
       assert is_integer(max_trials)
 
       # Test Bayesian optimization config
-      acquisition_fn = ConfigManager.get_with_default(
-        [:teleprompters, :simba, :bayesian_optimization, :acquisition_function],
-        :expected_improvement
-      )
+      acquisition_fn =
+        ConfigManager.get_with_default(
+          [:teleprompters, :simba, :bayesian_optimization, :acquisition_function],
+          :expected_improvement
+        )
+
       assert is_atom(acquisition_fn)
     end
   end
@@ -243,10 +270,13 @@ defmodule DSPEx.SIMBAContractValidationTest do
   describe "SIMBA OptimizedProgram Contract" do
     test "OptimizedProgram metadata support for SIMBA" do
       student = %Predict{signature: SIMBATestSignature, client: :test}
-      demos = [%Example{
-        data: %{question: "test", answer: "answer"},
-        input_keys: MapSet.new([:question])
-      }]
+
+      demos = [
+        %Example{
+          data: %{question: "test", answer: "answer"},
+          input_keys: MapSet.new([:question])
+        }
+      ]
 
       # Test SIMBA metadata storage
       simba_metadata = %{
@@ -300,12 +330,13 @@ defmodule DSPEx.SIMBAContractValidationTest do
       refute OptimizedProgram.supports_native_instruction?(basic_program)
       refute OptimizedProgram.supports_native_instruction?(nil)
 
-            # Test with custom program that has instruction field
+      # Test with custom program that has instruction field
       custom_program = %CustomProgramWithInstruction{
         signature: SIMBATestSignature,
         instruction: "custom instruction",
         demos: []
       }
+
       assert OptimizedProgram.supports_native_instruction?(custom_program)
       assert OptimizedProgram.supports_native_demos?(custom_program)
     end
@@ -325,6 +356,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
         instruction: "custom instruction",
         demos: []
       }
+
       assert OptimizedProgram.simba_enhancement_strategy(full_support_program) == :native_full
 
       # Test with program that has no native support
@@ -349,7 +381,9 @@ defmodule DSPEx.SIMBAContractValidationTest do
         max_bootstrapped_demos: teleprompter.max_bootstrapped_demos,
         quality_threshold: teleprompter.quality_threshold
       ]
-      result = BootstrapFewShot.compile(student, teacher, empty_trainset, metric_fn, teleprompter_opts)
+
+      result =
+        BootstrapFewShot.compile(student, teacher, empty_trainset, metric_fn, teleprompter_opts)
 
       case result do
         {:ok, optimized} ->
@@ -378,17 +412,21 @@ defmodule DSPEx.SIMBAContractValidationTest do
       # Metric that always returns low scores (below quality threshold)
       metric_fn = fn _example, _prediction -> 0.1 end
 
-      teleprompter = BootstrapFewShot.new(
-        max_bootstrapped_demos: 3,
-        quality_threshold: 0.9  # Very high threshold
-      )
+      teleprompter =
+        BootstrapFewShot.new(
+          max_bootstrapped_demos: 3,
+          # Very high threshold
+          quality_threshold: 0.9
+        )
 
       # Should handle case where no demos meet quality threshold
       teleprompter_opts = [
         max_bootstrapped_demos: teleprompter.max_bootstrapped_demos,
         quality_threshold: teleprompter.quality_threshold
       ]
-      {:ok, optimized} = BootstrapFewShot.compile(student, teacher, trainset, metric_fn, teleprompter_opts)
+
+      {:ok, optimized} =
+        BootstrapFewShot.compile(student, teacher, trainset, metric_fn, teleprompter_opts)
 
       # Should return OptimizedProgram even with empty demos
       assert is_struct(optimized, OptimizedProgram)
@@ -510,7 +548,9 @@ defmodule DSPEx.SIMBAContractValidationTest do
       end
 
       # Step 4: Test instruction generation simulation
-      instruction = "Answer the mathematical question step by step, showing your reasoning clearly."
+      instruction =
+        "Answer the mathematical question step by step, showing your reasoning clearly."
+
       assert is_binary(instruction)
       assert String.length(instruction) > 10
 
@@ -519,20 +559,21 @@ defmodule DSPEx.SIMBAContractValidationTest do
       assert enhancement_strategy in [:native_full, :native_demos, :wrap_optimized]
 
       # Step 6: Test enhanced program creation
-      enhanced_program = case enhancement_strategy do
-        :native_demos ->
-          %{student | demos: [trainset |> List.first()]}
+      enhanced_program =
+        case enhancement_strategy do
+          :native_demos ->
+            %{student | demos: [trainset |> List.first()]}
 
-        :wrap_optimized ->
-          OptimizedProgram.new(student, [trainset |> List.first()], %{
-            optimization_method: :simba_smoke_test,
-            instruction: instruction,
-            enhancement_strategy: enhancement_strategy
-          })
+          :wrap_optimized ->
+            OptimizedProgram.new(student, [trainset |> List.first()], %{
+              optimization_method: :simba_smoke_test,
+              instruction: instruction,
+              enhancement_strategy: enhancement_strategy
+            })
 
-        _ ->
-          OptimizedProgram.new(student, [trainset |> List.first()], %{instruction: instruction})
-      end
+          _ ->
+            OptimizedProgram.new(student, [trainset |> List.first()], %{instruction: instruction})
+        end
 
       # Step 7: Test enhanced program execution
       test_input = %{question: "What is 5+5?"}
