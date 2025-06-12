@@ -126,9 +126,9 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
       assert demo_data[:answer] == "Paris"
       assert demo_data[:confidence] == "high"
 
-      # Input keys should be preserved
+      # Input keys should be preserved (order doesn't matter)
       expected_input_keys = [:question, :context]
-      assert demo_data[:input_keys] == expected_input_keys
+      assert Enum.sort(demo_data[:input_keys]) == Enum.sort(expected_input_keys)
     end
 
     test "fails for unsuccessful trajectory" do

@@ -56,8 +56,8 @@ defmodule DSPEx.Teleprompter.SIMBA.BucketTest do
       assert bucket_data.max_score == 0.9
       assert bucket_data.min_score == 0.6
       assert bucket_data.avg_score == 0.75  # (0.9 + 0.7 + 0.6 + 0.8) / 4
-      assert bucket_data.max_to_min_gap == 0.3  # 0.9 - 0.6
-      assert bucket_data.max_to_avg_gap == 0.15  # 0.9 - 0.75
+      assert_in_delta bucket_data.max_to_min_gap, 0.3, 0.001  # 0.9 - 0.6
+      assert_in_delta bucket_data.max_to_avg_gap, 0.15, 0.001  # 0.9 - 0.75
     end
   end
 
@@ -155,7 +155,7 @@ defmodule DSPEx.Teleprompter.SIMBA.BucketTest do
       assert stats.successful_count == 3
       assert stats.max_score == 0.9
       assert stats.min_score == 0.5
-      assert stats.avg_score == 0.725  # (0.9 + 0.7 + 0.5 + 0.8) / 4
+      assert_in_delta stats.avg_score, 0.725, 0.001  # (0.9 + 0.7 + 0.5 + 0.8) / 4
       assert is_float(stats.score_variance)
       assert stats.score_variance >= 0.0
       assert is_boolean(stats.improvement_potential)
