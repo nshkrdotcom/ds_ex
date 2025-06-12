@@ -2,9 +2,9 @@ defmodule DSPEx.SignatureExtensionTest do
   @moduledoc """
   Unit tests for DSPEx.Signature extension capabilities.
 
-  CRITICAL: SIMBA references DSPEx.Signature.extend/2 for ChainOfThought patterns.
+  CRITICAL: BEACON references DSPEx.Signature.extend/2 for ChainOfThought patterns.
   This functionality is essential for creating signatures with additional
-  reasoning fields that SIMBA's optimization algorithms require.
+  reasoning fields that BEACON's optimization algorithms require.
   """
   use ExUnit.Case, async: true
 
@@ -23,7 +23,7 @@ defmodule DSPEx.SignatureExtensionTest do
 
   describe "extend/2 creates new signatures with additional fields" do
     test "extends simple signature with reasoning field" do
-      # This is the exact pattern SIMBA uses for ChainOfThought
+      # This is the exact pattern BEACON uses for ChainOfThought
       additional_fields = %{
         reasoning: %{
           description: "Step-by-step reasoning process",
@@ -394,9 +394,9 @@ defmodule DSPEx.SignatureExtensionTest do
     end
   end
 
-  describe "SIMBA-specific requirements" do
+  describe "BEACON-specific requirements" do
     test "ChainOfThought pattern extension works correctly" do
-      # This mimics exactly how SIMBA will extend signatures for ChainOfThought
+      # This mimics exactly how BEACON will extend signatures for ChainOfThought
       additional_fields = %{
         reasoning: %{
           description: "Think step by step about this problem",
@@ -424,8 +424,8 @@ defmodule DSPEx.SignatureExtensionTest do
       assert instance.answer == "Paris"
     end
 
-    test "multiple reasoning fields for complex SIMBA patterns" do
-      # SIMBA might create signatures with multiple reasoning stages
+    test "multiple reasoning fields for complex BEACON patterns" do
+      # BEACON might create signatures with multiple reasoning stages
       multi_stage_fields = %{
         initial_analysis: %{
           description: "Initial problem analysis",
@@ -463,7 +463,7 @@ defmodule DSPEx.SignatureExtensionTest do
     end
 
     test "extended signatures work with Program.forward" do
-      # SIMBA will use extended signatures in actual program execution
+      # BEACON will use extended signatures in actual program execution
       additional_fields = %{reasoning: %{description: "Reasoning"}}
       {:ok, extended_sig} = Signature.extend(SimpleSignature, additional_fields)
 

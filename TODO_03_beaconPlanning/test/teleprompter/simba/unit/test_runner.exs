@@ -1,26 +1,26 @@
-defmodule DSPEx.Teleprompter.SIMBA.TestRunner do
+defmodule DSPEx.Teleprompter.BEACON.TestRunner do
   @moduledoc """
-  Comprehensive test runner for all SIMBA modules with reporting and coverage analysis.
+  Comprehensive test runner for all BEACON modules with reporting and coverage analysis.
   """
 
-  alias DSPEx.Teleprompter.SIMBA.Utils
+  alias DSPEx.Teleprompter.BEACON.Utils
 
   @doc """
-  Run all SIMBA test suites and generate comprehensive report.
+  Run all BEACON test suites and generate comprehensive report.
   """
   def run_all_tests(opts \\ []) do
     verbose = Keyword.get(opts, :verbose, false)
     generate_report = Keyword.get(opts, :generate_report, true)
 
-    IO.puts("🧪 Starting Comprehensive SIMBA Test Suite")
+    IO.puts("🧪 Starting Comprehensive BEACON Test Suite")
     IO.puts("=" |> String.duplicate(50))
 
     test_suites = [
-      {DSPEx.Teleprompter.SIMBA.UtilsTest, "Utils Module"},
-      {DSPEx.Teleprompter.SIMBA.ExamplesTest, "Examples Module"},
-      {DSPEx.Teleprompter.SIMBA.BenchmarkTest, "Benchmark Module"},
-      {DSPEx.Teleprompter.SIMBA.IntegrationTest, "Integration Module"},
-      {DSPEx.Teleprompter.SIMBA.ContinuousOptimizerTest, "Continuous Optimizer"}
+      {DSPEx.Teleprompter.BEACON.UtilsTest, "Utils Module"},
+      {DSPEx.Teleprompter.BEACON.ExamplesTest, "Examples Module"},
+      {DSPEx.Teleprompter.BEACON.BenchmarkTest, "Benchmark Module"},
+      {DSPEx.Teleprompter.BEACON.IntegrationTest, "Integration Module"},
+      {DSPEx.Teleprompter.BEACON.ContinuousOptimizerTest, "Continuous Optimizer"}
     ]
 
     start_time = System.monotonic_time()
@@ -123,11 +123,11 @@ defmodule DSPEx.Teleprompter.SIMBA.TestRunner do
   Generate a comprehensive test report with coverage analysis.
   """
   def generate_test_report(results, opts \\ []) do
-    output_file = Keyword.get(opts, :output_file, "simba_test_report.md")
+    output_file = Keyword.get(opts, :output_file, "beacon_test_report.md")
     include_coverage = Keyword.get(opts, :include_coverage, true)
 
     report_content = """
-    # SIMBA Teleprompter Test Report
+    # BEACON Teleprompter Test Report
 
     Generated on: #{DateTime.utc_now() |> DateTime.to_string()}
 
@@ -161,7 +161,7 @@ defmodule DSPEx.Teleprompter.SIMBA.TestRunner do
   end
 
   @doc """
-  Run performance tests for all SIMBA modules.
+  Run performance tests for all BEACON modules.
   """
   def run_performance_tests do
     IO.puts("\n⚡ Running Performance Tests")
@@ -262,25 +262,25 @@ defmodule DSPEx.Teleprompter.SIMBA.TestRunner do
     # In a real implementation, you would introspect the module for test functions
     # For simulation, we return mock test function names
     case test_module do
-      DSPEx.Teleprompter.SIMBA.UtilsTest ->
+      DSPEx.Teleprompter.BEACON.UtilsTest ->
         [:test_text_similarity, :test_normalize_answer, :test_extract_keywords,
          :test_extract_number, :test_reasoning_quality, :test_correlation_id,
          :test_execution_time_measurement]
 
-      DSPEx.Teleprompter.SIMBA.ExamplesTest ->
+      DSPEx.Teleprompter.BEACON.ExamplesTest ->
         [:test_question_answering_example, :test_chain_of_thought_example,
          :test_text_classification_example, :test_multi_step_program_example,
          :test_run_all_examples]
 
-      DSPEx.Teleprompter.SIMBA.BenchmarkTest ->
+      DSPEx.Teleprompter.BEACON.BenchmarkTest ->
         [:test_benchmark_configuration, :test_concurrency_benchmarks,
          :test_memory_benchmarks, :test_quality_benchmarks, :test_comparison]
 
-      DSPEx.Teleprompter.SIMBA.IntegrationTest ->
+      DSPEx.Teleprompter.BEACON.IntegrationTest ->
         [:test_optimize_for_production, :test_optimize_batch, :test_optimize_adaptively,
          :test_create_optimization_pipeline, :test_validation_functions]
 
-      DSPEx.Teleprompter.SIMBA.ContinuousOptimizerTest ->
+      DSPEx.Teleprompter.BEACON.ContinuousOptimizerTest ->
         [:test_genserver_initialization, :test_client_api, :test_quality_monitoring,
          :test_optimization_execution, :test_error_handling]
 
@@ -297,15 +297,15 @@ defmodule DSPEx.Teleprompter.SIMBA.TestRunner do
     text2 = "Calculate 5 times 12 equals 60. Answer is $60."
 
     # Test text similarity
-    similarity = DSPEx.Teleprompter.SIMBA.Utils.text_similarity(text1, text2)
+    similarity = DSPEx.Teleprompter.BEACON.Utils.text_similarity(text1, text2)
     assert similarity > 0.5, "Text similarity should detect similar content"
 
     # Test reasoning quality evaluation
-    quality = DSPEx.Teleprompter.SIMBA.Utils.evaluate_reasoning_quality(text1, text2)
+    quality = DSPEx.Teleprompter.BEACON.Utils.evaluate_reasoning_quality(text1, text2)
     assert quality > 0.1, "Should detect reasoning quality"
 
     # Test answer normalization
-    normalized = DSPEx.Teleprompter.SIMBA.Utils.normalize_answer("$60.00")
+    normalized = DSPEx.Teleprompter.BEACON.Utils.normalize_answer("$60.00")
     assert normalized == "6000", "Should normalize currency"
 
     :ok
@@ -321,7 +321,7 @@ defmodule DSPEx.Teleprompter.SIMBA.TestRunner do
       actual = Map.get(prediction, :answer, "")
 
       # Use Utils for comparison
-      DSPEx.Teleprompter.SIMBA.Utils.text_similarity(expected, actual)
+      DSPEx.Teleprompter.BEACON.Utils.text_similarity(expected, actual)
     end
 
     # Verify metric function works
@@ -336,11 +336,11 @@ defmodule DSPEx.Teleprompter.SIMBA.TestRunner do
 
   defp test_benchmark_with_utils do
     # Test that Benchmark module properly uses Utils for measurements
-    correlation_id = DSPEx.Teleprompter.SIMBA.Utils.generate_correlation_id()
-    assert String.starts_with?(correlation_id, "simba-"), "Should generate valid correlation ID"
+    correlation_id = DSPEx.Teleprompter.BEACON.Utils.generate_correlation_id()
+    assert String.starts_with?(correlation_id, "beacon-"), "Should generate valid correlation ID"
 
     # Test execution time measurement
-    result = DSPEx.Teleprompter.SIMBA.Utils.measure_execution_time(fn ->
+    result = DSPEx.Teleprompter.BEACON.Utils.measure_execution_time(fn ->
       Process.sleep(10)
       :benchmark_test
     end)
@@ -356,7 +356,7 @@ defmodule DSPEx.Teleprompter.SIMBA.TestRunner do
     # Test that Integration module can work with other modules
 
     # Test correlation ID generation (Utils)
-    correlation_id = DSPEx.Teleprompter.SIMBA.Utils.generate_correlation_id()
+    correlation_id = DSPEx.Teleprompter.BEACON.Utils.generate_correlation_id()
 
     # Test progress callback creation (would use Utils functions)
     progress_callback = fn progress ->
@@ -402,7 +402,7 @@ defmodule DSPEx.Teleprompter.SIMBA.TestRunner do
 
     # Run multiple iterations to get stable timing
     Enum.each(1..100, fn _ ->
-      DSPEx.Teleprompter.SIMBA.Utils.text_similarity(text1, text2)
+      DSPEx.Teleprompter.BEACON.Utils.text_similarity(text1, text2)
     end)
 
     :ok
@@ -413,7 +413,7 @@ defmodule DSPEx.Teleprompter.SIMBA.TestRunner do
     actual = "Start by computing 5 times 12 equals 60. Thus, the result is $60."
 
     Enum.each(1..50, fn _ ->
-      DSPEx.Teleprompter.SIMBA.Utils.evaluate_reasoning_quality(expected, actual)
+      DSPEx.Teleprompter.BEACON.Utils.evaluate_reasoning_quality(expected, actual)
     end)
 
     :ok
@@ -587,7 +587,7 @@ defmodule DSPEx.Teleprompter.SIMBA.TestRunner do
     IO.puts("Total Duration: #{total_duration}ms (#{Float.round(total_duration / 1000, 1)}s)")
 
     if total_failed == 0 do
-      IO.puts("\n🎉 ALL TESTS PASSED! SIMBA modules are ready for production.")
+      IO.puts("\n🎉 ALL TESTS PASSED! BEACON modules are ready for production.")
     else
       IO.puts("\n⚠️  #{total_failed} test(s) failed. Review and fix before deployment.")
     end

@@ -1,12 +1,12 @@
-defmodule DSPEx.Teleprompter.SIMBA.ExamplesTest do
+defmodule DSPEx.Teleprompter.BEACON.ExamplesTest do
   @moduledoc """
-  Comprehensive test suite for SIMBA Examples module.
+  Comprehensive test suite for BEACON Examples module.
   """
 
   use ExUnit.Case, async: false
 
   alias DSPEx.{Example, Predict}
-  alias DSPEx.Teleprompter.SIMBA.Examples
+  alias DSPEx.Teleprompter.BEACON.Examples
 
   # Mock modules for testing
   defmodule MockSignature do
@@ -39,8 +39,8 @@ defmodule DSPEx.Teleprompter.SIMBA.ExamplesTest do
       fn _, _ -> %MockProgram{} end
     end
 
-    # Mock SIMBA teleprompter
-    mock_simba = %{
+    # Mock BEACON teleprompter
+    mock_beacon = %{
       compile: fn _student, _teacher, _trainset, _metric_fn ->
         {:ok, %MockProgram{}}
       end
@@ -49,7 +49,7 @@ defmodule DSPEx.Teleprompter.SIMBA.ExamplesTest do
     %{
       mock_student: %MockProgram{},
       mock_teacher: %MockProgram{},
-      mock_simba: mock_simba
+      mock_beacon: mock_beacon
     }
   end
 
@@ -62,7 +62,7 @@ defmodule DSPEx.Teleprompter.SIMBA.ExamplesTest do
     test "handles successful optimization" do
       # Mock successful optimization
       with_mocks([
-        {DSPEx.Teleprompter.SIMBA, [], [
+        {DSPEx.Teleprompter.BEACON, [], [
           new: fn _opts -> %{compile: fn _, _, _, _ -> {:ok, %MockProgram{}} end} end
         ]},
         {DSPEx.Predict, [], [
@@ -80,7 +80,7 @@ defmodule DSPEx.Teleprompter.SIMBA.ExamplesTest do
 
     test "handles optimization failure" do
       with_mocks([
-        {DSPEx.Teleprompter.SIMBA, [], [
+        {DSPEx.Teleprompter.BEACON, [], [
           new: fn _opts -> %{compile: fn _, _, _, _ -> {:error, :test_error} end} end
         ]},
         {DSPEx.Predict, [], [
@@ -101,7 +101,7 @@ defmodule DSPEx.Teleprompter.SIMBA.ExamplesTest do
     test "uses appropriate configuration for reasoning tasks" do
       # Test that reasoning tasks use longer timeouts and specific configs
       with_mocks([
-        {DSPEx.Teleprompter.SIMBA, [], [
+        {DSPEx.Teleprompter.BEACON, [], [
           new: fn opts ->
             # Verify reasoning-appropriate configuration
             assert opts[:timeout] >= 90_000
@@ -137,7 +137,7 @@ defmodule DSPEx.Teleprompter.SIMBA.ExamplesTest do
       assert answer_score == 0.6
 
       # Should get some reasoning score for mathematical content
-      reasoning_score = DSPEx.Teleprompter.SIMBA.Utils.evaluate_reasoning_quality(
+      reasoning_score = DSPEx.Teleprompter.BEACON.Utils.evaluate_reasoning_quality(
         expected[:reasoning],
         prediction[:reasoning]
       )

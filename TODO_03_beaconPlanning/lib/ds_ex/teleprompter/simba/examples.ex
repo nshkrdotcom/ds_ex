@@ -1,19 +1,19 @@
-defmodule DSPEx.Teleprompter.SIMBA.Examples do
+defmodule DSPEx.Teleprompter.BEACON.Examples do
   @moduledoc """
-  Comprehensive examples demonstrating various SIMBA teleprompter use cases.
+  Comprehensive examples demonstrating various BEACON teleprompter use cases.
 
-  This module provides educational examples showing how to use SIMBA for different
+  This module provides educational examples showing how to use BEACON for different
   types of optimization tasks, from basic question answering to complex reasoning.
   """
 
   alias DSPEx.{Example, Predict, Program}
-  alias DSPEx.Teleprompter.SIMBA
-  alias DSPEx.Teleprompter.SIMBA.Utils
+  alias DSPEx.Teleprompter.BEACON
+  alias DSPEx.Teleprompter.BEACON.Utils
 
   @doc """
   Example 1: Basic Question Answering Optimization
 
-  Demonstrates fundamental SIMBA usage for optimizing a simple Q&A program.
+  Demonstrates fundamental BEACON usage for optimizing a simple Q&A program.
   """
   def question_answering_example do
     defmodule QASignature do
@@ -59,7 +59,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
       end
     end
 
-    teleprompter = SIMBA.new(
+    teleprompter = BEACON.new(
       num_candidates: 15,
       max_bootstrapped_demos: 3,
       num_trials: 30,
@@ -81,7 +81,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
   @doc """
   Example 2: Mathematical Reasoning with Chain-of-Thought
 
-  Shows SIMBA optimization for complex reasoning tasks requiring step-by-step thinking.
+  Shows BEACON optimization for complex reasoning tasks requiring step-by-step thinking.
   """
   def chain_of_thought_example do
     defmodule ReasoningSignature do
@@ -138,7 +138,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
       answer_score + reasoning_score
     end
 
-    teleprompter = SIMBA.new(
+    teleprompter = BEACON.new(
       num_candidates: 25,
       max_bootstrapped_demos: 3,
       num_trials: 50,
@@ -171,7 +171,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
   @doc """
   Example 3: Text Classification with Confidence Scoring
 
-  Demonstrates SIMBA for classification tasks with confidence calibration.
+  Demonstrates BEACON for classification tasks with confidence calibration.
   """
   def text_classification_example do
     defmodule ClassificationSignature do
@@ -227,7 +227,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
       sentiment_score + confidence_score
     end
 
-    teleprompter = SIMBA.new(
+    teleprompter = BEACON.new(
       num_candidates: 20,
       max_bootstrapped_demos: 4,
       num_trials: 40,
@@ -308,7 +308,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
       summary_score + recommendation_score
     end
 
-    teleprompter = SIMBA.new(
+    teleprompter = BEACON.new(
       num_candidates: 15,
       max_bootstrapped_demos: 2,
       num_trials: 25,
@@ -339,7 +339,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
   Run all examples in sequence and generate a comprehensive report.
   """
   def run_all_examples do
-    IO.puts("🚀 Running All SIMBA Examples")
+    IO.puts("🚀 Running All BEACON Examples")
     IO.puts("=" |> String.duplicate(40))
 
     examples = [

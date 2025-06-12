@@ -1,11 +1,11 @@
-Of course. Integrating a new optimizer like `dspy.SIMBA` into your Elixir `DSPEx` codebase is an excellent way to enhance your program's performance. SIMBA, as a prompt optimizer, focuses on finding the best instructions for your program to maximize its accuracy on a given task.
+Of course. Integrating a new optimizer like `dspy.BEACON` into your Elixir `DSPEx` codebase is an excellent way to enhance your program's performance. BEACON, as a prompt optimizer, focuses on finding the best instructions for your program to maximize its accuracy on a given task.
 
-Here is a comprehensive plan and implementation for integrating `dspy.simba` into your Elixir codebase. This integration will create a new teleprompter, `DSPEx.Teleprompter.SIMBA`, and make the necessary adjustments to the core `DSPEx` modules to support instruction-based optimization.
+Here is a comprehensive plan and implementation for integrating `dspy.beacon` into your Elixir codebase. This integration will create a new teleprompter, `DSPEx.Teleprompter.BEACON`, and make the necessary adjustments to the core `DSPEx` modules to support instruction-based optimization.
 
 ### Integration Strategy Summary
 
-1.  **Enhance `DSPEx.Predict` and `DSPEx.Adapter`**: We will modify these core modules to allow for runtime overriding of a program's instructions. This is a crucial prerequisite for any instruction-based optimizer like SIMBA.
-2.  **Create `DSPEx.Teleprompter.SIMBA`**: We will implement a new teleprompter module that embodies the logic of SIMBA. This module will:
+1.  **Enhance `DSPEx.Predict` and `DSPEx.Adapter`**: We will modify these core modules to allow for runtime overriding of a program's instructions. This is a crucial prerequisite for any instruction-based optimizer like BEACON.
+2.  **Create `DSPEx.Teleprompter.BEACON`**: We will implement a new teleprompter module that embodies the logic of BEACON. This module will:
     *   Use a powerful "meta-model" (like GPT-4 or Gemini) to generate several new instruction candidates for your program.
     *   Concurrently evaluate each candidate instruction by running the program against your training data.
     *   Select the best-performing instruction based on your specified metric.
@@ -152,18 +152,18 @@ Here, we'll update the `Adapter` to accept and use the `instruction_override` op
 
 ---
 
-### Step 2: Create the SIMBA Teleprompter
+### Step 2: Create the BEACON Teleprompter
 
 Now, create a new file for our optimizer. This module will contain the core logic for generating and testing new instructions.
 
-#### New File: `dspex/teleprompter/simba.ex`
+#### New File: `dspex/teleprompter/beacon.ex`
 
 ```elixir
-defmodule DSPEx.Teleprompter.SIMBA do
+defmodule DSPEx.Teleprompter.BEACON do
   @moduledoc """
   A teleprompter for instruction optimization using a meta-learning approach.
 
-  SIMBA (Simple Instruction Meta-learning and Bootstrapping Algorithm) generates
+  BEACON (Simple Instruction Meta-learning and Bootstrapping Algorithm) generates
   and evaluates multiple instruction candidates for a given program to find the
   one that performs best on a training dataset.
 
@@ -218,7 +218,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     use Signature, "original_instruction, examples -> new_instructions"
   end
 
-  @doc "Creates a new SIMBA teleprompter."
+  @doc "Creates a new BEACON teleprompter."
   @spec new(keyword()) :: t()
   def new(opts \\ []) do
     struct(__MODULE__, opts)
@@ -235,14 +235,14 @@ defmodule DSPEx.Teleprompter.SIMBA do
            evaluate_candidates(student, candidates, trainset, metric_fn, config) do
       report_progress(config.progress_callback, %{
         phase: :done,
-        message: "SIMBA optimization complete.",
+        message: "BEACON optimization complete.",
         best_instruction: best_program.instruction_override
       })
 
       {:ok, best_program}
     else
       {:error, reason} ->
-        Logger.error("SIMBA optimization failed: #{inspect(reason)}")
+        Logger.error("BEACON optimization failed: #{inspect(reason)}")
         {:error, reason}
     end
   end
@@ -373,9 +373,9 @@ defmodule DSPEx.Teleprompter.SIMBA do
 end
 ```
 
-### Step 3: How to Use the New SIMBA Optimizer
+### Step 3: How to Use the New BEACON Optimizer
 
-With these changes in place, you can now use `DSPEx.Teleprompter.SIMBA` to optimize any program that has an `:instruction_override` field, such as `DSPEx.Predict`.
+With these changes in place, you can now use `DSPEx.Teleprompter.BEACON` to optimize any program that has an `:instruction_override` field, such as `DSPEx.Predict`.
 
 Here is a complete usage example:
 
@@ -400,16 +400,16 @@ metric_fn = fn example, prediction ->
   if String.contains?(prediction.answer, example.data.answer), do: 1.0, else: 0.0
 end
 
-# 3. Initialize and run the SIMBA optimizer.
-simba_teleprompter = DSPEx.Teleprompter.SIMBA.new(
+# 3. Initialize and run the BEACON optimizer.
+beacon_teleprompter = DSPEx.Teleprompter.BEACON.new(
   num_candidates: 8,
   meta_client: :openai, # Use a powerful model for generating instructions
   meta_model_config: %{model: "gpt-4-turbo"},
   progress_callback: &IO.inspect/1
 )
 
-# The `teacher` argument is ignored by SIMBA. We pass the student program again.
-case simba_teleprompter.compile(student_program, student_program, trainset, metric_fn) do
+# The `teacher` argument is ignored by BEACON. We pass the student program again.
+case beacon_teleprompter.compile(student_program, student_program, trainset, metric_fn) do
   {:ok, optimized_program} ->
     IO.puts("Optimization successful!")
     IO.puts("Original Instruction: #{QASignature.instructions()}")

@@ -19,7 +19,7 @@ defmodule DSPEx.Test.MockProviderTest do
     %{mock_pid: pid}
   end
 
-  describe "SIMBA-specific mock patterns" do
+  describe "BEACON-specific mock patterns" do
     test "setup_bootstrap_mocks/1 provides realistic teacher responses" do
       teacher_responses = [
         %{content: "The answer is 4 because 2+2 equals 4"},
@@ -68,7 +68,7 @@ defmodule DSPEx.Test.MockProviderTest do
       assert String.contains?(content, "evaluat") or is_binary(content)
     end
 
-    test "setup_simba_optimization_mocks/1 configures comprehensive SIMBA workflow" do
+    test "setup_beacon_optimization_mocks/1 configures comprehensive BEACON workflow" do
       config = [
         bootstrap_success_rate: 0.8,
         quality_distribution: :normal,
@@ -76,9 +76,9 @@ defmodule DSPEx.Test.MockProviderTest do
         optimization_trajectory: :improving
       ]
 
-      assert :ok = MockProvider.setup_simba_optimization_mocks(config)
+      assert :ok = MockProvider.setup_beacon_optimization_mocks(config)
 
-      # Test different types of SIMBA requests
+      # Test different types of BEACON requests
       bootstrap_msg = [%{role: "user", content: "Bootstrap demonstration example"}]
       {:ok, bootstrap_response} = GenServer.call(MockProvider, {:mock_request, bootstrap_msg, %{}})
 
@@ -333,10 +333,10 @@ defmodule DSPEx.Test.MockProviderTest do
     end
   end
 
-  describe "SIMBA workflow simulation" do
-    test "complete SIMBA bootstrap workflow simulation" do
+  describe "BEACON workflow simulation" do
+    test "complete BEACON bootstrap workflow simulation" do
       # Simulate a complete bootstrap workflow
-      MockProvider.setup_simba_optimization_mocks([
+      MockProvider.setup_beacon_optimization_mocks([
         bootstrap_success_rate: 0.9,
         optimization_trajectory: :improving
       ])
@@ -405,7 +405,7 @@ defmodule DSPEx.Test.MockProviderTest do
 
       Enum.each(trajectories, fn trajectory ->
         MockProvider.reset()
-        MockProvider.setup_simba_optimization_mocks([
+        MockProvider.setup_beacon_optimization_mocks([
           optimization_trajectory: trajectory
         ])
 

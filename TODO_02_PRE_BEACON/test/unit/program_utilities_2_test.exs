@@ -2,9 +2,9 @@ defmodule DSPEx.ProgramUtilitiesTest do
   @moduledoc """
   Unit tests for DSPEx.Program utility functions.
 
-  CRITICAL: SIMBA telemetry depends on program_name/1, implements_program?/1,
+  CRITICAL: BEACON telemetry depends on program_name/1, implements_program?/1,
   and safe_program_info/1 functions. These utilities must work correctly
-  for SIMBA's observability and validation features.
+  for BEACON's observability and validation features.
   """
   use ExUnit.Case, async: true
 
@@ -54,7 +54,7 @@ defmodule DSPEx.ProgramUtilitiesTest do
     }
   end
 
-  describe "program_name/1 - SIMBA telemetry dependency" do
+  describe "program_name/1 - BEACON telemetry dependency" do
     test "extracts correct names from program modules", %{predict_program: predict, test_program: test_prog} do
       # Test with Predict program
       assert Program.program_name(predict) == :Predict
@@ -105,7 +105,7 @@ defmodule DSPEx.ProgramUtilitiesTest do
     end
   end
 
-  describe "implements_program?/1 - SIMBA validation dependency" do
+  describe "implements_program?/1 - BEACON validation dependency" do
     test "correctly identifies valid program modules" do
       # Modules that implement Program behavior
       assert Program.implements_program?(Predict)
@@ -139,7 +139,7 @@ defmodule DSPEx.ProgramUtilitiesTest do
     end
   end
 
-  describe "program_type/1 - SIMBA classification" do
+  describe "program_type/1 - BEACON classification" do
     test "classifies program types correctly", %{predict_program: predict, test_program: test_prog, optimized_program: optimized} do
       assert Program.program_type(predict) == :predict
       assert Program.program_type(test_prog) == :testprogram
@@ -156,7 +156,7 @@ defmodule DSPEx.ProgramUtilitiesTest do
     end
   end
 
-  describe "safe_program_info/1 - SIMBA telemetry extraction" do
+  describe "safe_program_info/1 - BEACON telemetry extraction" do
     test "extracts safe information from Predict programs", %{predict_program: predict} do
       info = Program.safe_program_info(predict)
 
@@ -224,7 +224,7 @@ defmodule DSPEx.ProgramUtilitiesTest do
     end
   end
 
-  describe "has_demos?/1 - SIMBA demo detection" do
+  describe "has_demos?/1 - BEACON demo detection" do
     test "detects demos in programs with demos field", %{test_program: test_prog} do
       # Program without demos
       refute Program.has_demos?(test_prog)
@@ -381,19 +381,19 @@ defmodule DSPEx.ProgramUtilitiesTest do
     end
   end
 
-  describe "SIMBA-specific requirements validation" do
-    test "all SIMBA-required functions exist and work" do
-      # SIMBA requires these exact functions to exist
+  describe "BEACON-specific requirements validation" do
+    test "all BEACON-required functions exist and work" do
+      # BEACON requires these exact functions to exist
       assert function_exported?(Program, :program_name, 1)
       assert function_exported?(Program, :implements_program?, 1)
       assert function_exported?(Program, :safe_program_info, 1)
       assert function_exported?(Program, :has_demos?, 1)
 
-      # Test with realistic SIMBA usage
+      # Test with realistic BEACON usage
       student = %Predict{signature: TestSignature, client: :gemini}
       teacher = %Predict{signature: TestSignature, client: :openai}
 
-      # SIMBA will call these during optimization
+      # BEACON will call these during optimization
       student_name = Program.program_name(student)
       teacher_name = Program.program_name(teacher)
 
@@ -409,17 +409,17 @@ defmodule DSPEx.ProgramUtilitiesTest do
       assert teacher_info.type == :predict
     end
 
-    test "utilities work correctly with OptimizedProgram (SIMBA output)" do
-      # SIMBA creates OptimizedProgram instances
+    test "utilities work correctly with OptimizedProgram (BEACON output)" do
+      # BEACON creates OptimizedProgram instances
       base_program = %Predict{signature: TestSignature, client: :test}
       demos = [%Example{data: %{q: "test", a: "test"}, input_keys: MapSet.new([:q])}]
 
       optimized = OptimizedProgram.new(base_program, demos, %{
-        teleprompter: :simba,
+        teleprompter: :beacon,
         optimization_score: 0.85
       })
 
-      # All utilities should work with SIMBA's output
+      # All utilities should work with BEACON's output
       assert is_atom(Program.program_name(optimized))
       assert Program.implements_program?(OptimizedProgram)
       assert Program.has_demos?(optimized)
@@ -430,7 +430,7 @@ defmodule DSPEx.ProgramUtilitiesTest do
     end
 
     test "telemetry integration readiness" do
-      # SIMBA uses these functions in telemetry events
+      # BEACON uses these functions in telemetry events
       programs = [
         %Predict{signature: TestSignature, client: :test},
         %TestProgram{config: :test}
@@ -438,7 +438,7 @@ defmodule DSPEx.ProgramUtilitiesTest do
 
       # Should be able to extract telemetry data from any program
       Enum.each(programs, fn program ->
-        # These are the calls SIMBA makes for telemetry
+        # These are the calls BEACON makes for telemetry
         name = Program.program_name(program)
         type = Program.program_type(program)
         info = Program.safe_program_info(program)

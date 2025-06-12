@@ -1,11 +1,11 @@
-defmodule DSPEx.Teleprompter.SIMBA.BenchmarkTest do
+defmodule DSPEx.Teleprompter.BEACON.BenchmarkTest do
   @moduledoc """
-  Comprehensive test suite for SIMBA Benchmark module.
+  Comprehensive test suite for BEACON Benchmark module.
   """
 
   use ExUnit.Case, async: true
 
-  alias DSPEx.Teleprompter.SIMBA.Benchmark
+  alias DSPEx.Teleprompter.BEACON.Benchmark
 
   describe "benchmark configuration" do
     test "benchmark_configuration returns proper structure" do

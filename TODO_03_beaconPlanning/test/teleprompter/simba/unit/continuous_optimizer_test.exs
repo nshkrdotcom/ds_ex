@@ -1,12 +1,12 @@
-defmodule DSPEx.Teleprompter.SIMBA.ContinuousOptimizerTest do
+defmodule DSPEx.Teleprompter.BEACON.ContinuousOptimizerTest do
   @moduledoc """
-  Comprehensive test suite for SIMBA Continuous Optimizer GenServer.
+  Comprehensive test suite for BEACON Continuous Optimizer GenServer.
   """
 
   use ExUnit.Case, async: false
 
   alias DSPEx.{Example}
-  alias DSPEx.Teleprompter.SIMBA.ContinuousOptimizer
+  alias DSPEx.Teleprompter.BEACON.ContinuousOptimizer
 
   # Mock program for testing
   defmodule MockProgram do
@@ -450,8 +450,8 @@ defmodule DSPEx.Teleprompter.SIMBA.ContinuousOptimizerTest do
       {:ok, pid} = ContinuousOptimizer.start_optimization(program)
 
       # Should be registered globally
-      global_name = {:global, {:simba_continuous_optimizer, program}}
-      assert :global.whereis_name({:simba_continuous_optimizer, program}) == pid
+      global_name = {:global, {:beacon_continuous_optimizer, program}}
+      assert :global.whereis_name({:beacon_continuous_optimizer, program}) == pid
 
       GenServer.stop(pid)
     end

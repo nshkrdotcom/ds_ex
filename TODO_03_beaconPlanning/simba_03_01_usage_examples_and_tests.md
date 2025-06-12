@@ -1,20 +1,20 @@
-# Usage Examples and Tests for DSPEx SIMBA Integration
+# Usage Examples and Tests for DSPEx BEACON Integration
 
-defmodule DSPEx.Teleprompter.SIMBA.Examples do
+defmodule DSPEx.Teleprompter.BEACON.Examples do
   @moduledoc """
-  Comprehensive examples and usage patterns for DSPEx SIMBA teleprompter.
+  Comprehensive examples and usage patterns for DSPEx BEACON teleprompter.
   
-  This module demonstrates various ways to use SIMBA for optimizing DSPEx programs,
+  This module demonstrates various ways to use BEACON for optimizing DSPEx programs,
   including different types of tasks, evaluation metrics, and configuration options.
   """
 
   alias DSPEx.{Example, Predict, Program}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
 
   @doc """
   Example 1: Question Answering Optimization
   
-  Demonstrates basic SIMBA usage for optimizing a question-answering program.
+  Demonstrates basic BEACON usage for optimizing a question-answering program.
   """
   def question_answering_example do
     # Define signature
@@ -63,8 +63,8 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
       answer_score + reasoning_score
     end
 
-    # Configure SIMBA for reasoning optimization
-    teleprompter = SIMBA.new(
+    # Configure BEACON for reasoning optimization
+    teleprompter = BEACON.new(
       num_candidates: 25,
       max_bootstrapped_demos: 3,
       num_trials: 50,
@@ -180,8 +180,8 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
       summary_score + recommendation_score
     end
 
-    # SIMBA configuration for complex programs
-    teleprompter = SIMBA.new(
+    # BEACON configuration for complex programs
+    teleprompter = BEACON.new(
       num_candidates: 15,
       max_bootstrapped_demos: 2,  # Fewer demos for complex programs
       num_trials: 25,
@@ -220,7 +220,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
   end
 
   @doc """
-  Example 5: Advanced SIMBA Configuration
+  Example 5: Advanced BEACON Configuration
   
   Demonstrates advanced configuration options and custom optimization strategies.
   """
@@ -241,8 +241,8 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
     # Advanced metric with multiple criteria
     metric_fn = create_advanced_metric()
 
-    # Advanced SIMBA configuration
-    teleprompter = SIMBA.new(
+    # Advanced BEACON configuration
+    teleprompter = BEACON.new(
       # Core parameters
       num_candidates: 30,
       max_bootstrapped_demos: 5,
@@ -513,10 +513,10 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
   end
 end
 
-# Test module for SIMBA functionality
-defmodule DSPEx.Teleprompter.SIMBATest do
+# Test module for BEACON functionality
+defmodule DSPEx.Teleprompter.BEACONTest do
   @moduledoc """
-  Comprehensive test suite for SIMBA teleprompter functionality.
+  Comprehensive test suite for BEACON teleprompter functionality.
   
   Tests cover basic functionality, edge cases, error handling, and performance.
   """
@@ -524,11 +524,11 @@ defmodule DSPEx.Teleprompter.SIMBATest do
   use ExUnit.Case, async: false
   
   alias DSPEx.{Example, Predict}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
 
-  describe "SIMBA initialization" do
-    test "creates SIMBA with default configuration" do
-      teleprompter = SIMBA.new()
+  describe "BEACON initialization" do
+    test "creates BEACON with default configuration" do
+      teleprompter = BEACON.new()
       
       assert teleprompter.num_candidates == 20
       assert teleprompter.max_bootstrapped_demos == 4
@@ -536,8 +536,8 @@ defmodule DSPEx.Teleprompter.SIMBATest do
       assert teleprompter.quality_threshold == 0.7
     end
 
-    test "creates SIMBA with custom configuration" do
-      teleprompter = SIMBA.new(
+    test "creates BEACON with custom configuration" do
+      teleprompter = BEACON.new(
         num_candidates: 30,
         quality_threshold: 0.8,
         max_concurrency: 15
@@ -549,7 +549,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
   end
 
-  describe "SIMBA compilation" do
+  describe "BEACON compilation" do
     setup do
       # Define test signature
       defmodule TestSignature do
@@ -575,7 +575,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
 
     test "validates input parameters", %{student: student, teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
-      teleprompter = SIMBA.new()
+      teleprompter = BEACON.new()
 
       # Test invalid student
       assert {:error, :invalid_student_program} = 
@@ -597,7 +597,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     @tag :integration
     test "performs basic compilation", %{student: student, teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
       # Use minimal configuration for testing
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         num_candidates: 2,
         max_bootstrapped_demos: 1,
         num_trials: 3,
@@ -618,7 +618,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
   end
 
-  describe "SIMBA performance and edge cases" do
+  describe "BEACON performance and edge cases" do
     test "handles large trainsets efficiently" do
       # Create a large trainset
       large_trainset = 
@@ -627,7 +627,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
           Example.new(%{input: "test#{i}", output: "result#{i}"}, [:input])
         end)
 
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         num_candidates: 5,
         max_bootstrapped_demos: 2,
         num_trials: 5,
@@ -641,7 +641,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
 
     test "handles timeout scenarios gracefully" do
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         timeout: 1,  # Very short timeout
         teacher_retries: 0
       )
@@ -659,7 +659,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
         :ok
       end
 
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         progress_callback: progress_callback,
         num_candidates: 2,
         num_trials: 2
@@ -677,20 +677,20 @@ defmodule DSPEx.Teleprompter.SIMBATest do
   end
 end
 
-# Benchmark module for SIMBA performance testing
-defmodule DSPEx.Teleprompter.SIMBABenchmark do
+# Benchmark module for BEACON performance testing
+defmodule DSPEx.Teleprompter.BEACONBenchmark do
   @moduledoc """
-  Benchmarking utilities for SIMBA teleprompter performance analysis.
+  Benchmarking utilities for BEACON teleprompter performance analysis.
   """
 
   alias DSPEx.{Example, Predict}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
 
   @doc """
-  Run comprehensive benchmarks for SIMBA optimization.
+  Run comprehensive benchmarks for BEACON optimization.
   """
   def run_benchmarks do
-    IO.puts("=== SIMBA Teleprompter Benchmarks ===\n")
+    IO.puts("=== BEACON Teleprompter Benchmarks ===\n")
 
     benchmark_configurations = [
       %{name: "Small Scale", candidates: 10, trials: 20, demos: 2},
@@ -726,7 +726,7 @@ defmodule DSPEx.Teleprompter.SIMBABenchmark do
     trainset = create_benchmark_trainset(config.demos * 5)
     metric_fn = fn _example, _prediction -> :rand.uniform() end
 
-    teleprompter = SIMBA.new(
+    teleprompter = BEACON.new(
       num_candidates: config.candidates,
       max_bootstrapped_demos: config.demos,
       num_trials: config.trials,
@@ -804,8 +804,8 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
       end
     end
 
-    # Create SIMBA teleprompter
-    teleprompter = SIMBA.new(
+    # Create BEACON teleprompter
+    teleprompter = BEACON.new(
       num_candidates: 15,
       max_bootstrapped_demos: 3,
       num_trials: 30,
@@ -840,7 +840,7 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
   @doc """
   Example 2: Text Classification with Custom Metrics
   
-  Shows how to use SIMBA for text classification with custom evaluation metrics.
+  Shows how to use BEACON for text classification with custom evaluation metrics.
   """
   def text_classification_example do
     # Define signature
@@ -914,8 +914,8 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
       sentiment_score + confidence_score
     end
 
-    # Configure SIMBA for classification task
-    teleprompter = SIMBA.new(
+    # Configure BEACON for classification task
+    teleprompter = BEACON.new(
       num_candidates: 20,
       max_bootstrapped_demos: 4,
       num_trials: 40,
@@ -960,7 +960,7 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
   @doc """
   Example 3: Chain-of-Thought Reasoning
   
-  Demonstrates SIMBA optimization for complex reasoning tasks.
+  Demonstrates BEACON optimization for complex reasoning tasks.
   """
   def chain_of_thought_example do
     # Define signature for reasoning
@@ -1040,8 +1040,8 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
       answer_score + reasoning_score
     end
 
-    # Configure SIMBA for reasoning optimization
-    teleprompter = SIMBA.new(
+    # Configure BEACON for reasoning optimization
+    teleprompter = BEACON.new(
       num_candidates: 25,
       max_bootstrapped_demos: 3,
       num_trials: 50,
@@ -1123,7 +1123,7 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
   @doc """
   Example 4: Multi-Modal Reasoning with Images
   
-  Demonstrates SIMBA optimization for programs that handle both text and images.
+  Demonstrates BEACON optimization for programs that handle both text and images.
   """
   def multi_modal_example do
     # Define signature for multi-modal tasks
@@ -1188,8 +1188,8 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
       analysis_score + answer_score + confidence_score
     end
 
-    # Configure SIMBA for multi-modal optimization
-    teleprompter = SIMBA.new(
+    # Configure BEACON for multi-modal optimization
+    teleprompter = BEACON.new(
       num_candidates: 20,
       max_bootstrapped_demos: 4,
       num_trials: 40,
@@ -1247,7 +1247,7 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
   @doc """
   Example 5: Code Generation and Analysis
   
-  Shows SIMBA optimization for programming-related tasks.
+  Shows BEACON optimization for programming-related tasks.
   """
   def code_generation_example do
     # Define signature for code tasks
@@ -1312,8 +1312,8 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
       code_score + explanation_score + complexity_score
     end
 
-    # Configure SIMBA for code generation
-    teleprompter = SIMBA.new(
+    # Configure BEACON for code generation
+    teleprompter = BEACON.new(
       num_candidates: 15,
       max_bootstrapped_demos: 3,
       num_trials: 30,
@@ -1706,7 +1706,7 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
   @doc """
   Example 6: Real-time Adaptation and Learning
   
-  Demonstrates SIMBA's capability for online learning and adaptation.
+  Demonstrates BEACON's capability for online learning and adaptation.
   """
   def adaptive_learning_example do
     # Define signature for adaptive tasks
@@ -1770,8 +1770,8 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
       response_quality + context_awareness + adaptation_score
     end
 
-    # Configure SIMBA for adaptive learning
-    teleprompter = SIMBA.new(
+    # Configure BEACON for adaptive learning
+    teleprompter = BEACON.new(
       num_candidates: 18,
       max_bootstrapped_demos: 5,
       num_trials: 45,
@@ -1854,7 +1854,7 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
   @doc """
   Example 7: Ensemble and Meta-Learning
   
-  Shows how to use SIMBA to optimize ensemble programs and meta-learning approaches.
+  Shows how to use BEACON to optimize ensemble programs and meta-learning approaches.
   """
   def ensemble_meta_learning_example do
     # Define signature for ensemble decision making
@@ -1951,8 +1951,8 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
       synthesis_score + reasoning_score + confidence_score
     end
 
-    # Configure SIMBA for meta-learning
-    teleprompter = SIMBA.new(
+    # Configure BEACON for meta-learning
+    teleprompter = BEACON.new(
       num_candidates: 12,
       max_bootstrapped_demos: 3,
       num_trials: 25,
@@ -2012,12 +2012,12 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
   end
 
   @doc """
-  Run comprehensive SIMBA testing suite
+  Run comprehensive BEACON testing suite
   
   Executes all example scenarios and provides detailed performance analysis.
   """
   def run_comprehensive_test_suite do
-    IO.puts("🚀 Starting Comprehensive SIMBA Test Suite")
+    IO.puts("🚀 Starting Comprehensive BEACON Test Suite")
     IO.puts("=" |> String.duplicate(50))
     
     test_results = %{
@@ -2277,7 +2277,7 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
 
   defp generate_test_report(test_results) do
     IO.puts("\n" <> "=" |> String.duplicate(60))
-    IO.puts("📊 COMPREHENSIVE SIMBA TEST REPORT")
+    IO.puts("📊 COMPREHENSIVE BEACON TEST REPORT")
     IO.puts("=" |> String.duplicate(60))
     
     # Summary statistics
@@ -2322,7 +2322,7 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
     IO.puts("\n💡 RECOMMENDATIONS")
     
     if successful_tests == total_tests do
-      IO.puts("   🎉 All tests passed! SIMBA integration is working excellently.")
+      IO.puts("   🎉 All tests passed! BEACON integration is working excellently.")
     else
       failed_tests = total_tests - successful_tests
       IO.puts("   ⚠️  #{failed_tests} test(s) failed. Review error logs for optimization.")
@@ -2672,7 +2672,7 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
   @doc """
   Example 6: Real-time Adaptation and Learning
   
-  Demonstrates SIMBA's capability for online learning and adaptation.
+  Demonstrates BEACON's capability for online learning and adaptation.
   """
   def adaptive_learning_example do
     # Define signature for adaptive tasks
@@ -2736,8 +2736,8 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
       response_quality + context_awareness + adaptation_score
     end
 
-    # Configure SIMBA for adaptive learning
-    teleprompter = SIMBA.new(
+    # Configure BEACON for adaptive learning
+    teleprompter = BEACON.new(
       num_candidates: 18,
       max_bootstrapped_demos: 5,
       num_trials: 45,
@@ -2820,7 +2820,7 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
   @doc """
   Example 7: Ensemble and Meta-Learning
   
-  Shows how to use SIMBA to optimize ensemble programs and meta-learning approaches.
+  Shows how to use BEACON to optimize ensemble programs and meta-learning approaches.
   """
   def ensemble_meta_learning_example do
     # Define signature for ensemble decision making
@@ -2917,8 +2917,8 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
       synthesis_score + reasoning_score + confidence_score
     end
 
-    # Configure SIMBA for meta-learning
-    teleprompter = SIMBA.new(
+    # Configure BEACON for meta-learning
+    teleprompter = BEACON.new(
       num_candidates: 12,
       max_bootstrapped_demos: 3,
       num_trials: 25,
@@ -2978,12 +2978,12 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
   end
 
   @doc """
-  Run comprehensive SIMBA testing suite
+  Run comprehensive BEACON testing suite
   
   Executes all example scenarios and provides detailed performance analysis.
   """
   def run_comprehensive_test_suite do
-    IO.puts("🚀 Starting Comprehensive SIMBA Test Suite")
+    IO.puts("🚀 Starting Comprehensive BEACON Test Suite")
     IO.puts("=" |> String.duplicate(50))
     
     test_results = %{
@@ -3243,7 +3243,7 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
 
   defp generate_test_report(test_results) do
     IO.puts("\n" <> "=" |> String.duplicate(60))
-    IO.puts("📊 COMPREHENSIVE SIMBA TEST REPORT")
+    IO.puts("📊 COMPREHENSIVE BEACON TEST REPORT")
     IO.puts("=" |> String.duplicate(60))
     
     # Summary statistics
@@ -3288,7 +3288,7 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
     IO.puts("\n💡 RECOMMENDATIONS")
     
     if successful_tests == total_tests do
-      IO.puts("   🎉 All tests passed! SIMBA integration is working excellently.")
+      IO.puts("   🎉 All tests passed! BEACON integration is working excellently.")
     else
       failed_tests = total_tests - successful_tests
       IO.puts("   ⚠️  #{failed_tests} test(s) failed. Review error logs for optimization.")
@@ -3461,10 +3461,10 @@ endquestion: "What is the capital of France?", answer: "Paris"}, [:question]),
   end
 end
 
-# Test module for SIMBA functionality
-defmodule DSPEx.Teleprompter.SIMBATest do
+# Test module for BEACON functionality
+defmodule DSPEx.Teleprompter.BEACONTest do
   @moduledoc """
-  Comprehensive test suite for SIMBA teleprompter functionality.
+  Comprehensive test suite for BEACON teleprompter functionality.
   
   Tests cover basic functionality, edge cases, error handling, and performance.
   """
@@ -3472,11 +3472,11 @@ defmodule DSPEx.Teleprompter.SIMBATest do
   use ExUnit.Case, async: false
   
   alias DSPEx.{Example, Predict}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
 
-  describe "SIMBA initialization" do
-    test "creates SIMBA with default configuration" do
-      teleprompter = SIMBA.new()
+  describe "BEACON initialization" do
+    test "creates BEACON with default configuration" do
+      teleprompter = BEACON.new()
       
       assert teleprompter.num_candidates == 20
       assert teleprompter.max_bootstrapped_demos == 4
@@ -3484,8 +3484,8 @@ defmodule DSPEx.Teleprompter.SIMBATest do
       assert teleprompter.quality_threshold == 0.7
     end
 
-    test "creates SIMBA with custom configuration" do
-      teleprompter = SIMBA.new(
+    test "creates BEACON with custom configuration" do
+      teleprompter = BEACON.new(
         num_candidates: 30,
         quality_threshold: 0.8,
         max_concurrency: 15
@@ -3498,7 +3498,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
 
     test "validates configuration bounds" do
       # Test that configuration validates reasonable bounds
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         num_candidates: 100,  # High but valid
         quality_threshold: 1.0,  # Maximum valid threshold
         max_concurrency: 1  # Minimum valid concurrency
@@ -3510,7 +3510,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
   end
 
-  describe "SIMBA compilation" do
+  describe "BEACON compilation" do
     setup do
       # Define test signature
       defmodule TestSignature do
@@ -3540,7 +3540,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
 
     test "validates input parameters", %{student: student, teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
-      teleprompter = SIMBA.new()
+      teleprompter = BEACON.new()
 
       # Test invalid student
       assert {:error, :invalid_student_program} = 
@@ -3560,7 +3560,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
 
     test "handles edge cases gracefully", %{student: student, teacher: teacher, metric_fn: metric_fn} do
-      teleprompter = SIMBA.new(num_candidates: 1, num_trials: 1, max_bootstrapped_demos: 1)
+      teleprompter = BEACON.new(num_candidates: 1, num_trials: 1, max_bootstrapped_demos: 1)
 
       # Test with minimal trainset
       minimal_trainset = [
@@ -3576,7 +3576,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
 
     test "respects timeout configurations", %{student: student, teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
       # Test with very short timeout to ensure timeout handling works
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         timeout: 1,  # 1ms timeout should cause timeouts
         num_candidates: 2,
         num_trials: 2
@@ -3597,7 +3597,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
         :ok
       end
 
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         progress_callback: progress_callback,
         num_candidates: 2,
         num_trials: 2
@@ -3612,7 +3612,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     @tag :integration
     test "full compilation workflow", %{student: student, teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
       # Use minimal but realistic configuration for testing
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         num_candidates: 3,
         max_bootstrapped_demos: 2,
         num_trials: 3,
@@ -3644,7 +3644,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
   end
 
-  describe "SIMBA performance and edge cases" do
+  describe "BEACON performance and edge cases" do
     test "handles large trainsets efficiently" do
       # Create a large trainset
       large_trainset = 
@@ -3653,7 +3653,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
           Example.new(%{input: "test#{i}", output: "result#{i}"}, [:input])
         end)
 
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         num_candidates: 5,
         max_bootstrapped_demos: 2,
         num_trials: 5,
@@ -3670,8 +3670,8 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
 
     test "concurrent safety" do
-      # Test that SIMBA can handle concurrent operations safely
-      teleprompter = SIMBA.new(max_concurrency: 5)
+      # Test that BEACON can handle concurrent operations safely
+      teleprompter = BEACON.new(max_concurrency: 5)
       
       # Verify the concurrency setting
       assert teleprompter.max_concurrency == 5
@@ -3681,7 +3681,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
 
     test "memory efficiency with large datasets" do
-      # Test that SIMBA doesn't consume excessive memory
+      # Test that BEACON doesn't consume excessive memory
       large_trainset = 
         1..1000
         |> Enum.map(fn i ->
@@ -3690,7 +3690,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
           Example.new(%{input: "#{large_input}#{i}", output: "result#{i}"}, [:input])
         end)
 
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         num_candidates: 10,
         max_bootstrapped_demos: 5
       )
@@ -3711,7 +3711,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
 
     test "error recovery and resilience" do
-      # Test SIMBA's ability to handle various error conditions
+      # Test BEACON's ability to handle various error conditions
       
       # Test with metric function that sometimes throws errors
       unreliable_metric = fn _example, _prediction ->
@@ -3722,7 +3722,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
         end
       end
 
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         num_candidates: 3,
         num_trials: 3,
         teacher_retries: 2
@@ -3737,7 +3737,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
       # Test edge cases for configuration values
       
       # Test minimum values
-      min_config = SIMBA.new(
+      min_config = BEACON.new(
         num_candidates: 1,
         max_bootstrapped_demos: 1,
         num_trials: 1,
@@ -3752,7 +3752,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
       assert min_config.max_concurrency == 1
 
       # Test maximum reasonable values
-      max_config = SIMBA.new(
+      max_config = BEACON.new(
         num_candidates: 1000,
         max_bootstrapped_demos: 100,
         num_trials: 1000,
@@ -3768,10 +3768,10 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
   end
 
-  describe "SIMBA telemetry and observability" do
+  describe "BEACON telemetry and observability" do
     test "emits proper telemetry events" do
-      # Test that SIMBA emits expected telemetry events
-      teleprompter = SIMBA.new()
+      # Test that BEACON emits expected telemetry events
+      teleprompter = BEACON.new()
       
       # In a real test, you would set up telemetry event collection
       # and verify that the expected events are emitted during compilation
@@ -3783,7 +3783,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
       # Test that correlation IDs are properly propagated through the system
       correlation_id = "test-correlation-123"
       
-      teleprompter = SIMBA.new()
+      teleprompter = BEACON.new()
       
       # The correlation ID should be usable in compilation
       # In a real test, you would verify it appears in telemetry events
@@ -3801,7 +3801,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
         :ok
       end
 
-      teleprompter = SIMBA.new(progress_callback: progress_callback)
+      teleprompter = BEACON.new(progress_callback: progress_callback)
       
       # Verify the callback is properly stored
       assert is_function(teleprompter.progress_callback)
@@ -3827,26 +3827,26 @@ defmodule DSPEx.Teleprompter.SIMBATest do
   end
 end
 
-# Benchmark module for SIMBA performance testing
-defmodule DSPEx.Teleprompter.SIMBABenchmark do
+# Benchmark module for BEACON performance testing
+defmodule DSPEx.Teleprompter.BEACONBenchmark do
   @moduledoc """
-  Benchmarking utilities for SIMBA teleprompter performance analysis.
+  Benchmarking utilities for BEACON teleprompter performance analysis.
   
   Provides comprehensive benchmarking capabilities to measure and optimize
-  SIMBA's performance across different configurations and workload sizes.
+  BEACON's performance across different configurations and workload sizes.
   """
 
   alias DSPEx.{Example, Predict}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
 
   @doc """
-  Run comprehensive benchmarks for SIMBA optimization.
+  Run comprehensive benchmarks for BEACON optimization.
   
   Tests performance across multiple configuration scales and provides
   detailed analysis of optimization characteristics.
   """
   def run_benchmarks do
-    IO.puts("=== SIMBA Teleprompter Benchmarks ===\n")
+    IO.puts("=== BEACON Teleprompter Benchmarks ===\n")
 
     benchmark_configurations = [
       %{name: "Small Scale", candidates: 10, trials: 20, demos: 2, trainset_size: 50},
@@ -3880,7 +3880,7 @@ defmodule DSPEx.Teleprompter.SIMBABenchmark do
   end
 
   @doc """
-  Benchmark a specific SIMBA configuration.
+  Benchmark a specific BEACON configuration.
   """
   def benchmark_configuration(config) do
     # Setup benchmark environment
@@ -3895,7 +3895,7 @@ defmodule DSPEx.Teleprompter.SIMBABenchmark do
     trainset = create_benchmark_trainset(config.trainset_size)
     metric_fn = fn _example, _prediction -> :rand.uniform() end
 
-    teleprompter = SIMBA.new(
+    teleprompter = BEACON.new(
       num_candidates: config.candidates,
       max_bootstrapped_demos: config.demos,
       num_trials: config.trials,
@@ -3991,8 +3991,8 @@ defmodule DSPEx.Teleprompter.SIMBABenchmark do
       # Simulate memory usage for dataset size
       trainset = create_benchmark_trainset(size)
       
-      # Create SIMBA configuration
-      teleprompter = SIMBA.new(
+      # Create BEACON configuration
+      teleprompter = BEACON.new(
         num_candidates: min(50, div(size, 10)),
         max_bootstrapped_demos: min(10, div(size, 50))
       )
@@ -4151,19 +4151,19 @@ defmodule DSPEx.Teleprompter.SIMBABenchmark do
 end
 
 # Example usage and integration patterns
-defmodule DSPEx.Teleprompter.SIMBAIntegration do
+defmodule DSPEx.Teleprompter.BEACONIntegration do
   @moduledoc """
-  Integration patterns and real-world usage examples for SIMBA teleprompter.
+  Integration patterns and real-world usage examples for BEACON teleprompter.
   
-  This module demonstrates how to integrate SIMBA into larger applications
+  This module demonstrates how to integrate BEACON into larger applications
   and workflows, including monitoring, error handling, and optimization strategies.
   """
 
   alias DSPEx.{Example, Predict, Program}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
 
   @doc """
-  Production-ready SIMBA optimization with comprehensive error handling.
+  Production-ready BEACON optimization with comprehensive error handling.
   """
   def optimize_for_production(student, teacher, trainset, metric_fn, opts \\ []) do
     correlation_id = Keyword.get(opts, :correlation_id) || generate_correlation_id()
@@ -4180,7 +4180,7 @@ defmodule DSPEx.Teleprompter.SIMBAIntegration do
       progress_callback: create_production_progress_callback(correlation_id)
     }
 
-    teleprompter = SIMBA.new(production_config)
+    teleprompter = BEACON.new(production_config)
 
     # Comprehensive error handling and monitoring
     try do
@@ -4305,7 +4305,7 @@ defmodule DSPEx.Teleprompter.SIMBAIntegration do
    
    IO.puts("   Stage 1: Exploratory optimization...")
    
-   exploratory_teleprompter = SIMBA.new(exploratory_config)
+   exploratory_teleprompter = BEACON.new(exploratory_config)
    
    case exploratory_teleprompter.compile(student, teacher, trainset, metric_fn) do
      {:ok, exploratory_result} ->
@@ -4324,7 +4324,7 @@ defmodule DSPEx.Teleprompter.SIMBAIntegration do
        IO.puts("   Stage 2: Refined optimization...")
        IO.puts("   Adapted config: #{inspect(refined_config)}")
        
-       refined_teleprompter = SIMBA.new(refined_config)
+       refined_teleprompter = BEACON.new(refined_config)
        
        case refined_teleprompter.compile(student, teacher, trainset, metric_fn) do
          {:ok, final_result} ->
@@ -4368,7 +4368,7 @@ defmodule DSPEx.Teleprompter.SIMBAIntegration do
        quality_check_interval: quality_check_interval,
        opts: opts
      },
-     name: {:global, {:simba_continuous_optimizer, program}}
+     name: {:global, {:beacon_continuous_optimizer, program}}
    )
  end
 
@@ -4604,7 +4604,7 @@ defmodule DSPEx.Teleprompter.SIMBAIntegration do
  end
 
  defp generate_correlation_id do
-   "simba-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+   "beacon-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
  end
 end
 
@@ -4677,7 +4677,7 @@ defmodule DSPEx.Teleprompter.ContinuousOptimizer do
  
  defp run_optimization(state) do
    # Run the actual optimization
-   # This would use the real SIMBA optimization logic
+   # This would use the real BEACON optimization logic
    {:ok, state.program}  # Placeholder
  end
 end

@@ -1,6 +1,6 @@
-defmodule DSPEx.Teleprompter.SIMBATest do
+defmodule DSPEx.Teleprompter.BEACONTest do
   @moduledoc """
-  Comprehensive test suite for SIMBA teleprompter functionality.
+  Comprehensive test suite for BEACON teleprompter functionality.
 
   Tests cover initialization, compilation, edge cases, error handling, and performance.
   """
@@ -8,12 +8,12 @@ defmodule DSPEx.Teleprompter.SIMBATest do
   use ExUnit.Case, async: false
 
   alias DSPEx.{Example, Predict}
-  alias DSPEx.Teleprompter.SIMBA
-  alias DSPEx.Teleprompter.SIMBA.Utils
+  alias DSPEx.Teleprompter.BEACON
+  alias DSPEx.Teleprompter.BEACON.Utils
 
-  describe "SIMBA initialization" do
-    test "creates SIMBA with default configuration" do
-      teleprompter = SIMBA.new()
+  describe "BEACON initialization" do
+    test "creates BEACON with default configuration" do
+      teleprompter = BEACON.new()
 
       assert teleprompter.num_candidates == 20
       assert teleprompter.max_bootstrapped_demos == 4
@@ -21,8 +21,8 @@ defmodule DSPEx.Teleprompter.SIMBATest do
       assert teleprompter.quality_threshold == 0.7
     end
 
-    test "creates SIMBA with custom configuration" do
-      teleprompter = SIMBA.new(
+    test "creates BEACON with custom configuration" do
+      teleprompter = BEACON.new(
         num_candidates: 30,
         quality_threshold: 0.8,
         max_concurrency: 15
@@ -34,7 +34,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
 
     test "validates configuration bounds" do
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         num_candidates: 100,
         quality_threshold: 1.0,
         max_concurrency: 1
@@ -46,7 +46,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
   end
 
-  describe "SIMBA compilation" do
+  describe "BEACON compilation" do
     setup do
       defmodule TestSignature do
         use DSPEx.Signature, "input -> output"
@@ -75,7 +75,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
 
     test "validates input parameters", %{student: student, teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
-      teleprompter = SIMBA.new()
+      teleprompter = BEACON.new()
 
       # Test invalid student
       assert {:error, :invalid_student_program} =
@@ -95,7 +95,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
 
     test "handles edge cases gracefully", %{student: student, teacher: teacher, metric_fn: metric_fn} do
-      teleprompter = SIMBA.new(num_candidates: 1, num_trials: 1, max_bootstrapped_demos: 1)
+      teleprompter = BEACON.new(num_candidates: 1, num_trials: 1, max_bootstrapped_demos: 1)
 
       # Test with minimal trainset
       minimal_trainset = [
@@ -111,7 +111,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
 
     test "respects timeout configurations", %{student: student, teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
       # Test with very short timeout
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         timeout: 1,  # 1ms timeout should cause timeouts
         num_candidates: 2,
         num_trials: 2
@@ -130,7 +130,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
         :ok
       end
 
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         progress_callback: progress_callback,
         num_candidates: 2,
         num_trials: 2
@@ -142,7 +142,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
 
     @tag :integration
     test "full compilation workflow", %{student: student, teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         num_candidates: 3,
         max_bootstrapped_demos: 2,
         num_trials: 3,
@@ -170,7 +170,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
   end
 
-  describe "SIMBA performance and edge cases" do
+  describe "BEACON performance and edge cases" do
     test "handles large trainsets efficiently" do
       large_trainset =
         1..100
@@ -178,7 +178,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
           Example.new(%{input: "test#{i}", output: "result#{i}"}, [:input])
         end)
 
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         num_candidates: 5,
         max_bootstrapped_demos: 2,
         num_trials: 5,
@@ -192,7 +192,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
 
     test "concurrent safety" do
-      teleprompter = SIMBA.new(max_concurrency: 5)
+      teleprompter = BEACON.new(max_concurrency: 5)
       assert teleprompter.max_concurrency == 5
     end
 
@@ -204,7 +204,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
           Example.new(%{input: "#{large_input}#{i}", output: "result#{i}"}, [:input])
         end)
 
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         num_candidates: 10,
         max_bootstrapped_demos: 5
       )
@@ -229,7 +229,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
         end
       end
 
-      teleprompter = SIMBA.new(
+      teleprompter = BEACON.new(
         num_candidates: 3,
         num_trials: 3,
         teacher_retries: 2
@@ -241,7 +241,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
 
     test "configuration validation and bounds checking" do
       # Test minimum values
-      min_config = SIMBA.new(
+      min_config = BEACON.new(
         num_candidates: 1,
         max_bootstrapped_demos: 1,
         num_trials: 1,
@@ -256,7 +256,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
       assert min_config.max_concurrency == 1
 
       # Test maximum reasonable values
-      max_config = SIMBA.new(
+      max_config = BEACON.new(
         num_candidates: 1000,
         max_bootstrapped_demos: 100,
         num_trials: 1000,
@@ -272,13 +272,13 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
   end
 
-  describe "SIMBA telemetry and observability" do
+  describe "BEACON telemetry and observability" do
     test "correlation ID propagation" do
       correlation_id = Utils.generate_correlation_id()
-      teleprompter = SIMBA.new()
+      teleprompter = BEACON.new()
 
       assert is_binary(correlation_id)
-      assert String.starts_with?(correlation_id, "simba-")
+      assert String.starts_with?(correlation_id, "beacon-")
       assert is_struct(teleprompter)
     end
 
@@ -290,7 +290,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
         :ok
       end
 
-      teleprompter = SIMBA.new(progress_callback: progress_callback)
+      teleprompter = BEACON.new(progress_callback: progress_callback)
       assert is_function(teleprompter.progress_callback)
     end
   end

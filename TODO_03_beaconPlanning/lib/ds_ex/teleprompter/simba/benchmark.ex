@@ -1,23 +1,23 @@
-defmodule DSPEx.Teleprompter.SIMBA.Benchmark do
+defmodule DSPEx.Teleprompter.BEACON.Benchmark do
   @moduledoc """
-  Benchmarking utilities for SIMBA teleprompter performance analysis.
+  Benchmarking utilities for BEACON teleprompter performance analysis.
 
   Provides comprehensive benchmarking capabilities to measure and optimize
-  SIMBA's performance across different configurations and workload sizes.
+  BEACON's performance across different configurations and workload sizes.
   """
 
   alias DSPEx.{Example, Predict}
-  alias DSPEx.Teleprompter.SIMBA
-  alias DSPEx.Teleprompter.SIMBA.Utils
+  alias DSPEx.Teleprompter.BEACON
+  alias DSPEx.Teleprompter.BEACON.Utils
 
   @doc """
-  Run comprehensive benchmarks for SIMBA optimization.
+  Run comprehensive benchmarks for BEACON optimization.
 
   Tests performance across multiple configuration scales and provides
   detailed analysis of optimization characteristics.
   """
   def run_benchmarks do
-    IO.puts("=== SIMBA Teleprompter Benchmarks ===\n")
+    IO.puts("=== BEACON Teleprompter Benchmarks ===\n")
 
     benchmark_configurations = [
       %{name: "Small Scale", candidates: 10, trials: 20, demos: 2, trainset_size: 50},
@@ -51,7 +51,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Benchmark do
   end
 
   @doc """
-  Benchmark a specific SIMBA configuration.
+  Benchmark a specific BEACON configuration.
   """
   def benchmark_configuration(config) do
     # Setup benchmark environment
@@ -66,7 +66,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Benchmark do
     trainset = create_benchmark_trainset(config.trainset_size)
     metric_fn = fn _example, _prediction -> :rand.uniform() end
 
-    teleprompter = SIMBA.new(
+    teleprompter = BEACON.new(
       num_candidates: config.candidates,
       max_bootstrapped_demos: config.demos,
       num_trials: config.trials,
@@ -162,8 +162,8 @@ defmodule DSPEx.Teleprompter.SIMBA.Benchmark do
       # Simulate memory usage for dataset size
       trainset = create_benchmark_trainset(size)
 
-      # Create SIMBA configuration
-      teleprompter = SIMBA.new(
+      # Create BEACON configuration
+      teleprompter = BEACON.new(
         num_candidates: min(50, div(size, 10)),
         max_bootstrapped_demos: min(10, div(size, 50))
       )
@@ -208,7 +208,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Benchmark do
   end
 
   @doc """
-  Compare different SIMBA configurations on the same task.
+  Compare different BEACON configurations on the same task.
   """
   def compare_configurations(base_config \\ %{}) do
     IO.puts("\n=== Configuration Comparison ===")

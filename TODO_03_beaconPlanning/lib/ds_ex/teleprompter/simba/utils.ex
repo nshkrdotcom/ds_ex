@@ -1,8 +1,8 @@
-defmodule DSPEx.Teleprompter.SIMBA.Utils do
+defmodule DSPEx.Teleprompter.BEACON.Utils do
   @moduledoc """
-  Shared utilities for SIMBA teleprompter examples and testing.
+  Shared utilities for BEACON teleprompter examples and testing.
 
-  This module contains common helper functions used across SIMBA examples,
+  This module contains common helper functions used across BEACON examples,
   tests, and benchmarks to avoid duplication and ensure consistency.
   """
 
@@ -132,7 +132,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Utils do
   Generates a correlation ID for tracking optimization runs.
   """
   def generate_correlation_id do
-    "simba-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+    "beacon-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
   end
 
   @doc """

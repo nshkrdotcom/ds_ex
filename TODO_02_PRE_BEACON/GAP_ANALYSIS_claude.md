@@ -1,21 +1,21 @@
-# DSPEx Critical Gap Analysis for SIMBA Integration
+# DSPEx Critical Gap Analysis for BEACON Integration
 
 **Assessment Date:** June 10, 2025  
 **Scope:** Analysis of gaps between current `lib` implementation and requirements for:
-1. `TODO_02_PRE_SIMBA/test/*` test suite
-2. Category 1 tests from `test_phase2_priorities.md` (Critical for SIMBA)
+1. `TODO_02_PRE_BEACON/test/*` test suite
+2. Category 1 tests from `test_phase2_priorities.md` (Critical for BEACON)
 
 ## Executive Summary
 
 **Overall Assessment: 🟡 MODERATE GAP - Foundation Solid, Missing Key Utilities**
 
-The DSPEx codebase has a robust foundation with comprehensive core modules and good test coverage. However, there are **critical utility function gaps** and **missing specialized testing infrastructure** that must be addressed before SIMBA integration. The gaps are well-defined and implementable, but represent genuine blockers for SIMBA's advanced optimization workflows.
+The DSPEx codebase has a robust foundation with comprehensive core modules and good test coverage. However, there are **critical utility function gaps** and **missing specialized testing infrastructure** that must be addressed before BEACON integration. The gaps are well-defined and implementable, but represent genuine blockers for BEACON's advanced optimization workflows.
 
 **Critical Finding:** The gap analysis in `GAP_ANALYSIS_AND_IMPLEMENTATION.md` significantly **overestimated** the missing pieces. Most core infrastructure already exists and is working correctly.
 
 ## Detailed Gap Analysis
 
-### 🔴 **CRITICAL GAPS - Must Fix Before SIMBA**
+### 🔴 **CRITICAL GAPS - Must Fix Before BEACON**
 
 #### **1. Missing Program Utility Functions**
 **Status:** 🔴 **CRITICAL BLOCKER**  
@@ -29,13 +29,13 @@ The DSPEx codebase has a robust foundation with comprehensive core modules and g
 - ❌ `has_demos?/1` - MISSING
 
 **Required by:** 
-- SIMBA telemetry system needs `program_type/1` for classification
+- BEACON telemetry system needs `program_type/1` for classification
 - `safe_program_info/1` needed for observability without exposing sensitive data
 - `has_demos?/1` required for optimization validation
 
 **Evidence from Tests:**
 ```elixir
-# From TODO_02_PRE_SIMBA/test/unit/program_utilities_2_test.exs
+# From TODO_02_PRE_BEACON/test/unit/program_utilities_2_test.exs
 assert Program.program_type(predict) == :predict
 assert Program.program_type(optimized) == :optimized
 
@@ -46,7 +46,7 @@ assert info.has_demos == false
 assert Program.has_demos?(optimized) == true
 ```
 
-**Impact:** SIMBA compilation will fail at runtime when calling these utility functions.
+**Impact:** BEACON compilation will fail at runtime when calling these utility functions.
 
 #### **2. Missing Signature Introspection Functions**
 **Status:** 🟡 **HIGH PRIORITY**  
@@ -61,12 +61,12 @@ assert Program.has_demos?(optimized) == true
 - ❌ `field_statistics/1` - MISSING
 
 **Required by:**
-- SIMBA's program composition features need signature compatibility validation
+- BEACON's program composition features need signature compatibility validation
 - Advanced debugging and introspection during optimization
 
 **Evidence from Tests:**
 ```elixir
-# From TODO_02_PRE_SIMBA/test/unit/signature_extension_2_test.exs
+# From TODO_02_PRE_BEACON/test/unit/signature_extension_2_test.exs
 assert :ok = Signature.validate_signature_compatibility(
   ProcessingSignature,
   AnalysisSignature
@@ -75,32 +75,32 @@ assert :ok = Signature.validate_signature_compatibility(
 {:ok, metadata} = Signature.introspect(extended_module)
 ```
 
-**Impact:** SIMBA's advanced composition features will be limited without these functions.
+**Impact:** BEACON's advanced composition features will be limited without these functions.
 
-#### **3. Missing SIMBA-Specific Mock Provider**
+#### **3. Missing BEACON-Specific Mock Provider**
 **Status:** 🔴 **CRITICAL TESTING BLOCKER**  
 **File:** `test/support/mock_provider.ex` or similar
 
 **Current State:**
 - ✅ `DSPEx.MockClientManager` - Good basic mocking
-- ❌ `DSPEx.Test.MockProvider` - MISSING specialized SIMBA mocking
+- ❌ `DSPEx.Test.MockProvider` - MISSING specialized BEACON mocking
 
 **Required by:**
-- SIMBA testing requires sophisticated mocking of optimization workflows
+- BEACON testing requires sophisticated mocking of optimization workflows
 - Need to simulate bootstrap generation, instruction optimization, evaluation trajectories
 
 **Evidence from Tests:**
 ```elixir
-# From TODO_02_PRE_SIMBA/test/unit/mock_provider_test.exs
+# From TODO_02_PRE_BEACON/test/unit/mock_provider_test.exs
 MockProvider.setup_bootstrap_mocks(teacher_responses)
 MockProvider.setup_instruction_generation_mocks(instruction_responses)
 MockProvider.setup_evaluation_mocks(scores)
-MockProvider.setup_simba_optimization_mocks(config)
+MockProvider.setup_beacon_optimization_mocks(config)
 ```
 
-**Impact:** Cannot write reliable, deterministic tests for SIMBA optimization workflows.
+**Impact:** Cannot write reliable, deterministic tests for BEACON optimization workflows.
 
-### 🟡 **HIGH PRIORITY GAPS - Needed for Full SIMBA Capabilities**
+### 🟡 **HIGH PRIORITY GAPS - Needed for Full BEACON Capabilities**
 
 #### **4. Missing High-Concurrency Stress Tests**
 **Status:** 🟡 **HIGH PRIORITY**  
@@ -120,9 +120,9 @@ MockProvider.setup_simba_optimization_mocks(config)
 5. `end_to_end/complete_workflow_test.exs` - Full optimization workflow validation
 
 **Evidence:**
-SIMBA planning documents specify "100+ concurrent requests during optimization" - current tests don't validate this load pattern.
+BEACON planning documents specify "100+ concurrent requests during optimization" - current tests don't validate this load pattern.
 
-**Impact:** Risk of production failures under SIMBA's demanding concurrent workloads.
+**Impact:** Risk of production failures under BEACON's demanding concurrent workloads.
 
 ### 🟢 **SURPRISINGLY GOOD - Better Than Expected**
 
@@ -166,7 +166,7 @@ def validate_signature_implementation(module)
 def field_statistics(signature_module)
 ```
 
-### **Phase 2: SIMBA Mock Provider (1-2 Days)**
+### **Phase 2: BEACON Mock Provider (1-2 Days)**
 
 **Task 2.1: Create Enhanced Mock Provider**
 ```elixir
@@ -175,7 +175,7 @@ defmodule DSPEx.Test.MockProvider do
   def setup_bootstrap_mocks(teacher_responses)
   def setup_instruction_generation_mocks(instruction_responses)  
   def setup_evaluation_mocks(scores)
-  def setup_simba_optimization_mocks(config)
+  def setup_beacon_optimization_mocks(config)
 end
 ```
 
@@ -200,7 +200,7 @@ end
 - **Low Risk:** Performance validation might uncover bottlenecks
 - **Very Low Risk:** Mock provider integration complexity
 
-## Validation Checklist for SIMBA Readiness
+## Validation Checklist for BEACON Readiness
 
 ### **Critical Functions (Must Work):**
 ```elixir
@@ -215,7 +215,7 @@ assert :ok = Signature.validate_signature_compatibility(sig1, sig2)
 {:ok, metadata} = Signature.introspect(signature_module)
 
 # Mock provider
-MockProvider.setup_simba_optimization_mocks(config)
+MockProvider.setup_beacon_optimization_mocks(config)
 ```
 
 ### **Performance Validation (Must Pass):**
@@ -236,6 +236,6 @@ MockProvider.setup_simba_optimization_mocks(config)
 
 **Total Estimated Time: 4-7 days** (down from the original 12-day estimate)
 
-**Recommendation:** Proceed with the 3-phase implementation plan above. The foundation is solid enough for immediate SIMBA integration once these specific gaps are filled.
+**Recommendation:** Proceed with the 3-phase implementation plan above. The foundation is solid enough for immediate BEACON integration once these specific gaps are filled.
 
-**SIMBA Integration Readiness: 🟡 85% Ready** (up from the original assessment of 40% ready)
+**BEACON Integration Readiness: 🟡 85% Ready** (up from the original assessment of 40% ready)

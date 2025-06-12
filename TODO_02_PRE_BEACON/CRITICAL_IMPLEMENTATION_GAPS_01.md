@@ -1,12 +1,12 @@
-I'll conduct a comprehensive review of your DSPEx implementation to identify what needs to be completed before SIMBA integration.Based on my comprehensive review of your DSPEx implementation and analysis of DSPy's SIMBA requirements, I've identified several critical gaps that must be addressed before SIMBA integration. Let me provide a detailed assessment:
+I'll conduct a comprehensive review of your DSPEx implementation to identify what needs to be completed before BEACON integration.Based on my comprehensive review of your DSPEx implementation and analysis of DSPy's BEACON requirements, I've identified several critical gaps that must be addressed before BEACON integration. Let me provide a detailed assessment:
 
-## **Critical Implementation Gaps for SIMBA Integration**
+## **Critical Implementation Gaps for BEACON Integration**
 
 ### **1. Missing Core Infrastructure**
 
 #### **A. DSPEx.Teleprompter Behavior Not Implemented**
 - **Status**: ❌ **CRITICAL MISSING**
-- **Issue**: Your SIMBA implementation references `@behaviour DSPEx.Teleprompter` but this behavior is not defined anywhere in your codebase
+- **Issue**: Your BEACON implementation references `@behaviour DSPEx.Teleprompter` but this behavior is not defined anywhere in your codebase
 - **Required**: 
   ```elixir
   # lib/dspex/teleprompter.ex - MISSING
@@ -23,8 +23,8 @@ I'll conduct a comprehensive review of your DSPEx implementation to identify wha
 
 #### **B. DSPEx.OptimizedProgram Module Missing**
 - **Status**: ❌ **CRITICAL MISSING**  
-- **Issue**: SIMBA's `create_optimized_student/2` function references `DSPEx.OptimizedProgram.new/3` which doesn't exist
-- **Impact**: SIMBA cannot wrap programs that don't natively support demos
+- **Issue**: BEACON's `create_optimized_student/2` function references `DSPEx.OptimizedProgram.new/3` which doesn't exist
+- **Impact**: BEACON cannot wrap programs that don't natively support demos
 - **Found in your code**: `optimized_program.ex` exists but may not have the required interface
 
 #### **C. DSPEx.Program Behavior Incomplete**
@@ -38,7 +38,7 @@ I'll conduct a comprehensive review of your DSPEx implementation to identify wha
 
 #### **A. Missing Signature Extension Capabilities**
 - **Status**: ❌ **MISSING**
-- **Issue**: Your SIMBA code references `DSPEx.Signature.extend/2` which doesn't exist
+- **Issue**: Your BEACON code references `DSPEx.Signature.extend/2` which doesn't exist
 - **Required for**: ChainOfThought and other multi-step reasoning programs
 - **Needed**:
   ```elixir
@@ -51,7 +51,7 @@ I'll conduct a comprehensive review of your DSPEx implementation to identify wha
 #### **B. Signature Introspection Incomplete**  
 - **Status**: ⚠️ **PARTIALLY IMPLEMENTED**
 - **Issues**: 
-  - Your signatures have `input_fields/0` and `output_fields/0` but SIMBA needs more introspection
+  - Your signatures have `input_fields/0` and `output_fields/0` but BEACON needs more introspection
   - Missing `description/0` fallback handling in some scenarios
   - No signature validation utilities
 
@@ -59,7 +59,7 @@ I'll conduct a comprehensive review of your DSPEx implementation to identify wha
 
 #### **A. Multi-Provider Request Handling**
 - **Status**: ⚠️ **NEEDS VERIFICATION**
-- **Issue**: SIMBA needs to make requests with specific provider selection
+- **Issue**: BEACON needs to make requests with specific provider selection
 - **Your code**: Has `DSPEx.Client.request/3` but unclear if provider selection works reliably
 - **Required verification**:
   ```elixir
@@ -77,29 +77,29 @@ I'll conduct a comprehensive review of your DSPEx implementation to identify wha
 
 #### **A. Telemetry Event Definitions**
 - **Status**: ⚠️ **INCONSISTENT**
-- **Issue**: SIMBA emits specific telemetry events that may not be properly handled
+- **Issue**: BEACON emits specific telemetry events that may not be properly handled
 - **Required events**:
   ```elixir
-  [:dspex, :teleprompter, :simba, :start]
-  [:dspex, :teleprompter, :simba, :bootstrap, :start]
-  [:dspex, :teleprompter, :simba, :optimization, :start]
+  [:dspex, :teleprompter, :beacon, :start]
+  [:dspex, :teleprompter, :beacon, :bootstrap, :start]
+  [:dspex, :teleprompter, :beacon, :optimization, :start]
   # And corresponding :stop events
   ```
 
 #### **B. Configuration Management**
 - **Status**: ⚠️ **MAY BE INCOMPLETE**
-- **Issue**: SIMBA needs reliable access to provider configurations for instruction generation
+- **Issue**: BEACON needs reliable access to provider configurations for instruction generation
 - **Your code**: ConfigManager exists but may not be fully integrated with client selection
 
 ### **5. Testing Infrastructure Gaps**
 
 #### **A. Mock Framework**
-- **Status**: ❌ **INSUFFICIENT FOR SIMBA**
-- **Issue**: SIMBA requires sophisticated mocking for:
+- **Status**: ❌ **INSUFFICIENT FOR BEACON**
+- **Issue**: BEACON requires sophisticated mocking for:
   - Multi-provider LLM calls
   - Bootstrap demonstration generation  
   - Bayesian optimization trials
-- **Your code**: Has basic mocking but not comprehensive enough for SIMBA's complex workflows
+- **Your code**: Has basic mocking but not comprehensive enough for BEACON's complex workflows
 
 #### **B. Integration Test Setup**
 - **Status**: ❌ **MISSING**
@@ -108,7 +108,7 @@ I'll conduct a comprehensive review of your DSPEx implementation to identify wha
 
 ## **Implementation Priority Order**
 
-### **Phase 1: Core Infrastructure (BEFORE SIMBA)**
+### **Phase 1: Core Infrastructure (BEFORE BEACON)**
 
 1. **Implement DSPEx.Teleprompter Behavior** (1-2 days)
    ```elixir
@@ -125,7 +125,7 @@ I'll conduct a comprehensive review of your DSPEx implementation to identify wha
 
 2. **Complete DSPEx.OptimizedProgram** (1 day)
    ```elixir
-   # Ensure this matches SIMBA's expectations
+   # Ensure this matches BEACON's expectations
    defmodule DSPEx.OptimizedProgram do
      def new(program, demos, metadata \\ %{})
      def get_demos(optimized_program)
@@ -135,7 +135,7 @@ I'll conduct a comprehensive review of your DSPEx implementation to identify wha
 
 3. **Fix DSPEx.Program Utilities** (1 day)
    ```elixir
-   # Add missing functions referenced by SIMBA
+   # Add missing functions referenced by BEACON
    defmodule DSPEx.Program do
      def program_name(program), do: # Extract module name
      def implements_program?(module), do: # Check behavior
@@ -174,7 +174,7 @@ I'll conduct a comprehensive review of your DSPEx implementation to identify wha
 
 8. **Enhanced Mock Framework**
    ```elixir
-   # Better mocking for SIMBA's needs
+   # Better mocking for BEACON's needs
    defmodule DSPEx.Test.MockProvider do
      def setup_bootstrap_mocks(teacher_responses)
      def setup_instruction_generation_mocks(instruction_responses)
@@ -189,18 +189,18 @@ I'll conduct a comprehensive review of your DSPEx implementation to identify wha
 
 ## **Immediate Action Items**
 
-### **Before SIMBA Integration - Essential Steps:**
+### **Before BEACON Integration - Essential Steps:**
 
 1. **Create `lib/dspex/teleprompter.ex`** with the behavior definition
-2. **Verify `lib/dspex/optimized_program.ex`** matches SIMBA's interface expectations
+2. **Verify `lib/dspex/optimized_program.ex`** matches BEACON's interface expectations
 3. **Add missing utility functions** to `DSPEx.Program`
-4. **Test client stability** under SIMBA's concurrent load patterns
+4. **Test client stability** under BEACON's concurrent load patterns
 5. **Set up enhanced test mocks** for teleprompter workflows
 
 ### **Validation Tests to Run:**
 
 ```elixir
-# Test these work before SIMBA integration
+# Test these work before BEACON integration
 {:ok, student} = DSPEx.Predict.new(TestSignature, :gemini)  
 {:ok, teacher} = DSPEx.Predict.new(TestSignature, :openai)
 {:ok, response} = DSPEx.Client.request(messages, %{provider: :openai})
@@ -210,11 +210,11 @@ I'll conduct a comprehensive review of your DSPEx implementation to identify wha
 ## **Risk Assessment**
 
 - **HIGH RISK**: Missing teleprompter behavior will cause immediate compilation failures
-- **MEDIUM RISK**: Client instability could cause intermittent SIMBA failures  
+- **MEDIUM RISK**: Client instability could cause intermittent BEACON failures  
 - **LOW RISK**: Missing utilities will cause runtime errors but are easy to fix
 
 ## **Recommendation**
 
-**Do NOT integrate SIMBA yet.** Complete Phase 1 infrastructure first, then validate with simple teleprompter tests before adding SIMBA's complexity. The missing `DSPEx.Teleprompter` behavior alone will prevent compilation.
+**Do NOT integrate BEACON yet.** Complete Phase 1 infrastructure first, then validate with simple teleprompter tests before adding BEACON's complexity. The missing `DSPEx.Teleprompter` behavior alone will prevent compilation.
 
-Your SIMBA implementation looks excellent and production-ready, but your core DSPEx infrastructure needs these foundational pieces before it can support sophisticated teleprompters like SIMBA.
+Your BEACON implementation looks excellent and production-ready, but your core DSPEx infrastructure needs these foundational pieces before it can support sophisticated teleprompters like BEACON.

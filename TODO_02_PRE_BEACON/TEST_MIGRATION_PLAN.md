@@ -1,12 +1,12 @@
-# DSPEx Test Migration Plan: TODO_02_PRE_SIMBA → test/
+# DSPEx Test Migration Plan: TODO_02_PRE_BEACON → test/
 
 **Plan Date:** June 10, 2025  
-**Scope:** Systematic migration of tests from `TODO_02_PRE_SIMBA/test/` and `test_phase2/` to `test/`  
+**Scope:** Systematic migration of tests from `TODO_02_PRE_BEACON/test/` and `test_phase2/` to `test/`  
 **Dependencies:** Critical gaps identified in `GAP_ANALYSIS_claude.md` must be implemented during migration
 
 ## Executive Summary
 
-This plan details a **6-phase, incrementally validated migration strategy** that moves test files in small, logical groups while implementing the missing functionality identified in the gap analysis. Each phase builds confidence in the system's readiness for SIMBA integration.
+This plan details a **6-phase, incrementally validated migration strategy** that moves test files in small, logical groups while implementing the missing functionality identified in the gap analysis. Each phase builds confidence in the system's readiness for BEACON integration.
 
 **Key Principles:**
 1. **Migrate in small batches** - 2-4 test files per phase to enable quick debugging
@@ -36,7 +36,7 @@ mix test --cover
 #### Task 0.2: Create Migration Infrastructure
 **Files to Create:**
 - `test/support/migration_test_helper.ex` - Utilities for migrated tests
-- `test/support/simba_test_mocks.ex` - Enhanced mocking for SIMBA workflows
+- `test/support/beacon_test_mocks.ex` - Enhanced mocking for BEACON workflows
 
 #### Task 0.3: Document Current Test Inventory
 Create `test/MIGRATION_STATUS.md` tracking:
@@ -102,8 +102,8 @@ def field_statistics(signature_module)
 #### Task 1.3: Migrate Core Utility Tests
 **Source → Destination:**
 ```
-TODO_02_PRE_SIMBA/test/unit/program_utilities_2_test.exs → test/unit/program_utilities_test.exs
-TODO_02_PRE_SIMBA/test/unit/signature_extension_2_test.exs → test/unit/signature_introspection_test.exs
+TODO_02_PRE_BEACON/test/unit/program_utilities_2_test.exs → test/unit/program_utilities_test.exs
+TODO_02_PRE_BEACON/test/unit/signature_extension_2_test.exs → test/unit/signature_introspection_test.exs
 ```
 
 **Expected Test Coverage:**
@@ -128,18 +128,18 @@ mix test # Full suite regression check
 ## Phase 2: Enhanced Test Infrastructure (Days 4-5)
 
 ### Objective
-Build sophisticated mocking and testing infrastructure needed for SIMBA workflows before migrating complex tests.
+Build sophisticated mocking and testing infrastructure needed for BEACON workflows before migrating complex tests.
 
-### Implementation: SIMBA Mock Provider
+### Implementation: BEACON Mock Provider
 
 #### Task 2.1: Create Enhanced Mock Provider
-**File:** `test/support/simba_mock_provider.ex`
+**File:** `test/support/beacon_mock_provider.ex`
 
 **Based on Requirements from `mock_provider_test.exs`:**
 ```elixir
-defmodule DSPEx.Test.SimbaMockProvider do
+defmodule DSPEx.Test.BeaconMockProvider do
   @moduledoc """
-  Enhanced mocking infrastructure for SIMBA optimization workflows.
+  Enhanced mocking infrastructure for BEACON optimization workflows.
   Extends existing DSPEx.MockClientManager with specialized mocking.
   """
 
@@ -152,11 +152,11 @@ defmodule DSPEx.Test.SimbaMockProvider do
   @spec setup_evaluation_mocks(map()) :: :ok
   def setup_evaluation_mocks(score_map)
   
-  @spec setup_simba_optimization_mocks(map()) :: :ok
-  def setup_simba_optimization_mocks(config)
+  @spec setup_beacon_optimization_mocks(map()) :: :ok
+  def setup_beacon_optimization_mocks(config)
   
-  @spec reset_all_simba_mocks() :: :ok
-  def reset_all_simba_mocks()
+  @spec reset_all_beacon_mocks() :: :ok
+  def reset_all_beacon_mocks()
 end
 ```
 
@@ -179,23 +179,23 @@ end
 #### Task 2.3: Migrate Mock Provider Tests
 **Source → Destination:**
 ```
-TODO_02_PRE_SIMBA/test/unit/mock_provider_test.exs → test/unit/simba_mock_provider_test.exs
+TODO_02_PRE_BEACON/test/unit/mock_provider_test.exs → test/unit/beacon_mock_provider_test.exs
 ```
 
 **Validation Requirements:**
-- Mock provider can simulate complex SIMBA workflows
+- Mock provider can simulate complex BEACON workflows
 - Mocks integrate cleanly with existing test infrastructure  
 - Deterministic test execution under mocked conditions
 
 #### Task 2.4: Validation Checkpoint
 ```bash
-mix test test/unit/simba_mock_provider_test.exs
+mix test test/unit/beacon_mock_provider_test.exs
 mix test test/support/ # Test the test infrastructure itself
 mix test # Full regression check
 ```
 
 **Success Criteria:**
-- ✅ SIMBA mock provider works correctly
+- ✅ BEACON mock provider works correctly
 - ✅ Enhanced test helpers are reliable  
 - ✅ Foundation ready for complex optimization tests
 
@@ -204,7 +204,7 @@ mix test # Full regression check
 ## Phase 3: Critical Concurrent Tests - Category 1 (Days 6-8)
 
 ### Objective  
-Migrate and implement the **Category 1 tests** identified as "Required Now, Unique, Applicable for SIMBA" in `test_phase2_priorities.md`. These are critical for validating the system can handle SIMBA's demanding concurrent workloads.
+Migrate and implement the **Category 1 tests** identified as "Required Now, Unique, Applicable for BEACON" in `test_phase2_priorities.md`. These are critical for validating the system can handle BEACON's demanding concurrent workloads.
 
 ### Migration Strategy: One Critical Test at a Time
 
@@ -252,7 +252,7 @@ test_phase2/concurrent/teleprompter_concurrent_test.exs → test/concurrent/tele
 ```
 
 **Implementation Dependencies:**
-- This tests the **core SIMBA workflow** under concurrent load
+- This tests the **core BEACON workflow** under concurrent load
 - Validates concurrent "teacher" program executions
 - Ensures optimization results are consistent under concurrency
 
@@ -262,7 +262,7 @@ test_phase2/concurrent/teleprompter_concurrent_test.exs → test/concurrent/tele
 - Optimization result determinism
 
 **Critical Success Criteria:**
-- Must pass reliably - this validates SIMBA foundation
+- Must pass reliably - this validates BEACON foundation
 - Performance must be acceptable for 100+ concurrent optimizations
 - No memory leaks or resource exhaustion
 
@@ -275,14 +275,14 @@ mix test # Full regression check with stress tests
 **Success Criteria:**
 - ✅ All concurrent stress tests pass consistently
 - ✅ System remains stable under 100+ concurrent requests  
-- ✅ Performance baselines established for SIMBA planning
+- ✅ Performance baselines established for BEACON planning
 
 ---
 
 ## Phase 4: End-to-End Workflow Validation (Days 9-10)
 
 ### Objective
-Migrate end-to-end tests that validate complete optimization workflows - the ultimate test of SIMBA readiness.
+Migrate end-to-end tests that validate complete optimization workflows - the ultimate test of BEACON readiness.
 
 #### Task 4.1: Performance Benchmark Tests
 **Source → Destination:**
@@ -309,7 +309,7 @@ test_phase2/end_to_end/complete_workflow_test.exs → test/integration/full_opti
 
 **Implementation Dependencies:**
 - Tests entire pipeline: Signature → Program → Evaluate → Optimize → Validate Improvement
-- Validates the exact workflow SIMBA will depend on
+- Validates the exact workflow BEACON will depend on
 - Ensures optimization actually improves program performance
 
 **Critical Validations:**
@@ -323,7 +323,7 @@ test_phase2/end_to_end/complete_workflow_test.exs → test/integration/full_opti
 
 **Purpose:**
 - Automated performance regression detection
-- Baseline metrics for SIMBA performance comparison
+- Baseline metrics for BEACON performance comparison
 - Early warning system for performance degradation
 
 #### Task 4.4: Validation Checkpoint
@@ -337,7 +337,7 @@ mix test # Complete system validation
 - ✅ End-to-end optimization workflows complete successfully
 - ✅ Performance baselines documented and acceptable
 - ✅ Full system integration validated
-- ✅ Ready for SIMBA layer implementation
+- ✅ Ready for BEACON layer implementation
 
 ---
 
@@ -351,8 +351,8 @@ Migrate remaining utility and edge case tests that provide comprehensive coverag
 #### Task 5.1: Advanced Program Utility Tests
 **Source → Destination:**
 ```
-TODO_02_PRE_SIMBA/test/unit/optimized_program_2_test.exs → test/unit/optimized_program_advanced_test.exs
-TODO_02_PRE_SIMBA/test/unit/teleprompter_2_test.exs → test/unit/teleprompter_advanced_test.exs
+TODO_02_PRE_BEACON/test/unit/optimized_program_2_test.exs → test/unit/optimized_program_advanced_test.exs
+TODO_02_PRE_BEACON/test/unit/teleprompter_2_test.exs → test/unit/teleprompter_advanced_test.exs
 ```
 
 **Implementation Dependencies:**
@@ -365,7 +365,7 @@ TODO_02_PRE_SIMBA/test/unit/teleprompter_2_test.exs → test/unit/teleprompter_a
 #### Task 5.2: Edge Case Tests  
 **Source → Destination:**
 ```
-TODO_02_PRE_SIMBA/test/unit/edge_cases_test.exs → test/unit/system_edge_cases_test.exs
+TODO_02_PRE_BEACON/test/unit/edge_cases_test.exs → test/unit/system_edge_cases_test.exs
 ```
 
 **Focus:**
@@ -377,7 +377,7 @@ TODO_02_PRE_SIMBA/test/unit/edge_cases_test.exs → test/unit/system_edge_cases_
 #### Task 5.3: Bootstrap and Teleprompter Edge Cases
 **Source → Destination:**
 ```
-TODO_02_PRE_SIMBA/test/unit/bootstrap_fewshot_test.exs → test/unit/bootstrap_advanced_test.exs
+TODO_02_PRE_BEACON/test/unit/bootstrap_fewshot_test.exs → test/unit/bootstrap_advanced_test.exs
 ```
 
 **Implementation Dependencies:**
@@ -390,7 +390,7 @@ TODO_02_PRE_SIMBA/test/unit/bootstrap_fewshot_test.exs → test/unit/bootstrap_a
 #### Task 5.4: Performance Integration Tests
 **Source → Destination:**  
 ```
-TODO_02_PRE_SIMBA/test/performance/ → test/performance/
+TODO_02_PRE_BEACON/test/performance/ → test/performance/
 ```
 
 **Merge Strategy:**
@@ -416,7 +416,7 @@ mix test # Full system validation
 ## Phase 6: Final Integration and Cleanup (Day 13)
 
 ### Objective
-Complete migration, clean up redundancies, and prepare for SIMBA implementation.
+Complete migration, clean up redundancies, and prepare for BEACON implementation.
 
 #### Task 6.1: Handle Remaining Special Cases
 **Files to Review:**
@@ -433,7 +433,7 @@ test_phase2/example_test.exs
 
 #### Task 6.2: Clean Up Migration Artifacts
 **Tasks:**
-- Remove empty directories from `TODO_02_PRE_SIMBA/test/` and `test_phase2/`
+- Remove empty directories from `TODO_02_PRE_BEACON/test/` and `test_phase2/`
 - Update documentation to reflect new test structure
 - Archive migration plan and gap analysis in `docs/migration/`
 
@@ -447,17 +447,17 @@ mix credo --strict
 
 **Documentation Updates:**
 - Update `README.md` with new test structure  
-- Document performance baselines for SIMBA team
+- Document performance baselines for BEACON team
 - Create `TESTING.md` guide for contributors
 
-#### Task 6.4: SIMBA Readiness Assessment  
-**Create:** `SIMBA_READINESS_REPORT.md`
+#### Task 6.4: BEACON Readiness Assessment  
+**Create:** `BEACON_READINESS_REPORT.md`
 
 **Content:**
 - Validation that all critical gaps from `GAP_ANALYSIS_claude.md` are addressed
 - Performance baseline documentation
 - Test coverage analysis  
-- Known limitations and recommendations for SIMBA implementation
+- Known limitations and recommendations for BEACON implementation
 
 ---
 
@@ -476,7 +476,7 @@ mix credo --strict
 **Contingency:** If concurrent tests fail consistently:
 1. Document specific failure modes
 2. Implement fixes for critical issues only
-3. Defer complex concurrency to post-SIMBA if non-critical
+3. Defer complex concurrency to post-BEACON if non-critical
 
 #### Phase 4 (End-to-End) - Medium Risk  
 **Risk:** Full workflow tests may expose integration issues
@@ -492,7 +492,7 @@ mix credo --strict
 **If implementation is more complex than expected:**
 - Implement minimal viable versions first
 - Add comprehensive features in follow-up phases
-- Document technical debt for post-SIMBA cleanup
+- Document technical debt for post-BEACON cleanup
 
 #### Test Migration Conflicts
 **If tests conflict with existing suite:**
@@ -511,7 +511,7 @@ mix credo --strict
 - Enhanced mock infrastructure operational
 - No regression in existing test suite
 
-**Phase 3-4 Success (Critical for SIMBA):**
+**Phase 3-4 Success (Critical for BEACON):**
 - 100+ concurrent request handling validated
 - End-to-end optimization workflows operational  
 - Performance baselines established and documented
@@ -527,7 +527,7 @@ mix credo --strict
 - [ ] All migrated tests pass consistently
 - [ ] No regressions in existing functionality  
 - [ ] All critical gaps from gap analysis addressed
-- [ ] Performance meets SIMBA requirements
+- [ ] Performance meets BEACON requirements
 
 #### Quality Validation  
 - [ ] Test coverage maintained or improved
@@ -535,11 +535,11 @@ mix credo --strict
 - [ ] Documentation updated and accurate
 - [ ] Technical debt properly documented
 
-#### SIMBA Readiness Validation
+#### BEACON Readiness Validation
 - [ ] Concurrent optimization workflows validated
-- [ ] Performance baselines meet SIMBA needs
+- [ ] Performance baselines meet BEACON needs
 - [ ] All Category 1 tests from `test_phase2_priorities.md` implemented
-- [ ] System architecture ready for SIMBA layer
+- [ ] System architecture ready for BEACON layer
 
 ---
 
@@ -547,33 +547,33 @@ mix credo --strict
 
 ### Immediate (Days 14-15)
 1. **Archive migration materials** in `docs/migration/`
-2. **Create SIMBA integration guide** based on lessons learned
+2. **Create BEACON integration guide** based on lessons learned
 3. **Update team documentation** with new test procedures  
-4. **Performance baseline documentation** for SIMBA planning
+4. **Performance baseline documentation** for BEACON planning
 
 ### Medium-term (Weeks 3-4)
 1. **Monitor system stability** under normal workloads
 2. **Gather performance data** from production-like scenarios
 3. **Refine test suite** based on real-world usage patterns
-4. **Begin SIMBA implementation** with confidence in foundation
+4. **Begin BEACON implementation** with confidence in foundation
 
 ---
 
 ## Conclusion
 
-This migration plan addresses the critical finding from `GAP_ANALYSIS_claude.md` that **"the DSPEx foundation is much more complete than originally assessed"** while systematically implementing the missing pieces needed for SIMBA integration.
+This migration plan addresses the critical finding from `GAP_ANALYSIS_claude.md` that **"the DSPEx foundation is much more complete than originally assessed"** while systematically implementing the missing pieces needed for BEACON integration.
 
 **Key Strategic Decisions:**
-1. **Prioritize Category 1 tests** identified as critical for SIMBA
+1. **Prioritize Category 1 tests** identified as critical for BEACON
 2. **Implement missing utilities just-in-time** during migration
 3. **Validate incrementally** to catch issues early
-4. **Build comprehensive test infrastructure** to support SIMBA development
+4. **Build comprehensive test infrastructure** to support BEACON development
 
 **Expected Outcome:** 
-A robust, well-tested foundation ready for SIMBA integration with:
+A robust, well-tested foundation ready for BEACON integration with:
 - ✅ All critical utility functions implemented  
 - ✅ Concurrent workflow validation complete
 - ✅ Performance baselines established
-- ✅ **SIMBA Integration Readiness: 🟢 95% Ready**
+- ✅ **BEACON Integration Readiness: 🟢 95% Ready**
 
 The plan transforms the current **🟡 85% Ready** assessment to **🟢 95% Ready** through systematic gap closure and comprehensive validation.

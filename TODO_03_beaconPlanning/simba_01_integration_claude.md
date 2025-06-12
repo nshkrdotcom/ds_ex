@@ -1,10 +1,10 @@
-# DSPEx.Teleprompter.SIMBA - Complete Integration
+# DSPEx.Teleprompter.BEACON - Complete Integration
 
-defmodule DSPEx.Teleprompter.SIMBA do
+defmodule DSPEx.Teleprompter.BEACON do
   @moduledoc """
-  SIMBA (SIMple BAyesian) teleprompter for DSPEx program optimization.
+  BEACON (SIMple BAyesian) teleprompter for DSPEx program optimization.
 
-  SIMBA is a simple yet effective Bayesian optimization teleprompter that:
+  BEACON is a simple yet effective Bayesian optimization teleprompter that:
   1. Bootstrap generates candidate demonstrations using a teacher program
   2. Uses Bayesian optimization to find the best instruction/demonstration combinations
   3. Evaluates candidates on a validation set to select optimal configurations
@@ -26,8 +26,8 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   ## Example Usage
 
-      # Create SIMBA teleprompter
-      teleprompter = DSPEx.Teleprompter.SIMBA.new(
+      # Create BEACON teleprompter
+      teleprompter = DSPEx.Teleprompter.BEACON.new(
         num_candidates: 20,
         max_bootstrapped_demos: 4,
         num_trials: 50,
@@ -97,7 +97,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
         }
 
   @doc """
-  Create a new SIMBA teleprompter with given options.
+  Create a new BEACON teleprompter with given options.
 
   ## Options
 
@@ -144,7 +144,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     start_time = System.monotonic_time()
 
     emit_telemetry(
-      [:dspex, :teleprompter, :simba, :start],
+      [:dspex, :teleprompter, :beacon, :start],
       %{system_time: System.system_time()},
       %{
         correlation_id: correlation_id,
@@ -180,7 +180,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     success = match?({:ok, _}, result)
 
     emit_telemetry(
-      [:dspex, :teleprompter, :simba, :stop],
+      [:dspex, :teleprompter, :beacon, :stop],
       %{duration: duration, success: success},
       %{correlation_id: correlation_id}
     )
@@ -211,7 +211,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     start_time = System.monotonic_time()
 
     emit_telemetry(
-      [:dspex, :teleprompter, :simba, :bootstrap, :start],
+      [:dspex, :teleprompter, :beacon, :bootstrap, :start],
       %{system_time: System.system_time()},
       %{correlation_id: correlation_id, trainset_size: length(trainset)}
     )
@@ -267,7 +267,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     duration = System.monotonic_time() - start_time
 
     emit_telemetry(
-      [:dspex, :teleprompter, :simba, :bootstrap, :stop],
+      [:dspex, :teleprompter, :beacon, :bootstrap, :stop],
       %{duration: duration, success: length(candidates) > 0},
       %{
         correlation_id: correlation_id,
@@ -286,7 +286,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     start_time = System.monotonic_time()
 
     emit_telemetry(
-      [:dspex, :teleprompter, :simba, :instructions, :start],
+      [:dspex, :teleprompter, :beacon, :instructions, :start],
       %{system_time: System.system_time()},
       %{correlation_id: correlation_id}
     )
@@ -328,7 +328,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     duration = System.monotonic_time() - start_time
 
     emit_telemetry(
-      [:dspex, :teleprompter, :simba, :instructions, :stop],
+      [:dspex, :teleprompter, :beacon, :instructions, :stop],
       %{duration: duration, success: length(candidates) > 0},
       %{
         correlation_id: correlation_id,
@@ -370,7 +370,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     start_time = System.monotonic_time()
 
     emit_telemetry(
-      [:dspex, :teleprompter, :simba, :optimization, :start],
+      [:dspex, :teleprompter, :beacon, :optimization, :start],
       %{system_time: System.system_time()},
       %{
         correlation_id: correlation_id,
@@ -412,7 +412,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     duration = System.monotonic_time() - start_time
 
     emit_telemetry(
-      [:dspex, :teleprompter, :simba, :optimization, :stop],
+      [:dspex, :teleprompter, :beacon, :optimization, :stop],
       %{duration: duration, success: true},
       %{
         correlation_id: correlation_id,
@@ -502,7 +502,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
             student,
             optimization_result.best_demos,
             %{
-              optimization_method: :simba,
+              optimization_method: :beacon,
               instruction: optimization_result.best_instruction,
               optimization_score: optimization_result.score,
               optimization_stats: optimization_result.stats
@@ -527,7 +527,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
           # Add metadata fields
           demo_data =
             Map.merge(combined_data, %{
-              __generated_by: :simba,
+              __generated_by: :beacon,
               __teacher: teacher_name(teacher),
               __original_example_id: get_in(example.data, [:__id]) || :unknown,
               __timestamp: DateTime.utc_now()
@@ -816,7 +816,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
       Foundation.Utils.generate_correlation_id()
     rescue
       _ -> 
-        "simba-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+        "beacon-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
     end
   end
 
@@ -841,10 +841,10 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 end
 
-# Add SIMBA-specific signature for instruction generation
-defmodule DSPEx.Teleprompter.SIMBA.InstructionSignature do
+# Add BEACON-specific signature for instruction generation
+defmodule DSPEx.Teleprompter.BEACON.InstructionSignature do
   @moduledoc """
-  Signature for generating instructions in SIMBA teleprompter.
+  Signature for generating instructions in BEACON teleprompter.
   """
   use DSPEx.Signature, "task_description, examples -> instruction"
 
@@ -857,10 +857,10 @@ defmodule DSPEx.Teleprompter.SIMBA.InstructionSignature do
   end
 end
 
-# Evaluation signature for SIMBA
-defmodule DSPEx.Teleprompter.SIMBA.EvaluationSignature do
+# Evaluation signature for BEACON
+defmodule DSPEx.Teleprompter.BEACON.EvaluationSignature do
   @moduledoc """
-  Signature for evaluating instruction quality in SIMBA.
+  Signature for evaluating instruction quality in BEACON.
   """
   use DSPEx.Signature, "instruction, task_examples -> quality_score, feedback"
 

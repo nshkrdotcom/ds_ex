@@ -64,7 +64,7 @@ defmodule DSPEx.Integration.TeleprompterWorkflowTest do
         %{content: "10"}
       ])
 
-      # Step 1: Validate inputs (as SIMBA will do)
+      # Step 1: Validate inputs (as BEACON will do)
       assert :ok = Teleprompter.validate_student(student)
       assert :ok = Teleprompter.validate_teacher(teacher)
       assert :ok = Teleprompter.validate_trainset(trainset)

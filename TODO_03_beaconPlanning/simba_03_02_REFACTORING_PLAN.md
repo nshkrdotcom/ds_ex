@@ -1,4 +1,4 @@
-# SIMBA Teleprompter Refactoring Plan
+# BEACON Teleprompter Refactoring Plan
 
 ## Current Issues
 - ~4,200+ lines in a single file
@@ -10,41 +10,41 @@
 ## New Module Structure
 
 ### 1. Core Examples Module
-**File: `lib/dspex/teleprompter/simba/examples.ex`**
+**File: `lib/dspex/teleprompter/beacon/examples.ex`**
 - Clean, sequential examples (1-7)
 - Single set of helper functions
 - Focused, educational demonstrations
 
 ### 2. Test Suite Module  
-**File: `test/dspex/teleprompter/simba_test.exs`**
+**File: `test/dspex/teleprompter/beacon_test.exs`**
 - Comprehensive unit tests
 - Edge case coverage
 - Performance validation
 - Proper ExUnit structure
 
 ### 3. Benchmark Module
-**File: `lib/dspex/teleprompter/simba/benchmark.ex`**
+**File: `lib/dspex/teleprompter/beacon/benchmark.ex`**
 - Performance measurement utilities
 - Scalability testing
 - Resource usage analysis
 - Optimization recommendations
 
 ### 4. Integration Patterns Module
-**File: `lib/dspex/teleprompter/simba/integration.ex`**
+**File: `lib/dspex/teleprompter/beacon/integration.ex`**
 - Production-ready patterns
 - Error handling strategies
 - Monitoring and observability
 - Batch processing utilities
 
 ### 5. Continuous Optimizer Module
-**File: `lib/dspex/teleprompter/simba/continuous_optimizer.ex`**
+**File: `lib/dspex/teleprompter/beacon/continuous_optimizer.ex`**
 - GenServer for long-running optimization
 - Quality monitoring
 - Adaptive scheduling
 - Resource management
 
 ### 6. Shared Utilities Module
-**File: `lib/dspex/teleprompter/simba/utils.ex`**
+**File: `lib/dspex/teleprompter/beacon/utils.ex`**
 - Common helper functions
 - Evaluation metrics
 - Text processing utilities

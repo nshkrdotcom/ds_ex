@@ -1,8 +1,8 @@
-Now, here's a comprehensive list of tests needed based on the current implementation status and the critical gaps identified for SIMBA integration:
+Now, here's a comprehensive list of tests needed based on the current implementation status and the critical gaps identified for BEACON integration:
 
-## Comprehensive Test Plan for DSPEx Pre-SIMBA Integration
+## Comprehensive Test Plan for DSPEx Pre-BEACON Integration
 
-### 🔴 **CRITICAL: Pre-SIMBA Blocker Tests (URGENT)**
+### 🔴 **CRITICAL: Pre-BEACON Blocker Tests (URGENT)**
 
 #### **1. DSPEx.Teleprompter Behavior Tests**
 **File**: `test/unit/teleprompter_test.exs`
@@ -26,7 +26,7 @@ Now, here's a comprehensive list of tests needed based on the current implementa
 
 #### **2. DSPEx.OptimizedProgram Interface Tests**
 **File**: `test/unit/optimized_program_test.exs`
-- [ ] **SIMBA interface compatibility**
+- [ ] **BEACON interface compatibility**
   - `new/3` creates OptimizedProgram with correct structure
   - `new/3` handles optional metadata parameter correctly
   - `get_demos/1` returns demonstration list exactly as stored
@@ -112,7 +112,7 @@ Now, here's a comprehensive list of tests needed based on the current implementa
 #### **6. Enhanced Client Reliability Tests**
 **File**: `test/integration/client_reliability_test.exs`
 - [ ] **Concurrent request handling**
-  - Client handles 100+ concurrent requests (SIMBA pattern)
+  - Client handles 100+ concurrent requests (BEACON pattern)
   - Correlation ID propagation works under concurrent load
   - Provider switching works reliably under load
   - Memory usage remains stable during concurrent operations
@@ -153,7 +153,7 @@ Now, here's a comprehensive list of tests needed based on the current implementa
 
 #### **8. Mock Framework Enhancement Tests**
 **File**: `test/unit/mock_provider_test.exs`
-- [ ] **SIMBA-specific mock patterns**
+- [ ] **BEACON-specific mock patterns**
   - `setup_bootstrap_mocks/1` provides realistic teacher responses
   - `setup_instruction_generation_mocks/1` supports instruction optimization
   - `setup_optimization_mocks/1` simulates optimization trajectories
@@ -172,8 +172,8 @@ Now, here's a comprehensive list of tests needed based on the current implementa
 
 ### 🟢 **MEDIUM PRIORITY: Performance & Reliability Tests**
 
-#### **9. Pre-SIMBA Performance Tests**
-**File**: `test/performance/pre_simba_performance_test.exs`
+#### **9. Pre-BEACON Performance Tests**
+**File**: `test/performance/pre_beacon_performance_test.exs`
 - [ ] **Memory usage validation**
   - Teleprompter compilation doesn't leak memory
   - Large training sets don't cause memory issues
@@ -192,10 +192,10 @@ Now, here's a comprehensive list of tests needed based on the current implementa
   - Concurrent operations scale properly with available resources
 
 #### **10. Comprehensive Integration Validation Tests**
-**File**: `test/integration/pre_simba_validation_test.exs`
-- [ ] **SIMBA interface readiness**
+**File**: `test/integration/pre_beacon_validation_test.exs`
+- [ ] **BEACON interface readiness**
   - All required behaviors and modules exist and are complete
-  - Function signatures match SIMBA expectations exactly
+  - Function signatures match BEACON expectations exactly
   - Error handling and return types are compatible
   - Telemetry integration works as expected
 
@@ -203,7 +203,7 @@ Now, here's a comprehensive list of tests needed based on the current implementa
   - Complete end-to-end workflows work reliably
   - Error propagation works correctly through all layers
   - Correlation tracking works throughout complex workflows
-  - Performance meets targets for typical SIMBA usage patterns
+  - Performance meets targets for typical BEACON usage patterns
 
 ### 🟠 **SUPPORTING TESTS: Foundation & Infrastructure**
 
@@ -341,21 +341,21 @@ Now, here's a comprehensive list of tests needed based on the current implementa
 
 ### 🧪 **SPECIALIZED TESTING SCENARIOS**
 
-#### **18. SIMBA-Specific Integration Tests**
-**File**: `test/integration/simba_compatibility_test.exs`
-- [ ] **SIMBA workflow simulation**
-  - Simulate exact SIMBA teleprompter usage patterns
-  - Test concurrent optimization requests like SIMBA will make
-  - Validate memory usage patterns under SIMBA-like loads
+#### **18. BEACON-Specific Integration Tests**
+**File**: `test/integration/beacon_compatibility_test.exs`
+- [ ] **BEACON workflow simulation**
+  - Simulate exact BEACON teleprompter usage patterns
+  - Test concurrent optimization requests like BEACON will make
+  - Validate memory usage patterns under BEACON-like loads
   - Ensure correlation tracking works for complex optimization chains
 
 - [ ] **Interface contract validation**
-  - Every function SIMBA calls exists with correct arity
-  - Return types match SIMBA expectations exactly
+  - Every function BEACON calls exists with correct arity
+  - Return types match BEACON expectations exactly
   - Error scenarios return expected error tuples
   - Telemetry events match expected format and timing
 
-- [ ] **Performance validation for SIMBA**
+- [ ] **Performance validation for BEACON**
   - Bootstrap generation completes within acceptable time
   - Instruction optimization cycles meet performance targets
   - Memory usage remains stable during repeated optimizations
@@ -398,21 +398,21 @@ Now, here's a comprehensive list of tests needed based on the current implementa
 ## Test Implementation Priority
 
 ### **Phase 1: Critical Blockers (Week 1)**
-1. **DSPEx.Teleprompter behavior tests** (blocks SIMBA compilation)
-2. **DSPEx.OptimizedProgram interface tests** (blocks SIMBA runtime)
-3. **DSPEx.Program utility tests** (blocks SIMBA telemetry)
+1. **DSPEx.Teleprompter behavior tests** (blocks BEACON compilation)
+2. **DSPEx.OptimizedProgram interface tests** (blocks BEACON runtime)
+3. **DSPEx.Program utility tests** (blocks BEACON telemetry)
 4. **Basic BootstrapFewShot tests** (validates core optimization)
 
 ### **Phase 2: Enhanced Capabilities (Week 2)**
 5. **Signature extension tests** (supports advanced patterns)
-6. **Client reliability tests** (handles SIMBA load patterns)
+6. **Client reliability tests** (handles BEACON load patterns)
 7. **Mock framework enhancement tests** (supports complex workflows)
 8. **End-to-end workflow tests** (validates complete pipeline)
 
 ### **Phase 3: Integration Validation (Week 3)**
-9. **Pre-SIMBA performance tests** (ensures scalability)
+9. **Pre-BEACON performance tests** (ensures scalability)
 10. **Comprehensive integration tests** (final validation)
-11. **SIMBA compatibility tests** (interface contracts)
+11. **BEACON compatibility tests** (interface contracts)
 12. **Stress and concurrent tests** (production readiness)
 
 ### **Phase 4: Quality Assurance (Ongoing)**
@@ -427,7 +427,7 @@ Now, here's a comprehensive list of tests needed based on the current implementa
 - [ ] All critical behavior and interface tests pass
 - [ ] BootstrapFewShot teleprompter works end-to-end
 - [ ] Program utilities support telemetry requirements
-- [ ] No compilation errors for SIMBA-style usage
+- [ ] No compilation errors for BEACON-style usage
 
 ### **Phase 2 Complete When:**
 - [ ] Client handles 100+ concurrent requests reliably
@@ -436,7 +436,7 @@ Now, here's a comprehensive list of tests needed based on the current implementa
 - [ ] Memory usage is stable under optimization loads
 
 ### **Phase 3 Complete When:**
-- [ ] All SIMBA interface requirements are met and tested
+- [ ] All BEACON interface requirements are met and tested
 - [ ] Performance benchmarks meet or exceed targets
 - [ ] Integration tests validate complete workflows
 - [ ] Stress tests confirm production readiness
@@ -445,7 +445,7 @@ Now, here's a comprehensive list of tests needed based on the current implementa
 - [ ] **Zero test failures** across all test categories
 - [ ] **Zero Dialyzer warnings** maintained
 - [ ] **Test coverage ≥ 90%** for all core modules
-- [ ] **Performance targets met** for SIMBA usage patterns
-- [ ] **All SIMBA blockers resolved** and validated
+- [ ] **Performance targets met** for BEACON usage patterns
+- [ ] **All BEACON blockers resolved** and validated
 
-This comprehensive test plan ensures that DSPEx will be fully prepared for SIMBA integration with robust validation of all critical components, interfaces, and workflows.
+This comprehensive test plan ensures that DSPEx will be fully prepared for BEACON integration with robust validation of all critical components, interfaces, and workflows.

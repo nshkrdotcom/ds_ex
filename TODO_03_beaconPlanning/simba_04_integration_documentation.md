@@ -1,28 +1,28 @@
-# DSPEx SIMBA Integration - Complete Documentation
+# DSPEx BEACON Integration - Complete Documentation
 
 ## Overview
 
-This document provides comprehensive documentation for integrating DSPy.SIMBA into your existing DSPEx Elixir codebase. The integration includes a full SIMBA teleprompter implementation, Bayesian optimization engine, and extensive examples.
+This document provides comprehensive documentation for integrating DSPy.BEACON into your existing DSPEx Elixir codebase. The integration includes a full BEACON teleprompter implementation, Bayesian optimization engine, and extensive examples.
 
 ## Architecture
 
 ### Core Components
 
 ```
-DSPEx.Teleprompter.SIMBA
+DSPEx.Teleprompter.BEACON
 ├── Main teleprompter implementation
 ├── Bayesian optimization engine
 ├── Instruction generation pipeline
 ├── Demonstration bootstrapping
 └── Progress tracking and telemetry
 
-DSPEx.Teleprompter.SIMBA.BayesianOptimizer
+DSPEx.Teleprompter.BEACON.BayesianOptimizer
 ├── Gaussian Process surrogate modeling
 ├── Acquisition functions (EI, UCB, PI)
 ├── Configuration space exploration
 └── Convergence detection
 
-DSPEx.Teleprompter.SIMBA.Examples
+DSPEx.Teleprompter.BEACON.Examples
 ├── Usage examples and patterns
 ├── Test cases and benchmarks
 └── Performance analysis tools
@@ -37,18 +37,18 @@ DSPEx.Teleprompter.SIMBA.Examples
 
 ## Installation and Setup
 
-### 1. Add SIMBA Files to Your Codebase
+### 1. Add BEACON Files to Your Codebase
 
 Place the following files in your DSPEx project:
 
 ```
 lib/dspex/teleprompter/
-├── simba.ex                    # Main SIMBA implementation
-├── simba/
+├── beacon.ex                    # Main BEACON implementation
+├── beacon/
 │   ├── bayesian_optimizer.ex   # Bayesian optimization engine
 │   ├── examples.ex            # Usage examples
 │   └── benchmark.ex           # Performance benchmarks
-└── simba_test.exs             # Test suite
+└── beacon_test.exs             # Test suite
 ```
 
 ### 2. Update Dependencies
@@ -72,13 +72,13 @@ end
 
 ### 3. Configuration
 
-Add SIMBA-specific configuration to your application config:
+Add BEACON-specific configuration to your application config:
 
 ```elixir
 # config/config.exs
 config :dspex,
   teleprompters: %{
-    simba: %{
+    beacon: %{
       default_instruction_model: :openai,
       default_evaluation_model: :gemini,
       max_concurrent_operations: 20,
@@ -91,7 +91,7 @@ config :dspex,
 # config/dev.exs
 config :dspex,
   teleprompters: %{
-    simba: %{
+    beacon: %{
       telemetry_detailed: true,
       max_concurrent_operations: 10,  # Reduced for development
       default_timeout: 30_000
@@ -101,7 +101,7 @@ config :dspex,
 # config/test.exs
 config :dspex,
   teleprompters: %{
-    simba: %{
+    beacon: %{
       max_concurrent_operations: 5,
       default_timeout: 5_000,
       cache_enabled: false
@@ -144,8 +144,8 @@ metric_fn = fn example, prediction ->
   answer_match + explanation_quality
 end
 
-# Create and configure SIMBA
-teleprompter = DSPEx.Teleprompter.SIMBA.new(
+# Create and configure BEACON
+teleprompter = DSPEx.Teleprompter.BEACON.new(
   num_candidates: 20,
   max_bootstrapped_demos: 4,
   num_trials: 40,
@@ -171,9 +171,9 @@ teleprompter = DSPEx.Teleprompter.SIMBA.new(
 ### Custom Bayesian Optimizer
 
 ```elixir
-# Configure SIMBA with custom Bayesian optimization
-teleprompter = DSPEx.Teleprompter.SIMBA.new(
-  # Core SIMBA parameters
+# Configure BEACON with custom Bayesian optimization
+teleprompter = DSPEx.Teleprompter.BEACON.new(
+  # Core BEACON parameters
   num_candidates: 30,
   max_bootstrapped_demos: 6,
   num_trials: 75,
@@ -247,7 +247,7 @@ defmodule CustomReasoningProgram do
   end
 end
 
-# SIMBA can optimize complex programs
+# BEACON can optimize complex programs
 student = %CustomReasoningProgram{
   reasoning_step: DSPEx.Predict.new(ReasoningSignature, :gemini),
   answer_step: DSPEx.Predict.new(AnswerSignature, :gemini),
@@ -268,17 +268,17 @@ teacher = %CustomReasoningProgram{
 ### Integration with Foundation Services
 
 ```elixir
-# SIMBA automatically integrates with Foundation telemetry
+# BEACON automatically integrates with Foundation telemetry
 :telemetry.attach(
-  "simba-monitoring",
-  [:dspex, :teleprompter, :simba, :stop],
+  "beacon-monitoring",
+  [:dspex, :teleprompter, :beacon, :stop],
   fn event, measurements, metadata, _config ->
     # Custom monitoring logic
-    Foundation.Metrics.increment("simba.optimizations.completed")
-    Foundation.Metrics.histogram("simba.optimization.duration", measurements.duration)
+    Foundation.Metrics.increment("beacon.optimizations.completed")
+    Foundation.Metrics.histogram("beacon.optimization.duration", measurements.duration)
     
     # Log optimization results
-    Foundation.Logger.info("SIMBA optimization completed", %{
+    Foundation.Logger.info("BEACON optimization completed", %{
       correlation_id: metadata.correlation_id,
       duration_ms: measurements.duration,
       success: measurements.success
@@ -294,7 +294,7 @@ teacher = %CustomReasoningProgram{
 
 ```elixir
 # Small datasets (< 50 examples)
-small_scale_config = DSPEx.Teleprompter.SIMBA.new(
+small_scale_config = DSPEx.Teleprompter.BEACON.new(
   num_candidates: 10,
   max_bootstrapped_demos: 3,
   num_trials: 25,
@@ -303,7 +303,7 @@ small_scale_config = DSPEx.Teleprompter.SIMBA.new(
 )
 
 # Medium datasets (50-200 examples)
-medium_scale_config = DSPEx.Teleprompter.SIMBA.new(
+medium_scale_config = DSPEx.Teleprompter.BEACON.new(
   num_candidates: 20,
   max_bootstrapped_demos: 4,
   num_trials: 50,
@@ -312,7 +312,7 @@ medium_scale_config = DSPEx.Teleprompter.SIMBA.new(
 )
 
 # Large datasets (200+ examples)
-large_scale_config = DSPEx.Teleprompter.SIMBA.new(
+large_scale_config = DSPEx.Teleprompter.BEACON.new(
   num_candidates: 30,
   max_bootstrapped_demos: 6,
   num_trials: 75,
@@ -324,8 +324,8 @@ large_scale_config = DSPEx.Teleprompter.SIMBA.new(
 ### Memory Management
 
 ```elixir
-# Configure SIMBA for memory-efficient operation
-memory_efficient_config = DSPEx.Teleprompter.SIMBA.new(
+# Configure BEACON for memory-efficient operation
+memory_efficient_config = DSPEx.Teleprompter.BEACON.new(
   # Reduce concurrent operations
   max_concurrency: 10,
   
@@ -346,10 +346,10 @@ memory_efficient_config = DSPEx.Teleprompter.SIMBA.new(
 ### Unit Tests
 
 ```elixir
-defmodule MyApp.SIMBAIntegrationTest do
+defmodule MyApp.BEACONIntegrationTest do
   use ExUnit.Case, async: false
   
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
   
   setup do
     # Setup test data
@@ -361,8 +361,8 @@ defmodule MyApp.SIMBAIntegrationTest do
     }
   end
   
-  test "SIMBA optimization completes successfully", context do
-    teleprompter = SIMBA.new(
+  test "BEACON optimization completes successfully", context do
+    teleprompter = BEACON.new(
       num_candidates: 3,
       num_trials: 5,
       timeout: 10_000
@@ -387,12 +387,12 @@ end
 ### Integration Tests
 
 ```elixir
-defmodule MyApp.SIMBAIntegrationTest do
+defmodule MyApp.BEACONIntegrationTest do
   use ExUnit.Case, async: false
   
   @moduletag :integration
   
-  test "end-to-end SIMBA optimization with real models" do
+  test "end-to-end BEACON optimization with real models" do
     # This test requires actual API keys and network access
     if System.get_env("INTEGRATION_TESTS") == "true" do
       run_full_integration_test()
@@ -407,35 +407,35 @@ end
 
 ### Telemetry Events
 
-SIMBA emits the following telemetry events:
+BEACON emits the following telemetry events:
 
 ```elixir
 # Main optimization events
-[:dspex, :teleprompter, :simba, :start]
-[:dspex, :teleprompter, :simba, :stop]
+[:dspex, :teleprompter, :beacon, :start]
+[:dspex, :teleprompter, :beacon, :stop]
 
 # Bootstrap generation events
-[:dspex, :teleprompter, :simba, :bootstrap, :start]
-[:dspex, :teleprompter, :simba, :bootstrap, :stop]
+[:dspex, :teleprompter, :beacon, :bootstrap, :start]
+[:dspex, :teleprompter, :beacon, :bootstrap, :stop]
 
 # Instruction generation events
-[:dspex, :teleprompter, :simba, :instructions, :start]
-[:dspex, :teleprompter, :simba, :instructions, :stop]
+[:dspex, :teleprompter, :beacon, :instructions, :start]
+[:dspex, :teleprompter, :beacon, :instructions, :stop]
 
 # Bayesian optimization events
-[:dspex, :teleprompter, :simba, :optimization, :start]
-[:dspex, :teleprompter, :simba, :optimization, :stop]
+[:dspex, :teleprompter, :beacon, :optimization, :start]
+[:dspex, :teleprompter, :beacon, :optimization, :stop]
 
 # Individual Bayesian optimizer events
-[:dspex, :simba, :bayesian_optimizer, :start]
-[:dspex, :simba, :bayesian_optimizer, :stop]
-[:dspex, :simba, :bayesian_optimizer, :iteration]
+[:dspex, :beacon, :bayesian_optimizer, :start]
+[:dspex, :beacon, :bayesian_optimizer, :stop]
+[:dspex, :beacon, :bayesian_optimizer, :iteration]
 ```
 
 ### Progress Monitoring
 
 ```elixir
-defmodule MyApp.SIMBAMonitor do
+defmodule MyApp.BEACONMonitor do
   def setup_monitoring do
     # Real-time progress tracking
     progress_callback = fn progress ->
@@ -453,10 +453,10 @@ defmodule MyApp.SIMBAMonitor do
     
     # Telemetry-based monitoring
     :telemetry.attach_many(
-      "simba-monitor",
+      "beacon-monitor",
       [
-        [:dspex, :teleprompter, :simba, :stop],
-        [:dspex, :simba, :bayesian_optimizer, :iteration]
+        [:dspex, :teleprompter, :beacon, :stop],
+        [:dspex, :beacon, :bayesian_optimizer, :iteration]
       ],
       &handle_telemetry_event/4,
       %{}
@@ -465,7 +465,7 @@ defmodule MyApp.SIMBAMonitor do
     progress_callback
   end
   
-  defp handle_telemetry_event([:dspex, :teleprompter, :simba, :stop], measurements, metadata, _) do
+  defp handle_telemetry_event([:dspex, :teleprompter, :beacon, :stop], measurements, metadata, _) do
     # Log completion metrics
     MyApp.Metrics.record_optimization_completion(%{
       duration: measurements.duration,
@@ -474,7 +474,7 @@ defmodule MyApp.SIMBAMonitor do
     })
   end
   
-  defp handle_telemetry_event([:dspex, :simba, :bayesian_optimizer, :iteration], measurements, metadata, _) do
+  defp handle_telemetry_event([:dspex, :beacon, :bayesian_optimizer, :iteration], measurements, metadata, _) do
     # Track optimization progress
     MyApp.Metrics.record_optimization_iteration(%{
       iteration: measurements.iteration,
@@ -544,9 +544,9 @@ end
 ### 3. Error Handling
 
 ```elixir
-defp robust_simba_compilation(student, teacher, trainset, metric_fn) do
+defp robust_beacon_compilation(student, teacher, trainset, metric_fn) do
   try do
-    teleprompter = DSPEx.Teleprompter.SIMBA.new(
+    teleprompter = DSPEx.Teleprompter.BEACON.new(
       num_candidates: 20,
       num_trials: 40,
       timeout: 60_000,
@@ -563,7 +563,7 @@ defp robust_simba_compilation(student, teacher, trainset, metric_fn) do
       
       {:error, reason} ->
         # Log error and potentially retry with different configuration
-        Logger.warning("SIMBA optimization failed: #{inspect(reason)}")
+        Logger.warning("BEACON optimization failed: #{inspect(reason)}")
         
         case reason do
           :no_successful_bootstrap_candidates ->
@@ -575,7 +575,7 @@ defp robust_simba_compilation(student, teacher, trainset, metric_fn) do
     end
   rescue
     exception ->
-      Logger.error("SIMBA compilation crashed: #{Exception.format(:error, exception)}")
+      Logger.error("BEACON compilation crashed: #{Exception.format(:error, exception)}")
       {:error, {:crashed, exception}}
   end
 end
@@ -588,7 +588,7 @@ end
 1. **No Bootstrap Candidates Generated**
    ```elixir
    # Solution: Reduce quality threshold or increase retries
-   teleprompter = SIMBA.new(
+   teleprompter = BEACON.new(
      quality_threshold: 0.5,  # Lower threshold
      teacher_retries: 5,      # More retries
      timeout: 90_000          # Longer timeout
@@ -598,7 +598,7 @@ end
 2. **Slow Optimization**
    ```elixir
    # Solution: Reduce search space or increase concurrency
-   teleprompter = SIMBA.new(
+   teleprompter = BEACON.new(
      num_candidates: 15,      # Fewer candidates
      num_trials: 30,          # Fewer trials
      max_concurrency: 25      # More concurrency
@@ -608,7 +608,7 @@ end
 3. **Memory Issues**
    ```elixir
    # Solution: Reduce batch sizes and enable streaming
-   teleprompter = SIMBA.new(
+   teleprompter = BEACON.new(
      max_concurrency: 10,     # Lower concurrency
      max_bootstrapped_demos: 3, # Fewer demos
      evaluation_batch_size: 10  # Smaller batches
@@ -619,9 +619,9 @@ end
 
 ```elixir
 # Enable detailed logging for debugging
-teleprompter = DSPEx.Teleprompter.SIMBA.new(
+teleprompter = DSPEx.Teleprompter.BEACON.new(
   progress_callback: fn progress ->
-    IO.inspect(progress, label: "SIMBA Progress")
+    IO.inspect(progress, label: "BEACON Progress")
     :ok
   end
 )
@@ -661,7 +661,7 @@ Expected performance characteristics:
 
 ## Future Enhancements
 
-Planned improvements for the SIMBA integration:
+Planned improvements for the BEACON integration:
 
 1. **Advanced Bayesian Optimization**
    - Multi-fidelity optimization
@@ -692,4 +692,4 @@ For issues, questions, or contributions:
 3. Use the benchmark module for performance analysis
 4. Follow the existing code patterns and documentation standards
 
-The SIMBA integration follows DSPEx's architectural patterns and integrates seamlessly with your existing Foundation-based infrastructure.
+The BEACON integration follows DSPEx's architectural patterns and integrates seamlessly with your existing Foundation-based infrastructure.

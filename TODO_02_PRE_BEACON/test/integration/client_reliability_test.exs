@@ -26,12 +26,12 @@ defmodule DSPEx.Integration.ClientReliabilityTest do
   end
 
   describe "concurrent request handling" do
-    test "client handles 100+ concurrent requests (SIMBA pattern)" do
-      messages = [%{role: "user", content: "Concurrent SIMBA test"}]
+    test "client handles 100+ concurrent requests (BEACON pattern)" do
+      messages = [%{role: "user", content: "Concurrent BEACON test"}]
 
-      # SIMBA will make many concurrent requests during optimization
+      # BEACON will make many concurrent requests during optimization
       concurrent_requests = Task.async_stream(1..100, fn i ->
-        correlation_id = "simba-concurrent-#{i}"
+        correlation_id = "beacon-concurrent-#{i}"
         Client.request(messages, %{
           provider: :gemini,
           correlation_id: correlation_id
@@ -441,7 +441,7 @@ defmodule DSPEx.Integration.ClientReliabilityTest do
       assert max_time < 3000, "Maximum response time too high: #{max_time}ms"
     end
 
-    test "throughput meets expectations for SIMBA workloads" do
+    test "throughput meets expectations for BEACON workloads" do
       messages = [%{role: "user", content: "Throughput test"}]
 
       # Measure throughput over a sustained period
@@ -466,7 +466,7 @@ defmodule DSPEx.Integration.ClientReliabilityTest do
       # Calculate throughput
       throughput = successes / max(total_duration_s, 1)
 
-      # Should achieve reasonable throughput for SIMBA workloads
+      # Should achieve reasonable throughput for BEACON workloads
       assert throughput > 5, "Throughput too low: #{throughput} requests/second"
       assert successes >= 80, "Success rate too low: #{successes}/100"
     end

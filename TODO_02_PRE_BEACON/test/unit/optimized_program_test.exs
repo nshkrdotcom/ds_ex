@@ -30,7 +30,7 @@ defmodule DSPEx.OptimizedProgramTest do
     %{program: program, demos: demos, signature: TestOptimizedSignature}
   end
 
-  describe "SIMBA interface compatibility" do
+  describe "BEACON interface compatibility" do
     test "new/3 creates optimized program with correct structure", %{program: program, demos: demos} do
       # Test basic creation
       optimized = OptimizedProgram.new(program, demos)
@@ -43,7 +43,7 @@ defmodule DSPEx.OptimizedProgramTest do
 
     test "new/3 with metadata creates optimized program correctly", %{program: program, demos: demos} do
       metadata = %{
-        teleprompter: :simba,
+        teleprompter: :beacon,
         optimization_time: DateTime.utc_now(),
         custom_field: "test_value"
       }
@@ -55,7 +55,7 @@ defmodule DSPEx.OptimizedProgramTest do
       assert optimized.demos == demos
 
       # Should merge with default metadata
-      assert optimized.metadata.teleprompter == :simba
+      assert optimized.metadata.teleprompter == :beacon
       assert optimized.metadata.optimization_time == metadata.optimization_time
       assert optimized.metadata.custom_field == "test_value"
       assert optimized.metadata.demo_count == 2

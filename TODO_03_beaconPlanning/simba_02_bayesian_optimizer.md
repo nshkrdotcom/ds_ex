@@ -1,8 +1,8 @@
-# DSPEx.Teleprompter.SIMBA.BayesianOptimizer - Advanced Bayesian Optimization
+# DSPEx.Teleprompter.BEACON.BayesianOptimizer - Advanced Bayesian Optimization
 
-defmodule DSPEx.Teleprompter.SIMBA.BayesianOptimizer do
+defmodule DSPEx.Teleprompter.BEACON.BayesianOptimizer do
   @moduledoc """
-  Bayesian optimization engine for SIMBA teleprompter.
+  Bayesian optimization engine for BEACON teleprompter.
 
   This module implements a simplified but effective Bayesian optimization algorithm
   specifically designed for optimizing instruction and demonstration combinations
@@ -26,7 +26,7 @@ defmodule DSPEx.Teleprompter.SIMBA.BayesianOptimizer do
 
   ## Example Usage
 
-      optimizer = DSPEx.Teleprompter.SIMBA.BayesianOptimizer.new(
+      optimizer = DSPEx.Teleprompter.BEACON.BayesianOptimizer.new(
         num_initial_samples: 10,
         acquisition_function: :expected_improvement,
         convergence_patience: 5
@@ -40,7 +40,7 @@ defmodule DSPEx.Teleprompter.SIMBA.BayesianOptimizer do
       )
   """
 
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
 
   defstruct num_initial_samples: 10,
             acquisition_function: :expected_improvement,
@@ -113,7 +113,7 @@ defmodule DSPEx.Teleprompter.SIMBA.BayesianOptimizer do
     start_time = System.monotonic_time()
 
     emit_telemetry(
-      [:dspex, :simba, :bayesian_optimizer, :start],
+      [:dspex, :beacon, :bayesian_optimizer, :start],
       %{system_time: System.system_time()},
       %{
         correlation_id: correlation_id,
@@ -142,7 +142,7 @@ defmodule DSPEx.Teleprompter.SIMBA.BayesianOptimizer do
     success = match?({:ok, _}, result)
 
     emit_telemetry(
-      [:dspex, :simba, :bayesian_optimizer, :stop],
+      [:dspex, :beacon, :bayesian_optimizer, :stop],
       %{duration: duration, success: success},
       %{correlation_id: correlation_id}
     )
@@ -154,7 +154,7 @@ defmodule DSPEx.Teleprompter.SIMBA.BayesianOptimizer do
 
   defp initialize_observations(optimizer, search_space, objective_function, correlation_id) do
     emit_telemetry(
-      [:dspex, :simba, :bayesian_optimizer, :initialization, :start],
+      [:dspex, :beacon, :bayesian_optimizer, :initialization, :start],
       %{system_time: System.system_time()},
       %{correlation_id: correlation_id, num_samples: optimizer.num_initial_samples}
     )
@@ -183,7 +183,7 @@ defmodule DSPEx.Teleprompter.SIMBA.BayesianOptimizer do
       |> Enum.to_list()
 
     emit_telemetry(
-      [:dspex, :simba, :bayesian_optimizer, :initialization, :stop],
+      [:dspex, :beacon, :bayesian_optimizer, :initialization, :stop],
       %{duration: System.monotonic_time()},
       %{
         correlation_id: correlation_id,
@@ -295,7 +295,7 @@ defmodule DSPEx.Teleprompter.SIMBA.BayesianOptimizer do
       end
 
     emit_telemetry(
-      [:dspex, :simba, :bayesian_optimizer, :iteration],
+      [:dspex, :beacon, :bayesian_optimizer, :iteration],
       %{iteration: iteration, score: score, improvement: improvement},
       %{
         correlation_id: correlation_id,

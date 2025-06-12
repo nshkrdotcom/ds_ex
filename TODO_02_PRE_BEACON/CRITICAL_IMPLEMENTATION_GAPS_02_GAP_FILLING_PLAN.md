@@ -1,14 +1,14 @@
-# DSPEx Gap Filling Plan: Pre-SIMBA Implementation
+# DSPEx Gap Filling Plan: Pre-BEACON Implementation
 
 ## Executive Summary
 
-This plan addresses the critical implementation gaps identified in the DSPEx codebase before SIMBA teleprompter integration. The analysis revealed missing core infrastructure, incomplete signature systems, and client architecture issues that must be resolved for reliable teleprompter operation.
+This plan addresses the critical implementation gaps identified in the DSPEx codebase before BEACON teleprompter integration. The analysis revealed missing core infrastructure, incomplete signature systems, and client architecture issues that must be resolved for reliable teleprompter operation.
 
 ## Phase 1: Critical Infrastructure (Days 1-5)
 
 ### 1.1 DSPEx.Teleprompter Behavior (Day 1)
 
-**Priority**: 🔴 CRITICAL - SIMBA compilation will fail without this
+**Priority**: 🔴 CRITICAL - BEACON compilation will fail without this
 
 **Implementation**:
 
@@ -184,9 +184,9 @@ end
 
 ### 1.2 DSPEx.OptimizedProgram Interface (Day 2)
 
-**Priority**: 🔴 CRITICAL - SIMBA references this module
+**Priority**: 🔴 CRITICAL - BEACON references this module
 
-**Issue**: Current optimized_program.ex may not match SIMBA's interface expectations
+**Issue**: Current optimized_program.ex may not match BEACON's interface expectations
 
 **Implementation**:
 
@@ -196,7 +196,7 @@ defmodule DSPEx.OptimizedProgram do
   @moduledoc """
   Wrapper for programs that have been optimized with demonstrations.
   
-  This module provides the exact interface that SIMBA expects for wrapping
+  This module provides the exact interface that BEACON expects for wrapping
   programs that don't natively support demonstration storage.
   """
 
@@ -214,7 +214,7 @@ defmodule DSPEx.OptimizedProgram do
   @doc """
   Create a new optimized program wrapper.
   
-  This function MUST match SIMBA's expectations exactly.
+  This function MUST match BEACON's expectations exactly.
   """
   @spec new(struct(), [DSPEx.Example.t()], map()) :: t()
   def new(program, demos, metadata \\ %{}) when is_list(demos) do
@@ -252,14 +252,14 @@ defmodule DSPEx.OptimizedProgram do
 
   @doc """
   Get demonstrations from optimized program.
-  SIMBA depends on this function existing with this exact signature.
+  BEACON depends on this function existing with this exact signature.
   """
   @spec get_demos(t()) :: [DSPEx.Example.t()]
   def get_demos(%__MODULE__{demos: demos}), do: demos
 
   @doc """
   Get the wrapped program.
-  SIMBA depends on this function existing with this exact signature.
+  BEACON depends on this function existing with this exact signature.
   """
   @spec get_program(t()) :: struct()
   def get_program(%__MODULE__{program: program}), do: program
@@ -324,7 +324,7 @@ defmodule DSPEx.OptimizedProgramTest do
     %{program: program, demos: demos}
   end
   
-  describe "SIMBA interface compatibility" do
+  describe "BEACON interface compatibility" do
     test "new/3 creates optimized program", %{program: program, demos: demos} do
       optimized = OptimizedProgram.new(program, demos)
       
@@ -358,7 +358,7 @@ end
 
 ### 1.3 Missing Program Utilities (Day 3)
 
-**Priority**: 🟡 HIGH - SIMBA telemetry references these
+**Priority**: 🟡 HIGH - BEACON telemetry references these
 
 **Implementation**:
 
@@ -369,7 +369,7 @@ defmodule DSPEx.Program do
 
   @doc """
   Get a human-readable name for a program.
-  Used by SIMBA telemetry and logging.
+  Used by BEACON telemetry and logging.
   """
   @spec program_name(program()) :: atom() | String.t()
   def program_name(program) when is_struct(program) do
@@ -762,7 +762,7 @@ end
 
 ### 3.1 Multi-Provider Reliability Testing (Day 6)
 
-**Priority**: 🟡 HIGH - SIMBA needs reliable client calls
+**Priority**: 🟡 HIGH - BEACON needs reliable client calls
 
 **Implementation**:
 
@@ -956,9 +956,9 @@ defmodule DSPEx.Integration.FoundationIntegrationTest do
 end
 ```
 
-### 3.3 Enhanced Mock Framework for SIMBA Testing (Day 8)
+### 3.3 Enhanced Mock Framework for BEACON Testing (Day 8)
 
-**Priority**: 🟡 HIGH - SIMBA needs sophisticated mocking
+**Priority**: 🟡 HIGH - BEACON needs sophisticated mocking
 
 **Implementation**:
 
@@ -966,7 +966,7 @@ end
 # File: lib/dspex/test/mock_provider.ex
 defmodule DSPEx.Test.MockProvider do
   @moduledoc """
-  Enhanced mock framework for SIMBA teleprompter testing.
+  Enhanced mock framework for BEACON teleprompter testing.
   
   Provides sophisticated mocking capabilities for:
   - Multi-provider LLM calls
@@ -1007,7 +1007,7 @@ defmodule DSPEx.Test.MockProvider do
   @doc """
   Set up mocks for bootstrap demonstration generation.
   
-  This is specifically designed for SIMBA's bootstrap phase.
+  This is specifically designed for BEACON's bootstrap phase.
   """
   @spec setup_bootstrap_mocks([map()]) :: :ok
   def setup_bootstrap_mocks(teacher_responses) do
@@ -1031,10 +1031,10 @@ defmodule DSPEx.Test.MockProvider do
   end
   
   @doc """
-  Configure realistic response patterns for SIMBA optimization.
+  Configure realistic response patterns for BEACON optimization.
   """
-  @spec setup_simba_optimization_mocks(keyword()) :: :ok
-  def setup_simba_optimization_mocks(opts) do
+  @spec setup_beacon_optimization_mocks(keyword()) :: :ok
+  def setup_beacon_optimization_mocks(opts) do
     config = %{
       bootstrap_success_rate: Keyword.get(opts, :bootstrap_success_rate, 0.8),
       quality_distribution: Keyword.get(opts, :quality_distribution, :normal),
@@ -1042,7 +1042,7 @@ defmodule DSPEx.Test.MockProvider do
       optimization_trajectory: Keyword.get(opts, :optimization_trajectory, :improving)
     }
     
-    GenServer.call(__MODULE__, {:setup_simba, config})
+    GenServer.call(__MODULE__, {:setup_beacon, config})
   end
   
   @doc """
@@ -1134,11 +1134,11 @@ defmodule DSPEx.Test.MockProvider do
   end
   
   @impl true
-  def handle_call({:setup_simba, config}, _from, state) do
-    # Generate comprehensive SIMBA workflow responses
-    simba_responses = generate_simba_responses(config)
+  def handle_call({:setup_beacon, config}, _from, state) do
+    # Generate comprehensive BEACON workflow responses
+    beacon_responses = generate_beacon_responses(config)
     
-    updated_responses = Map.merge(state.responses, simba_responses)
+    updated_responses = Map.merge(state.responses, beacon_responses)
     {:reply, :ok, %{state | responses: updated_responses}}
   end
   
@@ -1197,11 +1197,11 @@ defmodule DSPEx.Test.MockProvider do
     min(base_score + complexity_bonus + keyword_bonus, 1.0)
   end
   
-  defp generate_simba_responses(config) do
+  defp generate_beacon_responses(config) do
     %{
-      "simba_bootstrap" => generate_bootstrap_responses(config),
-      "simba_instruction" => generate_instruction_responses(config),
-      "simba_optimization" => generate_optimization_responses(config)
+      "beacon_bootstrap" => generate_bootstrap_responses(config),
+      "beacon_instruction" => generate_instruction_responses(config),
+      "beacon_optimization" => generate_optimization_responses(config)
     }
   end
   
@@ -1284,7 +1284,7 @@ defmodule DSPEx.Test.MockProvider do
     content_lower = String.downcase(user_message)
     
     cond do
-      # SIMBA-specific patterns
+      # BEACON-specific patterns
       String.contains?(content_lower, ["bootstrap", "demonstration"]) ->
         "This is a bootstrap demonstration example: #{generate_demo_content()}"
       
@@ -1425,7 +1425,7 @@ end
 
 ### 4.1 End-to-End Teleprompter Workflow Tests (Day 9)
 
-**Priority**: 🟡 HIGH - Validate complete pipeline before SIMBA
+**Priority**: 🟡 HIGH - Validate complete pipeline before BEACON
 
 **Implementation**:
 
@@ -1524,7 +1524,7 @@ defmodule DSPEx.Integration.TeleprompterWorkflowTest do
     end
     
     test "student -> teacher -> optimized student pipeline", %{student: student, teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
-      # Test the complete pipeline that SIMBA will use
+      # Test the complete pipeline that BEACON will use
       
       # 1. Validate inputs
       assert :ok = Teleprompter.validate_student(student)
@@ -1608,7 +1608,7 @@ defmodule DSPEx.Integration.TeleprompterWorkflowTest do
     test "handles concurrent teleprompter operations" do
       # Test multiple teleprompter operations running concurrently
       
-      # This simulates what might happen when SIMBA is running
+      # This simulates what might happen when BEACON is running
       # multiple optimization trials simultaneously
       
       # Implementation would test concurrent compilation
@@ -1636,7 +1636,7 @@ end
 
 ### 4.2 Multi-Provider Switching Tests (Day 10)
 
-**Priority**: 🟡 MEDIUM - Ensure SIMBA can use different providers
+**Priority**: 🟡 MEDIUM - Ensure BEACON can use different providers
 
 **Implementation**:
 
@@ -1661,7 +1661,7 @@ defmodule DSPEx.Integration.MultiProviderTest do
   end
   
   describe "provider switching during teleprompter operations" do
-    test "SIMBA can use different providers for teacher and student", %{signature: signature} do
+    test "BEACON can use different providers for teacher and student", %{signature: signature} do
       # Create teacher with OpenAI
       teacher = %Predict{signature: signature, client: :openai}
       
@@ -1721,7 +1721,7 @@ defmodule DSPEx.Integration.MultiProviderTest do
   
   describe "load balancing across providers" do
     test "distributes requests across multiple providers" do
-      # Test that SIMBA can distribute optimization work across providers
+      # Test that BEACON can distribute optimization work across providers
       
       programs = [
         %Predict{signature: MultiProviderSignature, client: :openai},
@@ -1748,17 +1748,17 @@ defmodule DSPEx.Integration.MultiProviderTest do
 end
 ```
 
-## Phase 5: Pre-SIMBA Validation (Days 11-12)
+## Phase 5: Pre-BEACON Validation (Days 11-12)
 
 ### 5.1 Comprehensive Integration Validation (Day 11)
 
-**Priority**: 🔴 CRITICAL - Final validation before SIMBA
+**Priority**: 🔴 CRITICAL - Final validation before BEACON
 
 **Implementation**:
 
 ```elixir
-# File: test/dspex/integration/pre_simba_validation_test.exs
-defmodule DSPEx.Integration.PreSIMBAValidationTest do
+# File: test/dspex/integration/pre_beacon_validation_test.exs
+defmodule DSPEx.Integration.PreBEACONValidationTest do
   use ExUnit.Case, async: false
   
   alias DSPEx.{Teleprompter, Example, Predict, OptimizedProgram, Program}
@@ -1766,21 +1766,21 @@ defmodule DSPEx.Integration.PreSIMBAValidationTest do
   alias DSPEx.Teleprompter.BootstrapFewShot
   
   @moduletag :integration
-  @moduletag :pre_simba
+  @moduletag :pre_beacon
   
   setup_all do
-    # Comprehensive setup that mirrors what SIMBA will need
+    # Comprehensive setup that mirrors what BEACON will need
     {:ok, _mock} = MockProvider.start_link(mode: :contextual)
     
-    # Create test signature exactly as SIMBA examples use
-    defmodule SIMBACompatSignature do
+    # Create test signature exactly as BEACON examples use
+    defmodule BEACONCompatSignature do
       use DSPEx.Signature, "question -> answer"
     end
     
     :ok
   end
   
-  describe "SIMBA interface compatibility validation" do
+  describe "BEACON interface compatibility validation" do
     test "all required behaviors and modules exist" do
       # Test 1: DSPEx.Teleprompter behavior exists and is complete
       assert Code.ensure_loaded?(DSPEx.Teleprompter)
@@ -1802,9 +1802,9 @@ defmodule DSPEx.Integration.PreSIMBAValidationTest do
     end
     
     test "teleprompter behavior validation functions work" do
-      # Test validation functions that SIMBA will use
-      student = %Predict{signature: SIMBACompatSignature, client: :test}
-      teacher = %Predict{signature: SIMBACompatSignature, client: :test}
+      # Test validation functions that BEACON will use
+      student = %Predict{signature: BEACONCompatSignature, client: :test}
+      teacher = %Predict{signature: BEACONCompatSignature, client: :test}
       
       trainset = [
         %Example{
@@ -1823,9 +1823,9 @@ defmodule DSPEx.Integration.PreSIMBAValidationTest do
       assert Program.implements_program?(OptimizedProgram)
     end
     
-    test "OptimizedProgram interface matches SIMBA expectations" do
-      # Create programs exactly as SIMBA will
-      base_program = %Predict{signature: SIMBACompatSignature, client: :test}
+    test "OptimizedProgram interface matches BEACON expectations" do
+      # Create programs exactly as BEACON will
+      base_program = %Predict{signature: BEACONCompatSignature, client: :test}
       
       demos = [
         %Example{
@@ -1836,11 +1836,11 @@ defmodule DSPEx.Integration.PreSIMBAValidationTest do
       
       # Test OptimizedProgram.new/3 interface
       optimized = OptimizedProgram.new(base_program, demos, %{
-        teleprompter: :simba,
+        teleprompter: :beacon,
         optimization_time: DateTime.utc_now()
       })
       
-      # Test interface functions SIMBA uses
+      # Test interface functions BEACON uses
       assert ^demos = OptimizedProgram.get_demos(optimized)
       assert ^base_program = OptimizedProgram.get_program(optimized)
       
@@ -1871,9 +1871,9 @@ defmodule DSPEx.Integration.PreSIMBAValidationTest do
     end
     
     test "complete BootstrapFewShot workflow succeeds" do
-      # Set up complete workflow that mirrors SIMBA usage
-      student = %Predict{signature: SIMBACompatSignature, client: :test}
-      teacher = %Predict{signature: SIMBACompatSignature, client: :test}
+      # Set up complete workflow that mirrors BEACON usage
+      student = %Predict{signature: BEACONCompatSignature, client: :test}
+      teacher = %Predict{signature: BEACONCompatSignature, client: :test}
       
       trainset = [
         %Example{
@@ -1924,9 +1924,9 @@ defmodule DSPEx.Integration.PreSIMBAValidationTest do
       assert Enum.all?(demos, &is_struct(&1, Example))
     end
     
-    test "handles edge cases that SIMBA might encounter" do
-      student = %Predict{signature: SIMBACompatSignature, client: :test}
-      teacher = %Predict{signature: SIMBACompatSignature, client: :test}
+    test "handles edge cases that BEACON might encounter" do
+      student = %Predict{signature: BEACONCompatSignature, client: :test}
+      teacher = %Predict{signature: BEACONCompatSignature, client: :test}
       metric_fn = Teleprompter.exact_match(:answer)
       
       # Test with minimal trainset
@@ -1978,9 +1978,9 @@ defmodule DSPEx.Integration.PreSIMBAValidationTest do
   
   describe "program name and telemetry utilities" do
     test "program_name function works for all program types" do
-      # Test program_name with various program types SIMBA will encounter
+      # Test program_name with various program types BEACON will encounter
       
-      predict_program = %Predict{signature: SIMBACompatSignature, client: :test}
+      predict_program = %Predict{signature: BEACONCompatSignature, client: :test}
       assert Program.program_name(predict_program) == :Predict
       
       optimized_program = OptimizedProgram.new(predict_program, [], %{})
@@ -1994,8 +1994,8 @@ defmodule DSPEx.Integration.PreSIMBAValidationTest do
     end
     
     test "safe program info extraction for telemetry" do
-      # Test safe info extraction that SIMBA telemetry will use
-      program = %Predict{signature: SIMBACompatSignature, client: :test}
+      # Test safe info extraction that BEACON telemetry will use
+      program = %Predict{signature: BEACONCompatSignature, client: :test}
       
       info = Program.safe_program_info(program)
       
@@ -2015,12 +2015,12 @@ defmodule DSPEx.Integration.PreSIMBAValidationTest do
   
   describe "client architecture validation" do
     test "client handles concurrent requests reliably" do
-      # Test concurrent usage pattern that SIMBA will create
+      # Test concurrent usage pattern that BEACON will create
       messages = [%{role: "user", content: "Concurrent test"}]
       
-      # SIMBA will make many concurrent requests during optimization
+      # BEACON will make many concurrent requests during optimization
       concurrent_requests = Task.async_stream(1..20, fn i ->
-        correlation_id = "simba-test-#{i}"
+        correlation_id = "beacon-test-#{i}"
         DSPEx.Client.request(messages, %{
           provider: :gemini,
           correlation_id: correlation_id
@@ -2039,9 +2039,9 @@ defmodule DSPEx.Integration.PreSIMBAValidationTest do
     end
     
     test "correlation_id propagation works" do
-      # SIMBA heavily uses correlation IDs for tracking optimization
+      # BEACON heavily uses correlation IDs for tracking optimization
       messages = [%{role: "user", content: "Correlation test"}]
-      correlation_id = "simba-correlation-#{System.unique_integer()}"
+      correlation_id = "beacon-correlation-#{System.unique_integer()}"
       
       {:ok, _response} = DSPEx.Client.request(messages, %{
         provider: :gemini,
@@ -2057,9 +2057,9 @@ defmodule DSPEx.Integration.PreSIMBAValidationTest do
   
   describe "error handling and recovery" do
     test "graceful handling of teacher failures during bootstrap" do
-      # SIMBA needs robust error handling when teacher calls fail
-      student = %Predict{signature: SIMBACompatSignature, client: :test}
-      teacher = %Predict{signature: SIMBACompatSignature, client: :test}
+      # BEACON needs robust error handling when teacher calls fail
+      student = %Predict{signature: BEACONCompatSignature, client: :test}
+      teacher = %Predict{signature: BEACONCompatSignature, client: :test}
       
       trainset = [
         %Example{
@@ -2103,7 +2103,7 @@ defmodule DSPEx.Integration.PreSIMBAValidationTest do
     end
     
     test "recovery from client connection issues" do
-      # Test that SIMBA can recover from temporary client issues
+      # Test that BEACON can recover from temporary client issues
       messages = [%{role: "user", content: "Recovery test"}]
       
       # Simulate intermittent failures
@@ -2128,13 +2128,13 @@ end
 
 ### 5.2 Performance and Memory Validation (Day 12)
 
-**Priority**: 🟡 HIGH - Ensure SIMBA won't have performance issues
+**Priority**: 🟡 HIGH - Ensure BEACON won't have performance issues
 
 **Implementation**:
 
 ```elixir
-# File: test/dspex/performance/pre_simba_performance_test.exs
-defmodule DSPEx.Performance.PreSIMBAPerformanceTest do
+# File: test/dspex/performance/pre_beacon_performance_test.exs
+defmodule DSPEx.Performance.PreBEACONPerformanceTest do
   use ExUnit.Case, async: false
   
   alias DSPEx.{Teleprompter, Example, Predict, Program}
@@ -2142,7 +2142,7 @@ defmodule DSPEx.Performance.PreSIMBAPerformanceTest do
   alias DSPEx.Teleprompter.BootstrapFewShot
   
   @moduletag :performance
-  @moduletag :pre_simba
+  @moduletag :pre_beacon
   
   setup_all do
     {:ok, _mock} = MockProvider.start_link(
@@ -2159,7 +2159,7 @@ defmodule DSPEx.Performance.PreSIMBAPerformanceTest do
   
   describe "memory usage validation" do
     test "teleprompter compilation doesn't leak memory", %{signature: signature} do
-      # SIMBA will run many optimization iterations
+      # BEACON will run many optimization iterations
       # Need to ensure no memory leaks
       
       initial_memory = :erlang.memory()
@@ -2199,7 +2199,7 @@ defmodule DSPEx.Performance.PreSIMBAPerformanceTest do
     end
     
     test "large trainsets don't cause memory issues", %{signature: signature} do
-      # SIMBA might use large training sets
+      # BEACON might use large training sets
       student = %Predict{signature: signature, client: :test}
       teacher = %Predict{signature: signature, client: :test}
       
@@ -2232,7 +2232,7 @@ defmodule DSPEx.Performance.PreSIMBAPerformanceTest do
   
   describe "performance benchmarks" do
     test "teleprompter compilation performance", %{signature: signature} do
-      # Benchmark compilation time for SIMBA planning
+      # Benchmark compilation time for BEACON planning
       
       student = %Predict{signature: signature, client: :test}
       teacher = %Predict{signature: signature, client: :test}
@@ -2263,7 +2263,7 @@ defmodule DSPEx.Performance.PreSIMBAPerformanceTest do
     end
     
     test "concurrent program execution performance", %{signature: signature} do
-      # Test performance under concurrent load (SIMBA pattern)
+      # Test performance under concurrent load (BEACON pattern)
       
       program = %Predict{signature: signature, client: :test}
       inputs = %{question: "Performance test"}
@@ -2296,7 +2296,7 @@ defmodule DSPEx.Performance.PreSIMBAPerformanceTest do
     end
     
     test "program creation and destruction performance" do
-      # SIMBA creates many temporary programs during optimization
+      # BEACON creates many temporary programs during optimization
       
       {duration_us, _} = :timer.tc(fn ->
         for _i <- 1..1000 do
@@ -2363,7 +2363,7 @@ defmodule DSPEx.Performance.PreSIMBAPerformanceTest do
     end
     
     test "handles high demo counts efficiently", %{signature: signature} do
-      # SIMBA might create programs with many demonstrations
+      # BEACON might create programs with many demonstrations
       
       student = %Predict{signature: signature, client: :test}
       
@@ -2420,26 +2420,26 @@ end
 ### Week 2: Client & Testing Infrastructure
 - **Day 6**: ✅ Multi-provider reliability testing
 - **Day 7**: ✅ Foundation integration verification
-- **Day 8**: ✅ Enhanced mock framework for SIMBA
+- **Day 8**: ✅ Enhanced mock framework for BEACON
 - **Day 9**: ✅ End-to-end teleprompter workflow tests
 - **Day 10**: ✅ Multi-provider switching tests
 
-### Week 2 Finale: Pre-SIMBA Validation
+### Week 2 Finale: Pre-BEACON Validation
 - **Day 11**: ✅ Comprehensive integration validation
 - **Day 12**: ✅ Performance and memory validation
 
-## Success Criteria for SIMBA Integration
+## Success Criteria for BEACON Integration
 
 ### ✅ Critical Infrastructure Complete
 - [ ] `DSPEx.Teleprompter` behavior defined and functional
-- [ ] `DSPEx.OptimizedProgram.new/3` matches SIMBA interface exactly  
+- [ ] `DSPEx.OptimizedProgram.new/3` matches BEACON interface exactly  
 - [ ] `DSPEx.Program.program_name/1` available for telemetry
 - [ ] All existing tests pass with new architecture
 
 ### ✅ Enhanced Capabilities Ready
 - [ ] Signature extension working for ChainOfThought patterns
 - [ ] Multi-provider client architecture stable under load
-- [ ] Enhanced mock framework supports complex SIMBA workflows
+- [ ] Enhanced mock framework supports complex BEACON workflows
 - [ ] Foundation integration verified and operational
 
 ### ✅ Quality Assurance Complete
@@ -2448,8 +2448,8 @@ end
 - [ ] Performance benchmarks meet target thresholds
 - [ ] Error handling robust for production use
 
-### ✅ SIMBA Integration Readiness
-- [ ] All SIMBA-referenced functions exist and work correctly
+### ✅ BEACON Integration Readiness
+- [ ] All BEACON-referenced functions exist and work correctly
 - [ ] BootstrapFewShot teleprompter serves as working example
 - [ ] Client architecture handles concurrent optimization requests
 - [ ] Comprehensive test coverage ensures reliability
@@ -2458,14 +2458,14 @@ end
 
 ### High-Priority Risks
 
-**Risk**: SIMBA integration reveals interface incompatibilities
-**Mitigation**: Detailed interface validation tests that mirror exact SIMBA usage patterns
+**Risk**: BEACON integration reveals interface incompatibilities
+**Mitigation**: Detailed interface validation tests that mirror exact BEACON usage patterns
 
 **Risk**: Performance degradation under optimization workloads  
-**Mitigation**: Comprehensive performance testing with realistic SIMBA-like workloads
+**Mitigation**: Comprehensive performance testing with realistic BEACON-like workloads
 
 **Risk**: Memory leaks during repeated optimizations
-**Mitigation**: Memory profiling tests that simulate SIMBA's optimization cycles
+**Mitigation**: Memory profiling tests that simulate BEACON's optimization cycles
 
 ### Medium-Priority Risks
 
@@ -2480,11 +2480,11 @@ end
 Once all phases are complete, run this comprehensive validation:
 
 ```bash
-# Run all pre-SIMBA validation tests
-mix test test/dspex/integration/pre_simba_validation_test.exs --include pre_simba
+# Run all pre-BEACON validation tests
+mix test test/dspex/integration/pre_beacon_validation_test.exs --include pre_beacon
 
 # Run performance benchmarks  
-mix test test/dspex/performance/pre_simba_performance_test.exs --include performance
+mix test test/dspex/performance/pre_beacon_performance_test.exs --include performance
 
 # Verify no regressions
 mix test
@@ -2496,14 +2496,14 @@ mix dialyzer
 mix docs
 ```
 
-## Ready for SIMBA
+## Ready for BEACON
 
 After completing this plan, your DSPEx implementation will have:
 
-1. **All required infrastructure** for SIMBA teleprompter integration
-2. **Validated interfaces** that match SIMBA's expectations exactly
+1. **All required infrastructure** for BEACON teleprompter integration
+2. **Validated interfaces** that match BEACON's expectations exactly
 3. **Performance characteristics** suitable for optimization workloads  
 4. **Robust error handling** for production reliability
 5. **Comprehensive test coverage** ensuring continued compatibility
 
-The foundation will be solid and ready for the revolutionary distributed AI capabilities that SIMBA will bring to the BEAM ecosystem.
+The foundation will be solid and ready for the revolutionary distributed AI capabilities that BEACON will bring to the BEAM ecosystem.
