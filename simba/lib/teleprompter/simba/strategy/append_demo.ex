@@ -19,12 +19,10 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo do
     predictor2name = Map.get(opts, :predictor2name, %{})
     name2predictor = Map.get(opts, :name2predictor, %{})
 
-    # DSPy algorithm: Get the best trajectory and create demo
     case get_best_trajectory(bucket, quality_threshold) do
       {:ok, trajectory} ->
         case create_demo_from_trajectory(trajectory, opts) do
           {:ok, demo} ->
-            # Apply DSPy-style demo dropping and addition
             drop_demos_and_add_new(source_program, demo, max_demos, predictor2name, name2predictor)
 
           {:error, reason} ->
@@ -48,29 +46,22 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo do
 
   # Private helper functions
 
-  # DSPy-style demo dropping before adding new ones
-  defp drop_demos_and_add_new(source_program, new_demo, max_demos, predictor2name, name2predictor) do
-    # First, drop some existing demos (DSPy behavior)
-    program_with_dropped_demos = drop_random_demos(source_program, predictor2name, name2predictor, max_demos)
-
-    # Then add the new demo
+  defp drop_demos_and_add_new(source_program, new_demo, max_demos, _predictor2name, _name2predictor) do
+    program_with_dropped_demos = drop_random_demos(source_program, max_demos)
     add_demo_to_program(program_with_dropped_demos, new_demo, max_demos)
   end
 
-  defp drop_random_demos(program, predictor2name, name2predictor, max_demos) do
+  defp drop_random_demos(program, max_demos) do
     case program do
       %{demos: existing_demos} when is_list(existing_demos) and length(existing_demos) > 0 ->
-        # Calculate how many demos to drop (DSPy uses Poisson distribution)
         num_demos = length(existing_demos)
         max_demos_tmp = if max_demos > 0, do: max_demos, else: 3
 
-        # DSPy algorithm: drop based on Poisson distribution
         lambda = num_demos / max_demos_tmp
         num_demos_to_drop = max(poisson_sample(lambda), if(num_demos >= max_demos_tmp, do: 1, else: 0))
         num_demos_to_drop = min(num_demos_to_drop, num_demos)
 
         if num_demos_to_drop > 0 do
-          # Drop random demos
           demos_to_drop_indices =
             0..(num_demos - 1)
             |> Enum.to_list()
@@ -94,22 +85,21 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo do
   end
 
   defp poisson_sample(lambda) do
-    # Simple Poisson approximation using exponential distribution
     l = :math.exp(-lambda)
     k = 0
     p = 1.0
 
-    poisson_loop(l, k, p, lambda)
+    poisson_loop(l, k, p)
   end
 
-  defp poisson_loop(l, k, p, lambda) when p > l do
+  defp poisson_loop(l, k, p) when p > l do
     k = k + 1
     u = :rand.uniform()
     p = p * u
-    poisson_loop(l, k, p, lambda)
+    poisson_loop(l, k, p)
   end
 
-  defp poisson_loop(_l, k, _p, _lambda), do: k - 1
+  defp poisson_loop(_l, k, _p), do: k - 1
 
   defp get_best_trajectory(bucket, quality_threshold) do
     case Bucket.best_trajectory(bucket) do
@@ -128,7 +118,6 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo do
   defp create_demo_from_trajectory(trajectory, opts) do
     max_length = Map.get(opts, :demo_input_field_maxlen, 100_000)
 
-    # Truncate input fields if they're too long
     truncated_inputs =
       trajectory.inputs
       |> Enum.map(fn {key, value} ->
@@ -142,14 +131,11 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo do
       end)
       |> Enum.into(%{})
 
-    # Combine inputs and outputs
     combined_data = Map.merge(truncated_inputs, trajectory.outputs)
     input_keys = Map.keys(trajectory.inputs)
 
-    # Create demonstration example
     demo = Example.new(combined_data, input_keys)
 
-    # Add metadata about the demo's origin
     demo_with_metadata = %{demo |
       data: Map.put(demo.data, :__simba_demo_metadata, %{
         original_score: trajectory.score,
@@ -165,7 +151,6 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo do
     case program do
       # Program has native demo support
       %{demos: existing_demos} when is_list(existing_demos) ->
-        # Add new demo and limit total demos
         new_demos = [demo | existing_demos] |> Enum.take(max_demos)
         updated_program = %{program | demos: new_demos}
         {:ok, updated_program}

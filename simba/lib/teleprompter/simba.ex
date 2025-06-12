@@ -1,3 +1,4 @@
+# lib/teleprompter/simba.ex - Fixed Implementation
 defmodule DSPEx.Teleprompter.SIMBA do
   @moduledoc """
   Faithful implementation of DSPy's SIMBA (Stochastic Introspective Mini-Batch Ascent).
@@ -26,17 +27,17 @@ defmodule DSPEx.Teleprompter.SIMBA do
   alias DSPEx.Teleprompter.SIMBA.{Trajectory, Bucket}
 
   @enforce_keys []
-  defstruct bsize: 32,                    # Mini-batch size
-            num_candidates: 6,            # Number of candidate programs per iteration
-            max_steps: 8,                 # Maximum optimization steps
-            max_demos: 4,                 # Maximum demos per predictor
-            demo_input_field_maxlen: 100_000,  # Max length for demo input fields
-            num_threads: nil,              # Number of concurrent threads
-            strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo], # Strategy modules
-            temperature_for_sampling: 0.2,  # Temperature for trajectory sampling
-            temperature_for_candidates: 0.2, # Temperature for candidate selection
-            progress_callback: nil,       # Optional progress callback function
-            correlation_id: nil           # For tracking optimization runs
+  defstruct bsize: 32,
+            num_candidates: 6,
+            max_steps: 8,
+            max_demos: 4,
+            demo_input_field_maxlen: 100_000,
+            num_threads: nil,
+            strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo],
+            temperature_for_sampling: 0.2,
+            temperature_for_candidates: 0.2,
+            progress_callback: nil,
+            correlation_id: nil
 
   @type t :: %__MODULE__{
           bsize: pos_integer(),
@@ -75,14 +76,12 @@ defmodule DSPEx.Teleprompter.SIMBA do
   def compile(student, teacher, trainset, metric_fn, opts \\ [])
 
   def compile(%__MODULE__{} = teleprompter, student, teacher, trainset, metric_fn, opts) do
-    # Use teleprompter struct settings merged with opts
     config_opts = struct_to_keyword(teleprompter)
     merged_opts = Keyword.merge(config_opts, opts)
     do_compile(student, teacher, trainset, metric_fn, merged_opts)
   end
 
   def compile(student, teacher, trainset, metric_fn, opts) when is_list(opts) do
-    # Use default config with provided opts
     do_compile(student, teacher, trainset, metric_fn, opts)
   end
 
@@ -132,17 +131,17 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   defp run_simba_optimization(student, teacher, trainset, metric_fn, config, correlation_id) do
     try do
-      # Initialize the optimization state properly
-      programs = [student]  # Start with baseline
+      # Initialize properly
+      programs = [student]
       program_scores = %{0 => []}
       next_program_idx = 1
       winning_programs = [student]
 
-      # Initialize RNG and shuffle data (critical for DSPy fidelity)
-      :rand.seed(:exsplus, {1, 2, 3})  # Deterministic for testing
+      # Initialize RNG with better seed
+      :rand.seed(:exsplus, {System.unique_integer(), System.system_time(), self() |> :erlang.phash2()})
       data_indices = 0..(length(trainset) - 1) |> Enum.to_list() |> Enum.shuffle()
 
-      # Build predictor mappings (essential for strategy application)
+      # Build predictor mappings
       {predictor2name, name2predictor} = build_predictor_mappings(student)
 
       # Main optimization loop
@@ -157,7 +156,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
               %{correlation_id: correlation_id}
             )
 
-            # STEP 1: Get next batch (circular indexing like DSPy)
+            # STEP 1: Get next batch (fixed circular indexing)
             instance_idx = step * config.bsize
             batch_indices = get_circular_batch_indices(data_indices, instance_idx, config.bsize)
             batch = Enum.map(batch_indices, &Enum.at(trainset, &1))
@@ -166,7 +165,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
             models = prepare_models_for_resampling(List.first(current_programs), config.num_candidates)
             top_programs = select_top_programs(current_programs, current_scores, config.num_candidates)
 
-            # STEP 3: Sample trajectories (the core SIMBA step)
+            # STEP 3: Sample trajectories
             trajectories = sample_trajectories(
               batch,
               top_programs,
@@ -177,7 +176,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
               correlation_id
             )
 
-            # STEP 4: Create performance buckets (DSPy algorithm)
+            # STEP 4: Create performance buckets
             buckets = create_performance_buckets(trajectories, config, correlation_id)
 
             # STEP 5: Apply strategies to create candidates
@@ -194,7 +193,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
             # STEP 6: Evaluate candidates and update state
             candidate_scores = evaluate_candidates_batch(new_candidates, batch, metric_fn)
 
-            # STEP 7: Select winning programs (DSPy selection logic)
+            # STEP 7: Select winning programs
             best_candidate_program = select_best_from_candidates(new_candidates, candidate_scores)
             updated_winning = [best_candidate_program | current_winning]
 
@@ -218,7 +217,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
       {_final_programs, _final_scores, final_winning, _final_idx} = final_state
 
-      # Select final best program using full evaluation
+      # Select final best program
       best_program = select_final_best_program(final_winning, trainset, metric_fn)
 
       {:ok, best_program}
@@ -289,13 +288,10 @@ defmodule DSPEx.Teleprompter.SIMBA do
     start_time = System.monotonic_time()
 
     inputs = Example.inputs(example)
-
-    # Apply model configuration
     execution_opts = model_config_to_opts(model_config)
 
     case Program.forward(program, inputs, execution_opts) do
       {:ok, outputs} ->
-        # Calculate score using metric function
         score =
           try do
             metric_fn.(example, outputs)
@@ -305,7 +301,6 @@ defmodule DSPEx.Teleprompter.SIMBA do
             _ -> 0.0
           end
 
-        # Create trajectory with proper metadata
         %Trajectory{
           program: program,
           example: example,
@@ -367,7 +362,6 @@ defmodule DSPEx.Teleprompter.SIMBA do
     buckets =
       trajectories_by_example
       |> Enum.map(fn {_example_idx, example_trajectories} ->
-        # Sort by score descending like DSPy
         sorted_trajectories = Enum.sort_by(example_trajectories, &(-&1.score))
 
         scores = Enum.map(sorted_trajectories, & &1.score)
@@ -388,7 +382,6 @@ defmodule DSPEx.Teleprompter.SIMBA do
         )
       end)
       |> Enum.sort_by(fn bucket ->
-        # DSPy sorting: max_to_min_gap DESC, max_score DESC, max_to_avg_gap DESC
         {
           -bucket.metadata[:max_to_min_gap],
           -bucket.metadata[:max_score],
@@ -407,12 +400,10 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   # Apply strategies to buckets to generate new candidate programs
   defp apply_strategies_to_buckets(buckets, programs, config, next_program_idx, predictor2name, name2predictor, correlation_id) do
-    # Filter buckets that show improvement potential
     viable_buckets = Enum.filter(buckets, fn bucket ->
       bucket.metadata[:max_to_min_gap] > 0.01 and bucket.metadata[:max_score] > 0.1
     end)
 
-    # Take top buckets for strategy application
     top_buckets = Enum.take(viable_buckets, config.num_candidates)
 
     emit_telemetry(
@@ -421,15 +412,12 @@ defmodule DSPEx.Teleprompter.SIMBA do
       %{correlation_id: correlation_id}
     )
 
-    # Generate new candidates by applying strategies
     {candidates, updated_idx} =
       Enum.reduce(top_buckets, {[], next_program_idx}, fn bucket, {acc_candidates, current_idx} ->
-        # Select source program using softmax sampling
-        program_scores = Enum.map(programs, fn _p -> 0.5 end)  # Simplified scoring
+        program_scores = Enum.map(programs, fn _p -> 0.5 end)
         source_program_idx = softmax_sample_simple(program_scores, config.temperature_for_candidates)
         source_program = Enum.at(programs, source_program_idx)
 
-        # Apply strategies to create new candidate
         case apply_first_applicable_strategy(bucket, source_program, config.strategies,
                                            predictor2name, name2predictor, config) do
           {:ok, new_program} ->
@@ -495,10 +483,8 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   # Update program pool with new candidates and their scores
   defp update_program_pool(programs, program_scores, new_candidates, candidate_scores, _next_idx) do
-    # Add new candidates to program pool
     updated_programs = programs ++ new_candidates
 
-    # Update scores
     updated_scores =
       Enum.reduce(candidate_scores, program_scores, fn {candidate_idx, score}, acc ->
         program_idx = length(programs) + candidate_idx
@@ -510,13 +496,11 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   # Select final best program from winning programs
   defp select_final_best_program(winning_programs, trainset, metric_fn) do
-    # Evaluate all winning programs on full trainset
     program_scores =
       winning_programs
       |> Enum.with_index()
       |> Task.async_stream(
         fn {program, _idx} ->
-          # Evaluate on a sample of trainset for efficiency
           sample_size = min(50, length(trainset))
           sample = Enum.take_random(trainset, sample_size)
 
@@ -547,7 +531,6 @@ defmodule DSPEx.Teleprompter.SIMBA do
       |> Stream.map(fn {:ok, result} -> result end)
       |> Enum.to_list()
 
-    # Select best program
     if Enum.empty?(program_scores) do
       List.first(winning_programs)
     else
@@ -594,7 +577,6 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   defp get_circular_batch_indices(data_indices, start_idx, batch_size) do
-    # Implement circular indexing like DSPy
     total_size = length(data_indices)
 
     0..(batch_size - 1)
@@ -605,7 +587,6 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   defp prepare_models_for_resampling(base_program, num_candidates) do
-    # DSPy creates different temperature variants
     base_temp = 0.7
 
     temperatures = [base_temp] ++
@@ -613,7 +594,6 @@ defmodule DSPEx.Teleprompter.SIMBA do
         0.5 + i * (0.5 / num_candidates)
       end)
 
-    # Take only num_candidates temperatures and ensure uniqueness
     temperatures
     |> Enum.uniq()
     |> Enum.take(num_candidates)
@@ -625,7 +605,6 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   defp select_top_programs(programs, program_scores, num_candidates) do
-    # Calculate average scores for each program
     program_avg_scores =
       programs
       |> Enum.with_index()
@@ -634,15 +613,13 @@ defmodule DSPEx.Teleprompter.SIMBA do
         avg_score = if Enum.empty?(scores), do: 0.5, else: Enum.sum(scores) / length(scores)
         {idx, avg_score}
       end)
-      |> Enum.sort_by(fn {_idx, score} -> -score end)  # Sort by score descending
+      |> Enum.sort_by(fn {_idx, score} -> -score end)
 
-    # Take top programs, ensuring we include the baseline (index 0)
     top_indices =
       program_avg_scores
       |> Enum.take(num_candidates)
       |> Enum.map(fn {idx, _score} -> idx end)
 
-    # Ensure baseline is included
     if 0 in top_indices do
       top_indices
     else
@@ -650,10 +627,9 @@ defmodule DSPEx.Teleprompter.SIMBA do
     end
   end
 
-  defp softmax_sample(program_indices, all_programs, temperature) do
+  defp softmax_sample(program_indices, _all_programs, temperature) do
     if is_list(program_indices) and length(program_indices) > 0 do
-      # Fixed: Remove the extra program_scores parameter that was causing the error
-      scores = Enum.map(program_indices, fn _idx -> 0.5 end)  # Simplified scoring
+      scores = Enum.map(program_indices, fn _idx -> 0.5 end)
       weighted_index = softmax_sample_simple(scores, temperature)
       Enum.at(program_indices, weighted_index, List.first(program_indices))
     else
@@ -670,10 +646,9 @@ defmodule DSPEx.Teleprompter.SIMBA do
         probabilities = Enum.map(exp_scores, fn exp_score -> exp_score / sum_exp end)
         weighted_random_choice(probabilities)
       else
-        0  # Fallback to first program
+        0
       end
     else
-      # Greedy selection
       {_max_score, max_idx} = scores |> Enum.with_index() |> Enum.max_by(fn {score, _} -> score end)
       max_idx
     end
@@ -695,8 +670,6 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   defp build_predictor_mappings(program) do
-    # Build proper predictor mappings for strategy application
-    # For DSPEx, most programs are single-predictor
     predictor2name = %{program => "main"}
     name2predictor = %{"main" => program}
 
@@ -704,18 +677,16 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   defp apply_first_applicable_strategy(bucket, source_program, strategies, predictor2name, name2predictor, config) do
-    # Try each strategy module until one succeeds
+    opts = %{
+      max_demos: config.max_demos,
+      demo_input_field_maxlen: config.demo_input_field_maxlen,
+      predictor2name: predictor2name,
+      name2predictor: name2predictor,
+      quality_threshold: 0.7
+    }
+
     strategies
     |> Enum.reduce_while({:skip, "No strategies provided"}, fn strategy_module, _acc ->
-      # Check if strategy is applicable first
-      opts = %{
-        max_demos: config.max_demos,
-        demo_input_field_maxlen: config.demo_input_field_maxlen,
-        predictor2name: predictor2name,
-        name2predictor: name2predictor,
-        quality_threshold: 0.7  # Add quality threshold
-      }
-
       if apply(strategy_module, :applicable?, [bucket, opts]) do
         case apply(strategy_module, :apply, [bucket, source_program, opts]) do
           {:ok, new_program} -> {:halt, {:ok, new_program}}

@@ -29,27 +29,26 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
   @tag timeout: 60_000
   describe "SIMBA Math QA Optimization" do
     test "optimizes math word problem solving" do
-      # Setup mock responses for consistent testing
       setup_math_mock_responses()
 
-      # Create programs
       student = Predict.new(MathQASignature, :test_math)
       teacher = Predict.new(MathQASignature, :test_math)
 
-      # Create training dataset
       trainset = create_math_trainset()
 
-      # Define metric function that checks both reasoning and answer
+      # Fixed metric function - handle string outputs properly
       metric_fn = fn example, prediction ->
         expected_answer = Example.outputs(example)[:answer] || ""
         predicted_answer = prediction[:answer] || ""
 
-        # Check if answers match (simplified for testing)
-        answer_correct = String.trim(expected_answer) == String.trim(predicted_answer)
+        # Normalize strings for comparison
+        expected_normalized = expected_answer |> to_string() |> String.trim()
+        predicted_normalized = predicted_answer |> to_string() |> String.trim()
 
-        # Check if reasoning exists and has reasonable length
+        answer_correct = expected_normalized == predicted_normalized
+
         reasoning = prediction[:reasoning] || ""
-        has_reasoning = String.length(reasoning) > 20
+        has_reasoning = String.length(to_string(reasoning)) > 20
 
         cond do
           answer_correct and has_reasoning -> 1.0
@@ -59,30 +58,25 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
         end
       end
 
-      # Configure SIMBA for this test
+      # Fixed SIMBA configuration - use atom for strategy
       teleprompter = SIMBA.new(
-        bsize: 3,           # Small batches for controlled testing
-        num_candidates: 4,   # Generate 4 candidate programs per iteration
-        max_steps: 3,        # Run 3 optimization steps
-        max_demos: 3,        # Keep up to 3 demonstrations per predictor
-        strategies: [:append_demo],
-        temperature_sampling: 0.3,
-        temperature_candidates: 0.3
+        bsize: 3,
+        num_candidates: 4,
+        max_steps: 3,
+        max_demos: 3,
+        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo],  # Fixed: use full module name
+        temperature_for_sampling: 0.3,
+        temperature_for_candidates: 0.3
       )
 
-      # Track optimization progress
       start_time = System.monotonic_time()
 
-      # Run SIMBA optimization
       assert {:ok, optimized_program} = teleprompter.compile(student, teacher, trainset, metric_fn)
 
       duration = System.monotonic_time() - start_time
       IO.puts("\nSIMBA optimization completed in #{System.convert_time_unit(duration, :native, :millisecond)}ms")
 
-      # Validate optimization results
       assert_optimization_results(student, optimized_program, trainset, metric_fn)
-
-      # Test the optimized program on new examples
       test_optimized_program_performance(optimized_program)
 
       cleanup_math_mock_responses()
@@ -95,19 +89,22 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
       teacher = Predict.new(QASignature, :test_qa)
       trainset = create_qa_trainset()
 
-      # Simple exact match metric
+      # Fixed exact match metric
       metric_fn = fn example, prediction ->
-        expected = String.downcase(Example.outputs(example)[:answer] || "")
-        actual = String.downcase(prediction[:answer] || "")
-        if expected == actual, do: 1.0, else: 0.0
+        expected = Example.outputs(example)[:answer] || ""
+        actual = prediction[:answer] || ""
+
+        expected_normalized = expected |> to_string() |> String.downcase() |> String.trim()
+        actual_normalized = actual |> to_string() |> String.downcase() |> String.trim()
+
+        if expected_normalized == actual_normalized, do: 1.0, else: 0.0
       end
 
-      # Run single SIMBA step to demonstrate internal mechanics
       teleprompter = SIMBA.new(
         bsize: 2,
         num_candidates: 3,
-        max_steps: 1,  # Single step for detailed analysis
-        strategies: [:append_demo]
+        max_steps: 1,
+        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo]
       )
 
       {:ok, _optimized} = teleprompter.compile(student, teacher, trainset, metric_fn)
@@ -118,7 +115,6 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
     test "handles various program types and configurations" do
       setup_mixed_mock_responses()
 
-      # Test with different program configurations
       programs_to_test = [
         Predict.new(QASignature, :test_mixed),
         Predict.new(QASignature, :test_mixed, demos: [create_sample_demo()]),
@@ -128,13 +124,17 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
       trainset = create_mixed_trainset()
       metric_fn = &simple_exact_match/2
 
-      teleprompter = SIMBA.new(max_steps: 2, bsize: 2, num_candidates: 2)
+      teleprompter = SIMBA.new(
+        max_steps: 2,
+        bsize: 2,
+        num_candidates: 2,
+        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo]
+      )
 
       Enum.each(programs_to_test, fn program ->
         {:ok, optimized} = teleprompter.compile(program, program, trainset, metric_fn)
         assert is_struct(optimized)
 
-        # Test that optimized program can make predictions
         test_input = %{question: "What is the capital of France?"}
         {:ok, result} = DSPEx.Program.forward(optimized, test_input)
         assert Map.has_key?(result, :answer)
@@ -153,9 +153,6 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
       teacher = Predict.new(QASignature, :test_perf)
       trainset = create_performance_trainset()
 
-      # Configure SIMBA with progress tracking
-      progress_data = %{steps: []}
-
       progress_callback = fn progress ->
         IO.puts("Step #{progress[:step] || 'unknown'}: #{inspect(progress)}")
         :ok
@@ -165,13 +162,12 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
         max_steps: 3,
         bsize: 4,
         num_candidates: 3,
-        progress_callback: progress_callback
+        progress_callback: progress_callback,
+        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo]
       )
 
-      # Run optimization with performance tracking
       {:ok, optimized} = teleprompter.compile(student, teacher, trainset, &simple_exact_match/2)
 
-      # Analyze performance improvement
       improvement_metrics = Performance.calculate_improvement(
         student,
         optimized,
@@ -185,7 +181,6 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
       IO.puts("Absolute Improvement: #{improvement_metrics.absolute_improvement}")
       IO.puts("Relative Improvement: #{Float.round(improvement_metrics.relative_improvement * 100, 1)}%")
 
-      # Validate that we have meaningful metrics
       assert is_float(improvement_metrics.original_score)
       assert is_float(improvement_metrics.improved_score)
       assert is_boolean(improvement_metrics.improved)
@@ -194,7 +189,6 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
     end
 
     test "demonstrates bucket analysis and strategy selection" do
-      # Create sample trajectories with varying performance
       trajectories = [
         %Trajectory{
           program: nil, example: nil, inputs: %{question: "Q1"}, outputs: %{answer: "A1"},
@@ -214,7 +208,6 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
         }
       ]
 
-      # Create bucket and analyze
       bucket = Bucket.new(trajectories)
       stats = Bucket.statistics(bucket)
 
@@ -226,12 +219,10 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
       IO.puts("Average Score: #{Float.round(stats.avg_score, 3)}")
       IO.puts("Has Improvement Potential: #{stats.improvement_potential}")
 
-      # Test strategy applicability
       alias DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo
 
       assert AppendDemo.applicable?(bucket)
 
-      # Test strategy application
       student = Predict.new(QASignature, :test)
 
       case AppendDemo.apply(bucket, student) do
@@ -248,56 +239,36 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
   @tag :integration
   describe "SIMBA Algorithm Fidelity" do
     test "matches DSPy SIMBA algorithmic behavior" do
-      # This test verifies that our implementation follows the same algorithmic
-      # steps as the original DSPy SIMBA
-
       setup_fidelity_mock_responses()
 
       student = Predict.new(QASignature, :test_fidelity)
       teacher = Predict.new(QASignature, :test_fidelity)
       trainset = create_fidelity_trainset()
 
-      # Configure SIMBA to match DSPy parameters
       teleprompter = SIMBA.new(
-        bsize: 32,              # Default mini-batch size from DSPy
-        num_candidates: 6,      # Default candidate count from DSPy
-        max_steps: 8,           # Default max steps from DSPy
-        max_demos: 4,           # Default max demos from DSPy
-        strategies: [:append_demo],
-        temperature_sampling: 0.2,
-        temperature_candidates: 0.2
+        bsize: 32,
+        num_candidates: 6,
+        max_steps: 8,
+        max_demos: 4,
+        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo],
+        temperature_for_sampling: 0.2,
+        temperature_for_candidates: 0.2
       )
 
-      # Track algorithm execution steps
-      step_data = []
+      {:ok, optimized} = teleprompter.compile(student, teacher, trainset, &simple_exact_match/2)
 
-      progress_callback = fn progress ->
-        step_data = [progress | step_data]
-        :ok
-      end
-
-      teleprompter_with_tracking = %{teleprompter | progress_callback: progress_callback}
-
-      # Execute optimization
-      {:ok, optimized} = teleprompter_with_tracking.compile(student, teacher, trainset, &simple_exact_match/2)
-
-      # Verify algorithmic properties
       assert_algorithmic_fidelity(optimized, trainset)
 
       cleanup_fidelity_mock_responses()
     end
 
     test "demonstrates stochastic hill-climbing characteristics" do
-      # Test that SIMBA exhibits stochastic hill-climbing behavior
-      # rather than global optimization
-
       setup_stochastic_mock_responses()
 
       student = Predict.new(QASignature, :test_stochastic)
       teacher = Predict.new(QASignature, :test_stochastic)
       trainset = create_stochastic_trainset()
 
-      # Run multiple optimizations with same configuration
       results =
         1..3
         |> Enum.map(fn run ->
@@ -305,23 +276,21 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
             max_steps: 2,
             bsize: 3,
             num_candidates: 3,
-            correlation_id: "run_#{run}"
+            correlation_id: "run_#{run}",
+            strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo]
           )
 
           {:ok, optimized} = teleprompter.compile(student, teacher, trainset, &simple_exact_match/2)
 
-          # Evaluate performance
           performance = evaluate_program_performance(optimized, trainset, &simple_exact_match/2)
           {run, optimized, performance}
         end)
 
-      # Verify that results show variation (stochastic behavior)
       performances = Enum.map(results, fn {_run, _prog, perf} -> perf end)
 
       IO.puts("\nStochastic Behavior Analysis:")
       IO.puts("Run Performances: #{inspect(Enum.map(performances, &Float.round(&1, 3)))}")
 
-      # Results should show some variation due to stochastic sampling
       performance_variance = calculate_variance(performances)
       IO.puts("Performance Variance: #{Float.round(performance_variance, 4)}")
 
@@ -473,9 +442,13 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
   end
 
   defp simple_exact_match(example, prediction) do
-    expected = String.downcase(Example.outputs(example)[:answer] || "")
-    actual = String.downcase(prediction[:answer] || "")
-    if expected == actual, do: 1.0, else: 0.0
+    expected = Example.outputs(example)[:answer] || ""
+    actual = prediction[:answer] || ""
+
+    expected_normalized = expected |> to_string() |> String.downcase() |> String.trim()
+    actual_normalized = actual |> to_string() |> String.downcase() |> String.trim()
+
+    if expected_normalized == actual_normalized, do: 1.0, else: 0.0
   end
 
   defp assert_optimization_results(original, optimized, trainset, metric_fn) do
