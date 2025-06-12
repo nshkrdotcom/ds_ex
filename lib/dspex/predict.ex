@@ -30,6 +30,7 @@ defmodule DSPEx.Predict do
 
   use DSPEx.Program
 
+  @enforce_keys [:signature, :client]
   defstruct [:signature, :client, :adapter, demos: []]
 
   @type t :: %__MODULE__{

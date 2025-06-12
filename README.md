@@ -80,6 +80,132 @@ export DSPEX_TEST_MODE=live     # Force live mode
 
 > 📖 **For detailed testing strategy and migration guidelines**, see [LIVE_DIVERGENCE.md](LIVE_DIVERGENCE.md) which covers the strategic approach to live API integration and test architecture patterns.
 
+## Using DSPEx with Live APIs
+
+### Production API Configuration
+
+DSPEx uses a **test mode system** that defaults to pure mock mode for development safety. To use live APIs, you must explicitly enable live API mode using the `DSPEX_TEST_MODE` environment variable.
+
+**Test Mode Configuration:**
+```bash
+# Default: Pure mock mode (no API calls)
+mix run my_script.exs                           # Uses mocks only
+
+# Enable live API with fallback to mocks  
+DSPEX_TEST_MODE=fallback mix run my_script.exs  # Tries live API, falls back to mocks
+
+# Require live API (fail if no keys)
+DSPEX_TEST_MODE=live mix run my_script.exs      # Live API only, fails without keys
+```
+
+**Supported Providers:**
+```bash
+export GEMINI_API_KEY=your_gemini_key        # Google Gemini (recommended)
+export OPENAI_API_KEY=your_openai_key        # OpenAI GPT models
+export ANTHROPIC_API_KEY=your_anthropic_key  # Anthropic Claude (future)
+```
+
+**API Key Detection Logic:**
+- In mock mode: Always uses mock responses (default)
+- In fallback mode: Uses live API if keys available, otherwise falls back to mocks
+- In live mode: Requires API keys, fails if missing
+
+### Live API Examples
+
+**Basic Usage with Live API:**
+```elixir
+# Set your API key and enable live API mode
+export GEMINI_API_KEY=your_actual_gemini_key
+export DSPEX_TEST_MODE=fallback
+
+# Create and run a program - now uses live API
+program = DSPEx.Predict.new(MySignature, :gemini)
+{:ok, result} = DSPEx.Program.forward(program, %{question: "What is Elixir?"})
+# Returns real AI-generated response from Gemini
+```
+
+**SIMBA Optimization with Live API:**
+```elixir
+# Set live API mode first
+export GEMINI_API_KEY=your_key
+export DSPEX_TEST_MODE=fallback
+
+# Both student and teacher use live APIs
+student = DSPEx.Predict.new(QASignature, :gemini)  
+teacher = DSPEx.Predict.new(QASignature, :gemini)
+
+# SIMBA optimization makes 100+ real API calls
+{:ok, optimized} = DSPEx.Teleprompter.SIMBA.compile(
+  student, teacher, training_examples, metric_fn
+)
+```
+
+### Live API Demo Application
+
+DSPEx includes a comprehensive demo application showcasing SIMBA with live APIs:
+
+```bash
+# Navigate to the demo
+cd examples/dspex_demo
+
+# Install dependencies
+mix deps.get
+
+# Enable live API mode with your Gemini API key
+export GEMINI_API_KEY=your_key
+export DSPEX_TEST_MODE=fallback
+
+# Run demos with live API
+./demo qa                    # Question answering with SIMBA
+./demo sentiment             # Sentiment analysis optimization  
+./demo cot                   # Chain-of-thought reasoning
+./demo --interactive         # Interactive Q&A session
+
+# Run all demos with live API
+./demo                       # Complete SIMBA showcase
+```
+
+**What the Demo Shows with Live API:**
+- **Real API Request Logs**: `[LIVE API REQUEST] gemini | predict-...` showing actual calls
+- **Authentic Responses**: Real AI responses, not mock data
+- **SIMBA Optimization**: Dozens of concurrent API calls during optimization
+- **Performance**: Real-world latency and response characteristics
+
+### Important Notes for Live API Usage
+
+**Mode Requirements:**
+- **Default behavior**: DSPEx uses mock mode by default for safety
+- **Must set DSPEX_TEST_MODE**: `fallback` or `live` to enable live APIs
+- **Cost awareness**: Live mode makes many real API calls that cost money
+
+**Cost Considerations:**
+- Live API calls incur costs from your provider account
+- SIMBA optimization typically makes 50-200+ API calls during optimization
+- Monitor your usage through your provider's dashboard
+- Consider using `fallback` mode during development to limit costs
+
+**Test Mode Details:**
+- **mock**: Pure mock, no network (default, safe for development)
+- **fallback**: Live API preferred, graceful mock fallback (recommended for testing)  
+- **live**: Live API required, fails without keys (for production validation)
+
+**Development Workflow:**
+```bash
+# Daily development - fast and free
+mix run my_app.exs                              # Mock mode
+
+# Testing with real APIs - costs money but validates integration
+DSPEX_TEST_MODE=fallback mix run my_app.exs     # Live API with fallback
+
+# Production validation - strict live API testing
+DSPEX_TEST_MODE=live mix run my_app.exs         # Live API only
+```
+
+**API Key Security:**
+- Never commit API keys to version control
+- Use `.env` files or secure environment management  
+- Rotate keys regularly and monitor usage for anomalies
+
 ### Testing Performance & Reliability
 
 DSPEx's test architecture has been optimized for maximum developer productivity:

@@ -5,10 +5,29 @@ defmodule DSPEx.OptimizedProgram do
   This module provides a container for programs that don't natively support
   demonstration storage, allowing any program to be enhanced with few-shot
   learning capabilities through teleprompter optimization.
+
+  ## Key Features
+
+  - **Immutable Wrapper**: Safely wraps existing programs without modification
+  - **Demo Storage**: Manages demonstrations for programs lacking native support
+  - **Metadata Tracking**: Records optimization history and configuration
+  - **Flexible Integration**: Works with any DSPEx.Program implementation
+
+  ## Examples
+
+      # Wrap a program with optimized demonstrations
+      iex> program = %DSPEx.Predict{signature: MySignature, client: :openai}
+      iex> demos = [%DSPEx.Example{data: %{question: "Hi", answer: "Hello"}, input_keys: MapSet.new([:question])}]
+      iex> optimized = DSPEx.OptimizedProgram.new(program, demos)
+      iex> optimized.program == program
+      true
+
+  See `@type t` for the complete type specification.
   """
 
   use DSPEx.Program
 
+  @enforce_keys [:program, :demos]
   defstruct [:program, :demos, :metadata]
 
   @type t :: %__MODULE__{

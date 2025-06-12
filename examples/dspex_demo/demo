@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# DSPEx + SIMBA Demo Runner
+# Usage: ./demo [qa|sentiment|cot|--help|--interactive]
+
+case "$1" in
+    "qa")
+        mix run -e "DspexDemo.main([\"qa\"])"
+        ;;
+    "sentiment")
+        mix run -e "DspexDemo.main([\"sentiment\"])"
+        ;;
+    "cot")
+        mix run -e "DspexDemo.main([\"cot\"])"
+        ;;
+    "--help"|"-h")
+        mix run -e "DspexDemo.main([\"--help\"])"
+        ;;
+    "--interactive"|"-i")
+        mix run -e "DspexDemo.main([\"--interactive\"])"
+        ;;
+    "")
+        mix run -e "DspexDemo.main([])"
+        ;;
+    *)
+        echo "Unknown option: $1"
+        mix run -e "DspexDemo.main([\"--help\"])"
+        ;;
+esac

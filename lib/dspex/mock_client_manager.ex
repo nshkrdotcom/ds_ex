@@ -28,6 +28,7 @@ defmodule DSPEx.MockClientManager do
     responses: :contextual
   }
 
+  @enforce_keys [:provider]
   defstruct [
     :provider,
     :opts,
@@ -36,6 +37,15 @@ defmodule DSPEx.MockClientManager do
     :request_count,
     :start_time
   ]
+
+  @type t :: %__MODULE__{
+          provider: atom(),
+          opts: map(),
+          stats: map(),
+          responses: list() | atom(),
+          request_count: non_neg_integer(),
+          start_time: DateTime.t()
+        }
 
   ## Public API
 

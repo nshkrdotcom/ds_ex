@@ -42,6 +42,7 @@ defmodule DSPEx.Teleprompter.BootstrapFewShot do
 
   alias DSPEx.{Example, Program}
 
+  @enforce_keys []
   defstruct max_bootstrapped_demos: 4,
             max_labeled_demos: 16,
             quality_threshold: 0.7,

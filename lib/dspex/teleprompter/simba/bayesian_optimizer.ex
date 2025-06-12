@@ -40,6 +40,7 @@ defmodule DSPEx.Teleprompter.SIMBA.BayesianOptimizer do
 
   alias DSPEx.Services.ConfigManager
 
+  @enforce_keys []
   defstruct num_initial_samples: 10,
             acquisition_function: :expected_improvement,
             convergence_patience: 5,

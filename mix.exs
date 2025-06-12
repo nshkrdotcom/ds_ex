@@ -48,6 +48,9 @@ defmodule Dspex.MixProject do
       {:external_service, "~> 1.1"},
       {:retry, "~> 0.18"},
 
+      # Structured outputs
+      {:instructor_lite, "~> 0.3.0"},
+
       # Testing & Development
       {:propcheck, "~> 1.4", only: [:test, :dev]},
       {:mox, "~> 1.1", only: :test},

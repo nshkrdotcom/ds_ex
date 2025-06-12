@@ -48,6 +48,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
   alias DSPEx.Teleprompter.SIMBA.BayesianOptimizer
   alias DSPEx.Services.ConfigManager
 
+  @enforce_keys []
   defstruct num_candidates: 20,
             max_bootstrapped_demos: 4,
             max_labeled_demos: 16,
@@ -687,12 +688,24 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   defp signature_name(signature) do
-    if signature do
-      signature.__struct__
-      |> Module.split()
-      |> List.last()
-    else
-      "Unknown"
+    cond do
+      is_nil(signature) ->
+        "Unknown"
+
+      is_atom(signature) ->
+        # signature is a module atom
+        signature
+        |> Module.split()
+        |> List.last()
+
+      is_struct(signature) ->
+        # signature is a struct, get the module
+        signature.__struct__
+        |> Module.split()
+        |> List.last()
+
+      true ->
+        "Unknown"
     end
   end
 
