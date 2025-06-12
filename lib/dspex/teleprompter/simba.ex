@@ -45,6 +45,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   alias DSPEx.{Program, Example, OptimizedProgram}
   alias DSPEx.Teleprompter.BootstrapFewShot
+  alias DSPEx.Teleprompter.SIMBA.BayesianOptimizer
 
   defstruct num_candidates: 20,
             max_bootstrapped_demos: 4,
@@ -339,66 +340,79 @@ defmodule DSPEx.Teleprompter.SIMBA do
       }
     )
 
-    # For initial implementation, use simple grid search
-    # This will be replaced with proper Bayesian optimization in future iterations
-    trials = []
-    best_score = -1.0
-    best_config = nil
+    # Create search space for Bayesian optimizer
+    search_space = %{
+      instructions: instruction_candidates,
+      demos: demo_candidates
+    }
 
-    result =
-      instruction_candidates
-      |> Enum.take(min(config.num_trials, length(instruction_candidates)))
-      |> Enum.reduce_while(
-        {:ok, %{best_score: best_score, best_config: best_config, trials: trials}},
-        fn instruction_candidate, {:ok, acc} ->
-          # Create a test configuration
-          test_config = %{
-            instruction: instruction_candidate.instruction,
-            demos: Enum.map(demo_candidates, & &1.demo)
-          }
+    # Create objective function that evaluates configurations
+    objective_function = fn bayesian_config ->
+      # Convert Bayesian optimizer config to SIMBA config format
+      instruction = Enum.find(instruction_candidates, &(&1.id == bayesian_config.instruction_id))
 
-          # Create optimized program for testing
-          test_program = create_test_program(student, test_config)
+      demos =
+        Enum.filter(demo_candidates, &(bayesian_config.demo_ids |> Enum.member?(&1.id)))
+        |> Enum.map(& &1.demo)
 
-          # Evaluate on validation set (use subset of trainset)
-          validation_set = Enum.take_random(trainset, min(10, length(trainset)))
+      test_config = %{
+        instruction: instruction.instruction,
+        demos: demos
+      }
 
-          case evaluate_configuration(test_program, validation_set, metric_fn) do
-            {:ok, score} ->
-              trial = %{
-                instruction_id: instruction_candidate.id,
-                demo_ids: Enum.map(demo_candidates, & &1.id),
-                score: score,
-                timestamp: DateTime.utc_now()
-              }
+      # Create optimized program for testing
+      test_program = create_test_program(student, test_config)
 
-              new_trials = [trial | acc.trials]
+      # Evaluate on validation set (use subset of trainset)
+      validation_set = Enum.take_random(trainset, min(10, length(trainset)))
 
-              if score > acc.best_score do
-                {:cont, {:ok, %{best_score: score, best_config: test_config, trials: new_trials}}}
-              else
-                {:cont, {:ok, %{acc | trials: new_trials}}}
-              end
+      case evaluate_configuration(test_program, validation_set, metric_fn) do
+        {:ok, score} -> score
+        # Return poor score for failed evaluations
+        {:error, _} -> 0.0
+      end
+    end
 
-            {:error, reason} ->
-              {:halt, {:error, {:evaluation_failed, reason}}}
-          end
-        end
+    # Create and run Bayesian optimizer
+    optimizer =
+      BayesianOptimizer.new(
+        num_initial_samples: min(10, div(config.num_trials, 3)),
+        convergence_patience: 5,
+        acquisition_function: :expected_improvement
       )
 
-    case result do
-      {:ok, %{best_config: best_config, best_score: best_score, trials: trials}}
-      when best_config != nil ->
+    case BayesianOptimizer.optimize(
+           optimizer,
+           search_space,
+           objective_function,
+           max_iterations: config.num_trials,
+           correlation_id: correlation_id
+         ) do
+      {:ok, bayesian_result} ->
+        # Convert Bayesian result back to SIMBA format
+        best_instruction =
+          Enum.find(
+            instruction_candidates,
+            &(&1.id == bayesian_result.best_configuration.instruction_id)
+          )
+
+        best_demos =
+          Enum.filter(
+            demo_candidates,
+            &(bayesian_result.best_configuration.demo_ids |> Enum.member?(&1.id))
+          )
+          |> Enum.map(& &1.demo)
+
         optimization_result = %{
-          best_instruction: best_config.instruction,
-          best_demos: best_config.demos,
-          score: best_score,
-          trials: Enum.reverse(trials),
-          stats: %{
-            total_trials: length(trials),
-            best_score: best_score,
-            convergence_iteration: length(trials)
-          }
+          best_instruction: best_instruction.instruction,
+          best_demos: best_demos,
+          score: bayesian_result.best_score,
+          trials: convert_bayesian_trials_to_simba_format(bayesian_result.observations),
+          stats:
+            Map.merge(bayesian_result.stats, %{
+              bayesian_optimization: true,
+              convergence_iteration: bayesian_result.convergence_iteration
+            })
         }
 
         emit_telemetry(
@@ -406,8 +420,9 @@ defmodule DSPEx.Teleprompter.SIMBA do
           %{duration: System.monotonic_time()},
           %{
             correlation_id: correlation_id,
-            best_score: best_score,
-            total_trials: length(trials)
+            best_score: bayesian_result.best_score,
+            total_trials: length(bayesian_result.observations),
+            convergence_iteration: bayesian_result.convergence_iteration
           }
         )
 
@@ -421,10 +436,18 @@ defmodule DSPEx.Teleprompter.SIMBA do
         )
 
         {:error, reason}
-
-      _ ->
-        {:error, :no_valid_configurations}
     end
+  end
+
+  defp convert_bayesian_trials_to_simba_format(observations) do
+    Enum.map(observations, fn obs ->
+      %{
+        instruction_id: obs.configuration.instruction_id,
+        demo_ids: obs.configuration.demo_ids,
+        score: obs.score,
+        timestamp: obs.timestamp
+      }
+    end)
   end
 
   defp create_test_program(student, config) do
