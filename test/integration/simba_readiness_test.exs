@@ -5,6 +5,7 @@ end
 
 defmodule DSPEx.Integration.SIMBAReadinessTest do
   use ExUnit.Case, async: false
+  @moduletag :group_3
 
   alias DSPEx.{Teleprompter, Example, Predict, OptimizedProgram, Program}
   alias DSPEx.Test.MockProvider
@@ -317,7 +318,7 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
       MockProvider.reset()
 
       MockProvider.setup_bootstrap_mocks([
-        # Provide enough valid responses, some may not match but that's okay  
+        # Provide enough valid responses, some may not match but that's okay
         "Response 2",
         "Response 1",
         "Response 2",

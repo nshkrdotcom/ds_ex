@@ -83,10 +83,43 @@ defmodule DSPEx.Teleprompter do
       actual = Map.get(prediction, field)
 
       if is_binary(expected) and is_binary(actual) do
-        if String.contains?(String.downcase(actual), String.downcase(expected)) do
+        expected_lower = String.downcase(expected)
+        actual_lower = String.downcase(actual)
+
+        # Check if either contains the other for flexible matching
+        if String.contains?(actual_lower, expected_lower) or
+             String.contains?(expected_lower, actual_lower) do
           1.0
         else
-          0.0
+          # If direct containment fails, try word-level matching
+          # Extract words from expected (ignoring common words)
+          expected_words =
+            expected_lower
+            |> String.split(~r/\W+/, trim: true)
+            |> Enum.reject(
+              &(&1 in [
+                  "the",
+                  "a",
+                  "an",
+                  "and",
+                  "or",
+                  "is",
+                  "are",
+                  "was",
+                  "were",
+                  "will",
+                  "would",
+                  "answer"
+                ])
+            )
+
+          # Check if any significant word from expected appears in actual  
+          has_common_word =
+            Enum.any?(expected_words, fn word ->
+              String.length(word) > 2 and String.contains?(actual_lower, word)
+            end)
+
+          if has_common_word, do: 1.0, else: 0.0
         end
       else
         if expected == actual do

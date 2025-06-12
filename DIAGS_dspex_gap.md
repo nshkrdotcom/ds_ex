@@ -80,6 +80,9 @@ graph TD
     class T_TODO,CM_CACHE,CM_FUSE aggregationPhase
     class LLM processNode
     class UA,DSP,SOA,PAE,OT,CAL,ES subgraphTitleTop
+
+    %% Darker arrow styling for better visibility
+    linkStyle default stroke:#24292e,stroke-width:2px
 ```
 
 **Architectural Insights & Todos:**
@@ -146,6 +149,9 @@ graph TD
     class EXTEND_TODO aggregationPhase
     class COT_TODO,REACT_TODO processNode
     class CT,RT,FP subgraphTitleTop
+
+    %% Darker arrow styling for better visibility
+    linkStyle default stroke:#24292e,stroke-width:2px
 ```
 
 **Architectural Insights & Todos:**
@@ -248,6 +254,9 @@ graph TD
     class L resultNode
     class M aggregationPhase
     class IN,TP,OUT subgraphTitleTop
+
+    %% Darker arrow styling for better visibility
+    linkStyle default stroke:#24292e,stroke-width:2px
 ```
 **Architectural Insights & Todos:**
 

@@ -2,7 +2,24 @@ Of course! Based on the provided codebase, here is a series of diagrams illustra
 
 The process can be broken down into four main stages:
 1.  **High-Level Compilation Pipeline**: The overall flow from source files to a usable artifact.
-2.  **Schema Validation**: A deep dive into how BAML code is checked for correctness.
+2.  **Schema Validation**: A d    %% BAML-inspired styling
+    classDef setupPhase fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff
+    classDef concurrentEngine fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff
+    classDef taskNode fill:#22d3ee,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef processNode fill:#67e8f9,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef resultNode fill:#a7f3d0,stroke:#059669,stroke-width:1px,color:#0f172a
+    classDef aggregationPhase fill:#f3f4f6,stroke:#6b7280,stroke-width:2px,color:#374151
+    classDef subgraphTitleTop fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#0f172a
+
+    class A setupPhase
+    class B,C,D,E,F concurrentEngine
+    class Diagnostics1 taskNode
+    class G,H processNode
+    class I resultNode
+    class InputGen,ValidationLoading,OutputConf,DownstreamImpact subgraphTitleTop
+
+    %% BAML brand styling for arrows
+    linkStyle default stroke:#0e7490,stroke-width:2pxBAML code is checked for correctness.
 3.  **AST to IR Transformation**: How the parsed code is converted into a more structured Intermediate Representation (IR).
 4.  **IR Hashing & Signatures**: An advanced mechanism for change detection and caching.
 
@@ -36,20 +53,23 @@ graph TD
     C --> D
     C --> E
 
-    %% Elixir-inspired styling
-    classDef setupPhase fill:#4e2a8e,stroke:#24292e,stroke-width:2px,color:#fff
-    classDef concurrentEngine fill:#7c4dbd,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef taskNode fill:#9b72d0,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef processNode fill:#b89ce0,stroke:#4e2a8e,stroke-width:2px,color:#24292e
-    classDef resultNode fill:#d4c5ec,stroke:#4e2a8e,stroke-width:1px,color:#24292e
-    classDef aggregationPhase fill:#f5f5f5,stroke:#666,stroke-width:2px,color:#24292e
-    classDef subgraphTitleTop fill:#e6e0f0,stroke:#b89ce0,stroke-width:2px,color:#24292e
+    %% BAML-inspired styling
+    classDef setupPhase fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff
+    classDef concurrentEngine fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff
+    classDef taskNode fill:#22d3ee,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef processNode fill:#67e8f9,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef resultNode fill:#a7f3d0,stroke:#059669,stroke-width:1px,color:#0f172a
+    classDef aggregationPhase fill:#f3f4f6,stroke:#6b7280,stroke-width:2px,color:#374151
+    classDef subgraphTitleTop fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#0f172a
 
     class A setupPhase
     class B concurrentEngine
     class C taskNode
     class D,E resultNode
     class Input,ParserDB,Core,Output subgraphTitleTop
+
+    %% BAML brand styling for arrows
+    linkStyle default stroke:#0e7490,stroke-width:2px
 ```
 
 **Explanation:**
@@ -77,10 +97,10 @@ graph TD
 
     subgraph ValidationPipeline["Validation Pipeline src/validate/validation_pipeline.rs"]
         Start(Start Validation)
-        LoadGenerators[1. Load Generators src/validate/generator_loader]
-        RunValidations[2. Run Validation Checks]
-        ValidateTests[3. Validate test blocks Scoped Validation]
-        Finalize[4. Finalize & Link]
+        LoadGenerators[1 Load Generators src/validate/generator_loader]
+        RunValidations[2 Run Validation Checks]
+        ValidateTests[3 Validate test blocks Scoped Validation]
+        Finalize[4 Finalize & Link]
     end
     
     subgraph ValidationChecks["Validation Checks in parallel"]
@@ -107,20 +127,23 @@ graph TD
     ValidateTests --> Finalize
     Finalize --> Diagnostics
     
-    %% Elixir-inspired styling
-    classDef setupPhase fill:#4e2a8e,stroke:#24292e,stroke-width:2px,color:#fff
-    classDef concurrentEngine fill:#7c4dbd,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef taskNode fill:#9b72d0,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef processNode fill:#b89ce0,stroke:#4e2a8e,stroke-width:2px,color:#24292e
-    classDef resultNode fill:#d4c5ec,stroke:#4e2a8e,stroke-width:1px,color:#24292e
-    classDef aggregationPhase fill:#f5f5f5,stroke:#666,stroke-width:2px,color:#24292e
-    classDef subgraphTitleTop fill:#e6e0f0,stroke:#b89ce0,stroke-width:2px,color:#24292e
+    %% BAML-inspired styling
+    classDef setupPhase fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff
+    classDef concurrentEngine fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff
+    classDef taskNode fill:#22d3ee,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef processNode fill:#67e8f9,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef resultNode fill:#a7f3d0,stroke:#059669,stroke-width:1px,color:#0f172a
+    classDef aggregationPhase fill:#f3f4f6,stroke:#6b7280,stroke-width:2px,color:#374151
+    classDef subgraphTitleTop fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#0f172a
 
     class AST setupPhase
     class Start,LoadGenerators,RunValidations,ValidateTests,Finalize concurrentEngine
     class A,B,C,D,E,F,G,H taskNode
     class Diagnostics resultNode
     class InputAST,ValidationPipeline,ValidationChecks,OutputDiag subgraphTitleTop
+
+    %% BAML brand styling for arrows
+    linkStyle default stroke:#0e7490,stroke-width:2px
 ```
 
 **Explanation:**
@@ -176,14 +199,14 @@ graph TD
     
     IRNodes --> IRStruct
 
-    %% Elixir-inspired styling
-    classDef setupPhase fill:#4e2a8e,stroke:#24292e,stroke-width:2px,color:#fff
-    classDef concurrentEngine fill:#7c4dbd,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef taskNode fill:#9b72d0,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef processNode fill:#b89ce0,stroke:#4e2a8e,stroke-width:2px,color:#24292e
-    classDef resultNode fill:#d4c5ec,stroke:#4e2a8e,stroke-width:1px,color:#24292e
-    classDef aggregationPhase fill:#f5f5f5,stroke:#666,stroke-width:2px,color:#24292e
-    classDef subgraphTitleTop fill:#e6e0f0,stroke:#b89ce0,stroke-width:2px,color:#24292e
+    %% BAML-inspired styling
+    classDef setupPhase fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff
+    classDef concurrentEngine fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff
+    classDef taskNode fill:#22d3ee,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef processNode fill:#67e8f9,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef resultNode fill:#a7f3d0,stroke:#059669,stroke-width:1px,color:#0f172a
+    classDef aggregationPhase fill:#f3f4f6,stroke:#6b7280,stroke-width:2px,color:#374151
+    classDef subgraphTitleTop fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#0f172a
 
     class ValidatedAST setupPhase
     class Transform concurrentEngine
@@ -191,6 +214,9 @@ graph TD
     class ReprClass,ReprEnum,ReprFunction processNode
     class IRStruct,IRNodes resultNode
     class InputVal,IRTransform,IterateConvert,OutputIR subgraphTitleTop
+
+    %% BAML brand styling for arrows
+    linkStyle default stroke:#0e7490,stroke-width:2px
 ```
 
 **Explanation:**
@@ -221,13 +247,13 @@ graph TD
     subgraph HashingProcess["Hashing Process src/ir/ir_hasher/mod.rs"]
         StartHash[IRSignature new_from_ir]
         
-        Step1[1. Shallow Hash Calculation]
+        Step1[1 Shallow Hash Calculation]
         Step1_Desc[For each IR item Class Function etc<br/>create a hash of its own properties<br/>e.g. class name field names]
         
-        Step2[2. Dependency Analysis]
+        Step2[2 Dependency Analysis]
         Step2_Desc[Each IR item declares its dependencies<br/>e.g. A Function depends on its argument Types]
         
-        Step3[3. Recursive Signature Generation]
+        Step3[3 Recursive Signature Generation]
         Step3_Desc[Final Hash =<br/>Hash ShallowHash +<br/>Hash Dep1_Name + Dep1_FinalHash +<br/>Hash Dep2_Name + Dep2_FinalHash + ...]
     end
 
@@ -246,20 +272,23 @@ graph TD
     Step3 --> Signatures
     Signatures -.-> SigDesc
     
-    %% Elixir-inspired styling
-    classDef setupPhase fill:#4e2a8e,stroke:#24292e,stroke-width:2px,color:#fff
-    classDef concurrentEngine fill:#7c4dbd,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef taskNode fill:#9b72d0,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef processNode fill:#b89ce0,stroke:#4e2a8e,stroke-width:2px,color:#24292e
-    classDef resultNode fill:#d4c5ec,stroke:#4e2a8e,stroke-width:1px,color:#24292e
-    classDef aggregationPhase fill:#f5f5f5,stroke:#666,stroke-width:2px,color:#24292e
-    classDef subgraphTitleTop fill:#e6e0f0,stroke:#b89ce0,stroke-width:2px,color:#24292e
+    %% BAML-inspired styling
+    classDef setupPhase fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff
+    classDef concurrentEngine fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff
+    classDef taskNode fill:#22d3ee,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef processNode fill:#67e8f9,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef resultNode fill:#a7f3d0,stroke:#059669,stroke-width:1px,color:#0f172a
+    classDef aggregationPhase fill:#f3f4f6,stroke:#6b7280,stroke-width:2px,color:#374151
+    classDef subgraphTitleTop fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#0f172a
 
     class IR setupPhase
     class StartHash,Step1,Step2,Step3 concurrentEngine
     class Step1_Desc,Step2_Desc,Step3_Desc taskNode
     class Signatures,SigDesc resultNode
     class InputHash,HashingProcess,OutputSig subgraphTitleTop
+
+    %% BAML brand styling for arrows
+    linkStyle default stroke:#0e7490,stroke-width:2px
 ```
 
 **Explanation:**
@@ -292,11 +321,11 @@ graph TD
     end
 
     subgraph ValidationLoading["Validation & Loading src/validate/generator_loader/v2.rs"]
-        B[1. Parse Generator Block]
-        C{2. Check Property Allowlist}
-        D[3. Parse Required Keys e.g. output_type]
-        E[4. Parse Optional Keys e.g. output_dir version]
-        F[5. Construct Generator Struct]
+        B[1 Parse Generator Block]
+        C{2 Check Property Allowlist}
+        D[3 Parse Required Keys e.g. output_type]
+        E[4 Parse Optional Keys e.g. output_dir version]
+        F[5 Construct Generator Struct]
     end
 
     subgraph OutputConf["Output"]
@@ -318,14 +347,14 @@ graph TD
     G --> H
     H --> I
 
-    %% Elixir-inspired styling
-    classDef setupPhase fill:#4e2a8e,stroke:#24292e,stroke-width:2px,color:#fff
-    classDef concurrentEngine fill:#7c4dbd,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef taskNode fill:#9b72d0,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef processNode fill:#b89ce0,stroke:#4e2a8e,stroke-width:2px,color:#24292e
-    classDef resultNode fill:#d4c5ec,stroke:#4e2a8e,stroke-width:1px,color:#24292e
-    classDef aggregationPhase fill:#f5f5f5,stroke:#666,stroke-width:2px,color:#24292e
-    classDef subgraphTitleTop fill:#e6e0f0,stroke:#b89ce0,stroke-width:2px,color:#24292e
+    %% BAML-inspired styling
+    classDef setupPhase fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff
+    classDef concurrentEngine fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff
+    classDef taskNode fill:#22d3ee,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef processNode fill:#67e8f9,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef resultNode fill:#a7f3d0,stroke:#059669,stroke-width:1px,color:#0f172a
+    classDef aggregationPhase fill:#f3f4f6,stroke:#6b7280,stroke-width:2px,color:#374151
+    classDef subgraphTitleTop fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#0f172a
 
     class A setupPhase
     class B,C,D,E,F concurrentEngine
@@ -333,6 +362,9 @@ graph TD
     class G,H processNode
     class I resultNode
     class InputGen,ValidationLoading,OutputConf,DownstreamImpact subgraphTitleTop
+
+    %% BAML brand styling for arrows
+    linkStyle default stroke:#0e7490,stroke-width:2px
 ```
 
 **Explanation:**
@@ -387,20 +419,23 @@ graph TD
     CoerceArg --> CoercedValue
     DistributeConstraints --> Constraints
 
-    %% Elixir-inspired styling
-    classDef setupPhase fill:#4e2a8e,stroke:#24292e,stroke-width:2px,color:#fff
-    classDef concurrentEngine fill:#7c4dbd,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef taskNode fill:#9b72d0,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef processNode fill:#b89ce0,stroke:#4e2a8e,stroke-width:2px,color:#24292e
-    classDef resultNode fill:#d4c5ec,stroke:#4e2a8e,stroke-width:1px,color:#24292e
-    classDef aggregationPhase fill:#f5f5f5,stroke:#666,stroke-width:2px,color:#24292e
-    classDef subgraphTitleTop fill:#e6e0f0,stroke:#b89ce0,stroke-width:2px,color:#24292e
+    %% BAML-inspired styling
+    classDef setupPhase fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff
+    classDef concurrentEngine fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff
+    classDef taskNode fill:#22d3ee,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef processNode fill:#67e8f9,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef resultNode fill:#a7f3d0,stroke:#059669,stroke-width:1px,color:#0f172a
+    classDef aggregationPhase fill:#f3f4f6,stroke:#6b7280,stroke-width:2px,color:#374151
+    classDef subgraphTitleTop fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#0f172a
 
     class IR,UserInput setupPhase
     class HelperTraits concurrentEngine
     class Find,IsSubtype,DistributeType,CoerceArg,DistributeConstraints taskNode
     class Walker,BoolResult,TypedValue,CoercedValue,Constraints resultNode
     class InputHelp,CoreAPI,KeyHelperFunctions,OutputHelp subgraphTitleTop
+
+    %% BAML brand styling for arrows
+    linkStyle default stroke:#0e7490,stroke-width:2px
 ```
 
 **Explanation:**
@@ -460,20 +495,23 @@ graph TD
     H --> I
     H --> J
 
-    %% Elixir-inspired styling
-    classDef setupPhase fill:#4e2a8e,stroke:#24292e,stroke-width:2px,color:#fff
-    classDef concurrentEngine fill:#7c4dbd,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef taskNode fill:#9b72d0,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef processNode fill:#b89ce0,stroke:#4e2a8e,stroke-width:2px,color:#24292e
-    classDef resultNode fill:#d4c5ec,stroke:#4e2a8e,stroke-width:1px,color:#24292e
-    classDef aggregationPhase fill:#f5f5f5,stroke:#666,stroke-width:2px,color:#24292e
-    classDef subgraphTitleTop fill:#e6e0f0,stroke:#b89ce0,stroke-width:2px,color:#24292e
+    %% BAML-inspired styling
+    classDef setupPhase fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff
+    classDef concurrentEngine fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff
+    classDef taskNode fill:#22d3ee,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef processNode fill:#67e8f9,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef resultNode fill:#a7f3d0,stroke:#059669,stroke-width:1px,color:#0f172a
+    classDef aggregationPhase fill:#f3f4f6,stroke:#6b7280,stroke-width:2px,color:#374151
+    classDef subgraphTitleTop fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#0f172a
 
     class A setupPhase
     class B,D,G concurrentEngine
     class C,E,F,H taskNode
     class I,J resultNode
     class InputExpr,Pass1,Pass2,Pass3,OutputExpr subgraphTitleTop
+
+    %% BAML brand styling for arrows
+    linkStyle default stroke:#0e7490,stroke-width:2px
 ```
 
 **Explanation:**
@@ -525,14 +563,14 @@ graph TD
 
     TransformationLogic --> JSONSchema
     
-    %% Elixir-inspired styling
-    classDef setupPhase fill:#4e2a8e,stroke:#24292e,stroke-width:2px,color:#fff
-    classDef concurrentEngine fill:#7c4dbd,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef taskNode fill:#9b72d0,stroke:#4e2a8e,stroke-width:2px,color:#fff
-    classDef processNode fill:#b89ce0,stroke:#4e2a8e,stroke-width:2px,color:#24292e
-    classDef resultNode fill:#d4c5ec,stroke:#4e2a8e,stroke-width:1px,color:#24292e
-    classDef aggregationPhase fill:#f5f5f5,stroke:#666,stroke-width:2px,color:#24292e
-    classDef subgraphTitleTop fill:#e6e0f0,stroke:#b89ce0,stroke-width:2px,color:#24292e
+    %% BAML-inspired styling
+    classDef setupPhase fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff
+    classDef concurrentEngine fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff
+    classDef taskNode fill:#22d3ee,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef processNode fill:#67e8f9,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef resultNode fill:#a7f3d0,stroke:#059669,stroke-width:1px,color:#0f172a
+    classDef aggregationPhase fill:#f3f4f6,stroke:#6b7280,stroke-width:2px,color:#374151
+    classDef subgraphTitleTop fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#0f172a
 
     class IR setupPhase
     class Trait,ImplRoot,ImplTypes concurrentEngine
@@ -540,6 +578,9 @@ graph TD
     class Ref,Array,Nullable,EnumRef processNode
     class JSONSchema resultNode
     class InputJSON,CoreLogic,TransformationLogic,OutputJSON subgraphTitleTop
+
+    %% BAML brand styling for arrows
+    linkStyle default stroke:#0e7490,stroke-width:2px
 ```
 
 **Explanation:**

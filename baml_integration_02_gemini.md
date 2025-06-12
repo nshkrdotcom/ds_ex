@@ -107,6 +107,9 @@ graph TD
     class B4 resultNode
     class C1,C2 processNode
     class A,B,C subgraphTitleTop
+
+    %% Darker arrow styling for better visibility
+    linkStyle default stroke:#24292e,stroke-width:2px
 ```
 
 1.  **Integration Points:**
@@ -176,6 +179,9 @@ graph TD
     class C1 processNode
     class D1,D2,D3 concurrentEngine
     class A,B,C,D subgraphTitleTop
+
+    %% Darker arrow styling for better visibility
+    linkStyle default stroke:#24292e,stroke-width:2px
 ```
 
 1.  **Integration Points:**
@@ -234,6 +240,9 @@ graph TD
     class F,G processNode
     class H,I concurrentEngine
     class AA,BB,CC subgraphTitleTop
+
+    %% Darker arrow styling for better visibility
+    linkStyle default stroke:#24292e,stroke-width:2px
 ```
 
 1.  **Integration Points:**

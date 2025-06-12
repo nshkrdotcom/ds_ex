@@ -7,6 +7,7 @@ defmodule DSPEx.Integration.TeleprompterWorkflowAdvancedTest do
   correctly before SIMBA's sophisticated optimization algorithms are added.
   """
   use ExUnit.Case, async: false
+  @moduletag :group_3
 
   alias DSPEx.{Teleprompter, Example, Predict, OptimizedProgram, Program}
   alias DSPEx.Teleprompter.BootstrapFewShot

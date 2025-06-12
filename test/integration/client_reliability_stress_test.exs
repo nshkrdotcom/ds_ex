@@ -7,6 +7,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
   concurrent load patterns without failures or memory leaks.
   """
   use ExUnit.Case, async: false
+  @moduletag :group_3
 
   alias DSPEx.{Client, ClientManager}
 

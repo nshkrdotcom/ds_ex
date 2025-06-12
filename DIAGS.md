@@ -96,6 +96,9 @@ graph TD
     class Adapter,OptimizedProgram adapter
     class UI,CORE,ES subgraphTitleTop
     class CA,KM,CL,SA subgraphTitleNested
+
+    %% Darker arrow styling for better visibility
+    linkStyle default stroke:#24292e,stroke-width:2px
 ```
 
 **Workflow Description:**
@@ -203,6 +206,9 @@ graph TD
     class D,E,F,G processNode
     class H,I,J,K aggregationPhase
     class SETUP,CEE,RA subgraphTitleTop
+
+    %% Darker arrow styling for better visibility
+    linkStyle default stroke:#24292e,stroke-width:2px
 ```
 
 **Workflow Description:**
@@ -267,6 +273,9 @@ graph TD
     class P2a,P2b,P2c,QualityDemos evaluationNode
     class SelectedDemos,OptimizedStudent outputNode
     class INPUTS,OPT subgraphTitleTop
+
+    %% Darker arrow styling for better visibility
+    linkStyle default stroke:#24292e,stroke-width:2px
 ```
 
 **Workflow Description:**
@@ -336,6 +345,9 @@ graph TD
     class N liveMode
     class O failMode
     class UC,TS,RB subgraphTitleTop
+
+    %% Darker arrow styling for better visibility
+    linkStyle default stroke:#24292e,stroke-width:2px
 ```
 
 **Workflow Description:**

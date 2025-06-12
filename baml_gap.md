@@ -18,27 +18,21 @@ This diagram shows how BAML's formal configuration and validation can be integra
 
 ```mermaid
 graph TD
-    subgraph "A. Project Definition"
+    subgraph A["A. Project Definition"]
         A1["<b>mix.exs / dspex.exs</b><br><i>(Formalized Config - Todo)</i>"]
         A2["<b>User Program Module</b><br><i>(e.g., MyRAG.ex)</i>"]
-        style A1 fill:#f99,stroke:#333
-        style A2 fill:#9f9,stroke:#333
     end
 
-    subgraph "B. Compile-Time & App Start"
+    subgraph B["B. Compile-Time & App Start"]
         B1["<b>mix compile</b>"]
         B2["<b>ConfigManager (Enhanced)</b><br><i>(services/config_manager.ex)</i>"]
         B3["<b>Advanced Validator (New Todo)</b><br><i>Static Program Analysis</i>"]
         B4["<b>Compiler Warnings/Errors</b>"]
-        style B2 fill:#ff9,stroke:#333
-        style B3 fill:#f99,stroke:#333
     end
 
-    subgraph "C. Runtime"
+    subgraph C["C. Runtime"]
         C1["<b>DSPEx.Predict</b><br><i>(predict.ex)</i>"]
         C2["Runtime Options<br><i>(e.g., `Program.forward(..., model: 'gpt-4o')`)</i>"]
-        style C1 fill:#9f9,stroke:#333
-        style C2 fill:#9f9,stroke:#333
     end
 
     A1 -- "Loaded by" --> B2
@@ -49,6 +43,25 @@ graph TD
 
     B2 -- "Provides defaults to" --> C1
     C2 -- "Overrides defaults in" --> C1
+
+    %% BAML-inspired styling with semantic colors for DSPEx gaps
+    classDef setupPhase fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff
+    classDef concurrentEngine fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff
+    classDef taskNode fill:#22d3ee,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef processNode fill:#67e8f9,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef resultNode fill:#a7f3d0,stroke:#059669,stroke-width:1px,color:#0f172a
+    classDef todoNew fill:#f97316,stroke:#ea580c,stroke-width:2px,color:#fff
+    classDef needsChanges fill:#fbbf24,stroke:#f59e0b,stroke-width:2px,color:#0f172a
+    classDef subgraphTitleTop fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#0f172a
+
+    class A1,B3 todoNew
+    class B2 needsChanges
+    class A2,B1,C1,C2 setupPhase
+    class B4 resultNode
+    class A,B,C subgraphTitleTop
+
+    %% BAML brand styling for arrows
+    linkStyle default stroke:#0e7490,stroke-width:2px
 ```
 
 #### 1. Integration Points
@@ -72,32 +85,24 @@ This diagram shows how to create a static IR from signatures without breaking th
 
 ```mermaid
 graph TD
-    subgraph "A. Signature Definition (Compile-Time)"
+    subgraph A["A. Signature Definition (Compile-Time)"]
         A1["<b>`use DSPEx.Signature` Macro (Enhanced)</b><br><i>(signature.ex)</i>"]
-        style A1 fill:#ff9,stroke:#333
     end
     
-    subgraph "B. Generated Artifacts"
+    subgraph B["B. Generated Artifacts"]
         B1["<b>Runtime Signature Module</b><br><i>(As-is: used by Predict)</i>"]
         B2["<b>Static IR Struct (New)</b><br><i>(e.g., `%DSPEx.IR.Signature{...}`)</i>"]
         B3["<b>`__ir__/0` function (New)</b><br><i>Embedded in the runtime module</i>"]
-        style B1 fill:#9f9,stroke:#333
-        style B2 fill:#f99,stroke:#333
-        style B3 fill:#f99,stroke:#333
     end
 
-    subgraph "C. Runtime Execution Path (DSPy-style)"
+    subgraph C["C. Runtime Execution Path (DSPy-style)"]
         C1["<b>DSPEx.Predict</b><br><i>(predict.ex)</i>"]
-        style C1 fill:#9f9,stroke:#333
     end
 
-    subgraph "D. Static Tooling Path (BAML-style)"
+    subgraph D["D. Static Tooling Path (BAML-style)"]
         D1["<b>IR Helpers Module (New Todo)</b><br><i>(e.g., DSPEx.IR.Helpers)</i>"]
         D2["<b>DSPEx.Teleprompter</b><br><i>(teleprompter/bootstrap_fewshot.ex)</i>"]
         D3["<b>`mix dspex.validate` Task (New Todo)</b>"]
-        style D1 fill:#f99,stroke:#333
-        style D2 fill:#ff9,stroke:#333
-        style D3 fill:#f99,stroke:#333
     end
 
     A1 -- "Generates" --> B1
@@ -111,6 +116,25 @@ graph TD
     B3 -- "Provides IR to" --> D1
     D1 -- "Used by" --> D2
     D1 -- "Used by" --> D3
+
+    %% BAML-inspired styling with semantic colors for DSPEx gaps
+    classDef setupPhase fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff
+    classDef concurrentEngine fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff
+    classDef taskNode fill:#22d3ee,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef processNode fill:#67e8f9,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef resultNode fill:#a7f3d0,stroke:#059669,stroke-width:1px,color:#0f172a
+    classDef todoNew fill:#f97316,stroke:#ea580c,stroke-width:2px,color:#fff
+    classDef needsChanges fill:#fbbf24,stroke:#f59e0b,stroke-width:2px,color:#0f172a
+    classDef subgraphTitleTop fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#0f172a
+
+    class A1 needsChanges
+    class B1,C1 setupPhase
+    class B2,B3,D1,D3 todoNew
+    class D2 needsChanges
+    class A,B,C,D subgraphTitleTop
+
+    %% BAML brand styling for arrows
+    linkStyle default stroke:#0e7490,stroke-width:2px
 ```
 
 #### 1. Integration Points
@@ -135,32 +159,44 @@ This diagram shows the end-to-end lifecycle, incorporating the "nice-to-have" fe
 
 ```mermaid
 graph TD
-    subgraph "Phase 1: Definition & Compilation"
+    subgraph Phase1["Phase 1: Definition & Compilation"]
         A[User defines `MyRAG` module] --> B{mix compile}
         B --> C["<b>1. Advanced Validation</b><br><i>(New)</i> Checks if sub-module<br>signatures are compatible"]
         B --> D["<b>2. IR & Hash Generation</b><br><i>(New)</i> `use ...` macro generates<br>IR and `__hash__/0` function"]
-        style C fill:#f99,stroke:#333
-        style D fill:#f99,stroke:#333
     end
 
-    subgraph "Phase 2: Program Construction (Nice-to-have)"
+    subgraph Phase2["Phase 2: Program Construction (Nice-to-have)"]
         E["<b>Multi-Pass Instantiation (New Todo)</b><br>e.g., `DSPEx.ChainOfThought.new(base_sig)`"]
         F["Calls `Signature.extend` to create a new<br>signature IR with a `reasoning` field"]
         G["Instantiates an internal `DSPEx.Predict`<br>module with the new signature"]
-        style E fill:#f99,stroke:#333
     end
 
-    subgraph "Phase 3: Optimization & Execution"
+    subgraph Phase3["Phase 3: Optimization & Execution"]
         H["<b>Teleprompter (Enhanced)</b><br>Uses Program Hash to cache<br>expensive optimization runs"]
         I["<b>ClientManager (Enhanced)</b><br>Uses Program Hash + Input Hash<br>for smarter response caching"]
-        style H fill:#ff9,stroke:#333
-        style I fill:#ff9,stroke:#333
     end
 
     C & D --> E
     E --> F --> G
     G --> H & I
 
+    %% BAML-inspired styling with semantic colors for DSPEx gaps
+    classDef setupPhase fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff
+    classDef concurrentEngine fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff
+    classDef taskNode fill:#22d3ee,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef processNode fill:#67e8f9,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef resultNode fill:#a7f3d0,stroke:#059669,stroke-width:1px,color:#0f172a
+    classDef todoNew fill:#f97316,stroke:#ea580c,stroke-width:2px,color:#fff
+    classDef needsChanges fill:#fbbf24,stroke:#f59e0b,stroke-width:2px,color:#0f172a
+    classDef subgraphTitleTop fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#0f172a
+
+    class A,B setupPhase
+    class C,D,E,F,G todoNew
+    class H,I needsChanges
+    class Phase1,Phase2,Phase3 subgraphTitleTop
+
+    %% BAML brand styling for arrows
+    linkStyle default stroke:#0e7490,stroke-width:2px
 ```
 #### 1. Integration Points
 *   **Recursive Hashing (Nice-to-have):** The hash would be generated at compile time (`D`) and then consumed at runtime by the `ClientManager` (`I`) and the `Teleprompter` (`H`) for advanced caching.
@@ -215,38 +251,26 @@ This diagram illustrates how formalized configuration, advanced compile-time val
 
 ```mermaid
 graph TD
-    subgraph "A. Project Setup & Compile-Time"
+    subgraph A["A. Project Setup & Compile-Time"]
         A1["<b>(Must-Have)</b><br>Formal Config<br><i>(mix.exs / dspex.exs)</i>"]
         A2["User Program & Signature Modules<br><i>(e.g., MyRAG.ex, QASignature.ex)</i>"]
         A3["<b>(Must-Have)</b><br>Advanced Validator<br><i>(New Compile-Time Task)</i>"]
-
-        style A1 fill:#f99,stroke:#333
-        style A2 fill:#9f9,stroke:#333
-        style A3 fill:#f99,stroke:#333
     end
 
-    subgraph "B. Core Service Layer (Enhanced)"
+    subgraph B["B. Core Service Layer (Enhanced)"]
         B1["<b>ConfigManager (Enhanced)</b><br><i>services/config_manager.ex</i>"]
         B2["<b>Signature Macro (Enhanced)</b><br><i>signature.ex</i>"]
         B3["<b>(Must-Have)</b><br>IR Helpers Module<br><i>(New Module: DSPEx.IR.Helpers)</i>"]
-
-        style B1 fill:#ff9,stroke:#333
-        style B2 fill:#ff9,stroke:#333
-        style B3 fill:#f99,stroke:#333
     end
 
-    subgraph "C. Generated Artifacts"
+    subgraph C["C. Generated Artifacts"]
         C1["<b>Runtime Signature Module</b><br><i>(Existing Behavior)</i>"]
         C2["<b>(Must-Have)</b><br>Static IR Struct<br><i>(New Artifact)</i>"]
-        style C1 fill:#9f9,stroke:#333
-        style C2 fill:#f99,stroke:#333
     end
     
-    subgraph "D. Consumers of the Architecture"
+    subgraph D["D. Consumers of the Architecture"]
         D1["<b>Path 1: Coupled Runtime (DSPy-style)</b><br>DSPEx.Predict"]
         D2["<b>Path 2: Decoupled Tooling (BAML-style)</b><br>DSPEx.Teleprompter (Enhanced)"]
-        style D1 fill:#9f9,stroke:#333
-        style D2 fill:#ff9,stroke:#333
     end
 
     %% Flows
@@ -263,6 +287,24 @@ graph TD
     B3 -- "Used by" --> A3
     
     C1 -- "Used directly by" --> D1
+
+    %% BAML-inspired styling with semantic colors for DSPEx gaps
+    classDef setupPhase fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff
+    classDef concurrentEngine fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff
+    classDef taskNode fill:#22d3ee,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef processNode fill:#67e8f9,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef resultNode fill:#a7f3d0,stroke:#059669,stroke-width:1px,color:#0f172a
+    classDef todoNew fill:#f97316,stroke:#ea580c,stroke-width:2px,color:#fff
+    classDef needsChanges fill:#fbbf24,stroke:#f59e0b,stroke-width:2px,color:#0f172a
+    classDef subgraphTitleTop fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#0f172a
+
+    class A1,A3,B3,C2 todoNew
+    class B1,B2,D2 needsChanges
+    class A2,C1,D1 setupPhase
+    class A,B,C,D subgraphTitleTop
+
+    %% BAML brand styling for arrows
+    linkStyle default stroke:#0e7490,stroke-width:2px
 ```
 
 #### 1. Integration Points
@@ -289,27 +331,22 @@ This diagram shows how more advanced features like multi-pass construction and r
 
 ```mermaid
 graph TD
-    subgraph "A. Definition & Compile Time"
+    subgraph A["A. Definition & Compile Time"]
         A1[User Defines Program] --> A2{"`mix compile`"}
         A2 --> A3["<b>(Nice-to-Have)</b><br>Generate `__hash__/0` function<br>for Signatures and Programs"]
-        style A3 fill:#f99,stroke:#333
     end
 
-    subgraph "B. Program Instantiation"
+    subgraph B["B. Program Instantiation"]
         B1["<b>(Nice-to-Have) Multi-Pass Construction</b><br>e.g., `ChainOfThought.new(base_sig)`"]
         B2["1. Calls `Signature.extend` (Todo)"]
         B3["2. Creates internal `Predict` instance"]
         B4["Returns a new, complex Program"]
-        style B1 fill:#f99,stroke:#333
     end
     
-    subgraph "C. Runtime Caching (Enhanced)"
+    subgraph C["C. Runtime Caching (Enhanced)"]
         C1["<b>Teleprompter (Enhanced)</b>"]
         C2["<b>ClientManager (Enhanced)</b>"]
         C3["<b>(Nice-to-Have) Logic-Aware Cache Key</b><br>Key = Hash(Program) + Hash(Inputs)"]
-        style C1 fill:#ff9,stroke:#333
-        style C2 fill:#ff9,stroke:#333
-        style C3 fill:#f99,stroke:#333
     end
 
     A3 --> C3
@@ -318,6 +355,24 @@ graph TD
     
     A1 --> B1
     B1 --> B2 --> B3 --> B4
+
+    %% BAML-inspired styling with semantic colors for DSPEx gaps
+    classDef setupPhase fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff
+    classDef concurrentEngine fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff
+    classDef taskNode fill:#22d3ee,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef processNode fill:#67e8f9,stroke:#0891b2,stroke-width:2px,color:#0f172a
+    classDef resultNode fill:#a7f3d0,stroke:#059669,stroke-width:1px,color:#0f172a
+    classDef todoNew fill:#f97316,stroke:#ea580c,stroke-width:2px,color:#fff
+    classDef needsChanges fill:#fbbf24,stroke:#f59e0b,stroke-width:2px,color:#0f172a
+    classDef subgraphTitleTop fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#0f172a
+
+    class A1,A2 setupPhase
+    class A3,B1,B2,B3,B4,C3 todoNew
+    class C1,C2 needsChanges
+    class A,B,C subgraphTitleTop
+
+    %% BAML brand styling for arrows
+    linkStyle default stroke:#0e7490,stroke-width:2px
 ```
 
 #### 1. Integration Points

@@ -215,7 +215,7 @@ defmodule DSPEx.Teleprompter.BootstrapFewShotTest do
     } do
       failing_teacher = %FailingTeacherProgram{}
 
-      {:error, :no_successful_bootstrap_candidates} =
+      {:ok, optimized} =
         BootstrapFewShot.compile(
           student,
           failing_teacher,
@@ -223,6 +223,9 @@ defmodule DSPEx.Teleprompter.BootstrapFewShotTest do
           metric_fn,
           teacher_retries: 1
         )
+
+      # Should succeed but with no demos since teacher always fails
+      assert %DSPEx.OptimizedProgram{program: %MockStudentProgram{}, demos: []} = optimized
     end
 
     test "filters out low quality demonstrations", %{

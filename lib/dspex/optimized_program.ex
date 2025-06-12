@@ -28,6 +28,9 @@ defmodule DSPEx.OptimizedProgram do
   """
   @spec new(struct(), [DSPEx.Example.t()], map()) :: t()
   def new(program, demos, metadata \\ %{}) do
+    # Handle nil metadata gracefully
+    safe_metadata = metadata || %{}
+
     %__MODULE__{
       program: program,
       demos: demos,
@@ -37,7 +40,7 @@ defmodule DSPEx.OptimizedProgram do
             optimized_at: DateTime.utc_now(),
             demo_count: length(demos)
           },
-          metadata
+          safe_metadata
         )
     }
   end
@@ -99,4 +102,24 @@ defmodule DSPEx.OptimizedProgram do
         metadata: Map.put(optimized.metadata, :demo_count, length(new_demos))
     }
   end
+
+  @doc """
+  Update the wrapped program while preserving demos and metadata.
+  """
+  @spec update_program(t(), struct()) :: t()
+  def update_program(%__MODULE__{} = optimized, new_program) do
+    %{optimized | program: new_program}
+  end
+
+  @doc """
+  Check if a program natively supports demonstrations.
+
+  Returns true if the program struct has a `demos` field, false otherwise.
+  """
+  @spec supports_native_demos?(struct()) :: boolean()
+  def supports_native_demos?(program) when is_struct(program) do
+    Map.has_key?(program, :demos)
+  end
+
+  def supports_native_demos?(_), do: false
 end

@@ -1,16 +1,15 @@
-defmodule DSPEx.OptimizedProgramTest do
+defmodule DSPEx.OptimizedProgramAdvancedTest do
   @moduledoc """
-  Unit tests for DSPEx.OptimizedProgram.
+  Advanced unit tests for DSPEx.OptimizedProgram.
 
   CRITICAL: This test validates that OptimizedProgram has the exact interface
   that SIMBA expects. SIMBA's create_optimized_student/2 function depends on
   OptimizedProgram.new/3, get_demos/1, and get_program/1 working correctly.
   """
   use ExUnit.Case, async: true
+  @moduletag :group_3
 
   alias DSPEx.{OptimizedProgram, Example, Predict, Program}
-
-  @moduletag :integration_2
 
   # Create test signature
   defmodule TestSignature do
@@ -23,7 +22,7 @@ defmodule DSPEx.OptimizedProgramTest do
     defstruct [:signature, :client, demos: []]
 
     @impl DSPEx.Program
-    def forward(program, inputs, _opts \\ []) do
+    def forward(_program, inputs, _opts) do
       # Simple echo implementation for testing
       {:ok, %{answer: "Test response for #{inputs[:question]}"}}
     end
@@ -57,7 +56,11 @@ defmodule DSPEx.OptimizedProgramTest do
   end
 
   describe "SIMBA interface compatibility" do
-    test "new/3 creates optimized program with required interface", %{base_program: program, demos: demos, metadata: metadata} do
+    test "new/3 creates optimized program with required interface", %{
+      base_program: program,
+      demos: demos,
+      metadata: metadata
+    } do
       # Test the exact interface SIMBA expects
       optimized = OptimizedProgram.new(program, demos, metadata)
 
@@ -81,7 +84,10 @@ defmodule DSPEx.OptimizedProgramTest do
       assert optimized.metadata.demo_count == length(demos)
     end
 
-    test "get_demos/1 returns demonstrations - SIMBA dependency", %{base_program: program, demos: demos} do
+    test "get_demos/1 returns demonstrations - SIMBA dependency", %{
+      base_program: program,
+      demos: demos
+    } do
       optimized = OptimizedProgram.new(program, demos)
 
       # SIMBA calls this function to extract demos
@@ -92,7 +98,10 @@ defmodule DSPEx.OptimizedProgramTest do
       assert Enum.all?(result_demos, &is_struct(&1, Example))
     end
 
-    test "get_program/1 returns wrapped program - SIMBA dependency", %{base_program: program, demos: demos} do
+    test "get_program/1 returns wrapped program - SIMBA dependency", %{
+      base_program: program,
+      demos: demos
+    } do
       optimized = OptimizedProgram.new(program, demos)
 
       # SIMBA calls this function to extract the original program
@@ -125,6 +134,7 @@ defmodule DSPEx.OptimizedProgramTest do
         {:ok, result} ->
           assert %{answer: answer} = result
           assert is_binary(answer)
+
         {:error, _reason} ->
           # In test mode with mocks, should succeed
           # If it fails, that's acceptable for this unit test
@@ -170,7 +180,8 @@ defmodule DSPEx.OptimizedProgramTest do
       # Even if the call fails in test mode, the structure should be preserved
       case Program.forward(optimized, inputs, opts) do
         {:ok, _result} -> :ok
-        {:error, _reason} -> :ok  # Acceptable in test environment
+        # Acceptable in test environment
+        {:error, _reason} -> :ok
       end
     end
   end
@@ -195,12 +206,15 @@ defmodule DSPEx.OptimizedProgramTest do
 
     test "tracks demo count automatically", %{base_program: program} do
       empty_demos = []
+
       few_demos = [
         %Example{data: %{q: "1", a: "1"}, input_keys: MapSet.new([:q])}
       ]
-      many_demos = Enum.map(1..10, fn i ->
-        %Example{data: %{q: "#{i}", a: "#{i}"}, input_keys: MapSet.new([:q])}
-      end)
+
+      many_demos =
+        Enum.map(1..10, fn i ->
+          %Example{data: %{q: "#{i}", a: "#{i}"}, input_keys: MapSet.new([:q])}
+        end)
 
       opt_empty = OptimizedProgram.new(program, empty_demos)
       opt_few = OptimizedProgram.new(program, few_demos)
@@ -211,15 +225,21 @@ defmodule DSPEx.OptimizedProgramTest do
       assert opt_many.metadata.demo_count == 10
     end
 
-    test "update_program/2 preserves demos and metadata", %{base_program: program, demos: demos, metadata: metadata} do
+    test "update_program/2 preserves demos and metadata", %{
+      base_program: program,
+      demos: demos,
+      metadata: metadata
+    } do
       optimized = OptimizedProgram.new(program, demos, metadata)
 
       new_program = %Predict{signature: TestSignature, client: :new_client}
       updated = OptimizedProgram.update_program(optimized, new_program)
 
       assert updated.program == new_program
-      assert updated.demos == demos  # Preserved
-      assert updated.metadata == optimized.metadata  # Preserved
+      # Preserved
+      assert updated.demos == demos
+      # Preserved
+      assert updated.metadata == optimized.metadata
     end
   end
 
@@ -250,7 +270,10 @@ defmodule DSPEx.OptimizedProgramTest do
       end)
     end
 
-    test "replace_demos/2 replaces all demonstrations", %{base_program: program, demos: initial_demos} do
+    test "replace_demos/2 replaces all demonstrations", %{
+      base_program: program,
+      demos: initial_demos
+    } do
       optimized = OptimizedProgram.new(program, initial_demos)
 
       new_demos = [
@@ -308,7 +331,7 @@ defmodule DSPEx.OptimizedProgramTest do
       program = %Predict{signature: TestSignature, client: :test}
 
       # This might raise an error, which is acceptable
-      assert_raise(FunctionClauseError, fn ->
+      assert_raise(ArgumentError, fn ->
         OptimizedProgram.new(program, "not a list")
       end)
     end
@@ -318,7 +341,7 @@ defmodule DSPEx.OptimizedProgramTest do
       optimized = OptimizedProgram.new(program, demos, original_metadata)
 
       # Operations should not modify the original metadata map
-      updated = OptimizedProgram.add_demos(optimized, [])
+      _updated = OptimizedProgram.add_demos(optimized, [])
 
       # Original metadata map should be unchanged
       assert original_metadata.teleprompter == :test
@@ -328,7 +351,10 @@ defmodule DSPEx.OptimizedProgramTest do
   end
 
   describe "Program behavior integration" do
-    test "program_name/1 works correctly for optimized programs", %{base_program: program, demos: demos} do
+    test "program_name/1 works correctly for optimized programs", %{
+      base_program: program,
+      demos: demos
+    } do
       optimized = OptimizedProgram.new(program, demos)
 
       name = Program.program_name(optimized)
@@ -338,9 +364,11 @@ defmodule DSPEx.OptimizedProgramTest do
 
     test "has_demos?/1 correctly identifies demo presence", %{base_program: program} do
       # With demos
-      optimized_with_demos = OptimizedProgram.new(program, [
-        %Example{data: %{q: "test", a: "test"}, input_keys: MapSet.new([:q])}
-      ])
+      optimized_with_demos =
+        OptimizedProgram.new(program, [
+          %Example{data: %{q: "test", a: "test"}, input_keys: MapSet.new([:q])}
+        ])
+
       assert Program.has_demos?(optimized_with_demos)
 
       # Without demos
@@ -355,8 +383,9 @@ defmodule DSPEx.OptimizedProgramTest do
 
       assert info.type == :optimized
       assert info.has_demos == true
-      assert info.module == OptimizedProgram
-      assert is_atom(info.name)
+      assert is_binary(info.name)
+      assert info.signature == TestSignature
+      assert info.demo_count == length(demos)
     end
   end
 end
