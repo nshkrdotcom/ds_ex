@@ -2,13 +2,21 @@ defmodule SIMBA.TestHelper do
   @moduledoc """
   Test helper functions for SIMBA unit tests.
   Provides common utilities for creating test data and mocking dependencies.
+
+  Phase 1: Basic helper functions without dependencies on Bucket/Trajectory modules.
+  Full functionality will be restored in later phases.
   """
 
-  alias DSPEx.Teleprompter.SIMBA.{Bucket, Trajectory}
-  alias DSPEx.{Example, Program}
+  import ExUnit.Assertions
+
+  # Phase 1: Comment out dependencies that will be added in later phases
+  # alias DSPEx.Teleprompter.SIMBA.{Bucket, Trajectory}
+  # alias DSPEx.{Example, Program}
+  alias DSPEx.Example
 
   @doc """
   Creates a test program with basic structure.
+  Phase 1: Returns a simple map structure compatible with validation.
   """
   def create_test_program(opts \\ []) do
     inputs = Keyword.get(opts, :inputs, [:question])
@@ -16,10 +24,12 @@ defmodule SIMBA.TestHelper do
     demos = Keyword.get(opts, :demos, [])
     predictors = Keyword.get(opts, :predictors, [])
 
-    %Program{
+    # Phase 1: Return a simple map that satisfies validation
+    %{
       signature: %{inputs: inputs, outputs: outputs},
       predictors: predictors,
-      demos: demos
+      demos: demos,
+      type: :test_program
     }
   end
 
@@ -32,43 +42,46 @@ defmodule SIMBA.TestHelper do
     Example.new(example_data)
   end
 
-  @doc """
-  Creates a test trajectory with specified score and options.
-  """
-  def create_test_trajectory(score, opts \\ []) do
-    program = Keyword.get(opts, :program, create_test_program())
-    example = Keyword.get(opts, :example, create_test_example())
-    inputs = Keyword.get(opts, :inputs, %{question: "test"})
-    outputs = Keyword.get(opts, :outputs, %{answer: "test"})
+  # Phase 1: Trajectory and Bucket functions commented out until dependencies are available
+  # Will be restored in Phase 2 when Trajectory and Bucket modules are moved
 
-    trajectory_opts = Keyword.drop(opts, [:program, :example, :inputs, :outputs])
+  # @doc """
+  # Creates a test trajectory with specified score and options.
+  # """
+  # def create_test_trajectory(score, opts \\ []) do
+  #   program = Keyword.get(opts, :program, create_test_program())
+  #   example = Keyword.get(opts, :example, create_test_example())
+  #   inputs = Keyword.get(opts, :inputs, %{question: "test"})
+  #   outputs = Keyword.get(opts, :outputs, %{answer: "test"})
+  #
+  #   trajectory_opts = Keyword.drop(opts, [:program, :example, :inputs, :outputs])
+  #
+  #   Trajectory.new(program, example, inputs, outputs, score, trajectory_opts)
+  # end
 
-    Trajectory.new(program, example, inputs, outputs, score, trajectory_opts)
-  end
+  # @doc """
+  # Creates a test bucket with trajectories of specified scores.
+  # """
+  # def create_test_bucket(scores, opts \\ []) do
+  #   trajectories = Enum.map(scores, fn score ->
+  #     create_test_trajectory(score, opts)
+  #   end)
+  #
+  #   bucket_opts = Keyword.take(opts, [:metadata])
+  #   Bucket.new(trajectories, bucket_opts)
+  # end
 
-  @doc """
-  Creates a test bucket with trajectories of specified scores.
-  """
-  def create_test_bucket(scores, opts \\ []) do
-    trajectories = Enum.map(scores, fn score ->
-      create_test_trajectory(score, opts)
-    end)
-
-    bucket_opts = Keyword.take(opts, [:metadata])
-    Bucket.new(trajectories, bucket_opts)
-  end
-
-  @doc """
-  Creates multiple test buckets with different score patterns.
-  """
-  def create_test_buckets(bucket_specs) do
-    Enum.map(bucket_specs, fn
-      scores when is_list(scores) ->
-        create_test_bucket(scores)
-      {scores, opts} ->
-        create_test_bucket(scores, opts)
-    end)
-  end
+  # @doc """
+  # Creates multiple test buckets with different score patterns.
+  # """
+  # def create_test_buckets(bucket_specs) do
+  #   Enum.map(bucket_specs, fn
+  #     scores when is_list(scores) ->
+  #       create_test_bucket(scores)
+  #     {scores, opts} ->
+  #       create_test_bucket(scores, opts)
+  #   end)
+  # end
 
   @doc """
   Generates a list of test examples for training/testing.
@@ -124,8 +137,13 @@ defmodule SIMBA.TestHelper do
   """
   def assert_valid_statistics(stats) do
     required_keys = [
-      :trajectory_count, :successful_count, :max_score,
-      :min_score, :avg_score, :score_variance, :improvement_potential
+      :trajectory_count,
+      :successful_count,
+      :max_score,
+      :min_score,
+      :avg_score,
+      :score_variance,
+      :improvement_potential
     ]
 
     for key <- required_keys do
@@ -141,36 +159,39 @@ defmodule SIMBA.TestHelper do
     assert is_boolean(stats.improvement_potential)
   end
 
-  @doc """
-  Asserts that bucket has expected structure and values.
-  """
-  def assert_valid_bucket(bucket) do
-    assert %Bucket{} = bucket
-    assert is_list(bucket.trajectories)
-    assert is_number(bucket.max_score)
-    assert is_number(bucket.min_score)
-    assert is_number(bucket.avg_score)
-    assert is_number(bucket.max_to_min_gap)
-    assert is_number(bucket.max_to_avg_gap)
-    assert is_map(bucket.metadata)
-  end
+  # Phase 1: Bucket and Trajectory assertion functions commented out until dependencies are available
+  # Will be restored in Phase 2
 
-  @doc """
-  Asserts that trajectory has expected structure and values.
-  """
-  def assert_valid_trajectory(trajectory) do
-    assert %Trajectory{} = trajectory
-    assert is_struct(trajectory.program)
-    assert %Example{} = trajectory.example
-    assert is_map(trajectory.inputs)
-    assert is_map(trajectory.outputs)
-    assert is_number(trajectory.score)
-  end
+  # @doc """
+  # Asserts that bucket has expected structure and values.
+  # """
+  # def assert_valid_bucket(bucket) do
+  #   assert %Bucket{} = bucket
+  #   assert is_list(bucket.trajectories)
+  #   assert is_number(bucket.max_score)
+  #   assert is_number(bucket.min_score)
+  #   assert is_number(bucket.avg_score)
+  #   assert is_number(bucket.max_to_min_gap)
+  #   assert is_number(bucket.max_to_avg_gap)
+  #   assert is_map(bucket.metadata)
+  # end
+
+  # @doc """
+  # Asserts that trajectory has expected structure and values.
+  # """
+  # def assert_valid_trajectory(trajectory) do
+  #   assert %Trajectory{} = trajectory
+  #   assert is_struct(trajectory.program)
+  #   assert %Example{} = trajectory.example
+  #   assert is_map(trajectory.inputs)
+  #   assert is_map(trajectory.outputs)
+  #   assert is_number(trajectory.score)
+  # end
 
   @doc """
   Simulates program execution for testing purposes.
   """
-  def mock_program_forward(program, inputs, result \\ nil) do
+  def mock_program_forward(_program, _inputs, result \\ nil) do
     default_result = {:ok, %{answer: "mocked answer"}}
     result || default_result
   end
@@ -180,6 +201,7 @@ defmodule SIMBA.TestHelper do
   """
   def create_test_progress_callback do
     parent = self()
+
     fn progress ->
       send(parent, {:progress_update, progress})
     end
