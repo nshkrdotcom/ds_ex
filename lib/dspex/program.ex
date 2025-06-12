@@ -82,7 +82,10 @@ defmodule DSPEx.Program do
     # PERFORMANCE INSTRUMENTATION - Start
     total_start = System.monotonic_time()
 
-    # Step 1: Correlation ID generation (optimized for performance)
+    # Step 1: Extract timeout option (SIMBA critical feature)
+    timeout = Keyword.get(opts, :timeout, 30_000)
+
+    # Step 2: Correlation ID generation (optimized for performance)
     correlation_start = System.monotonic_time()
 
     correlation_id =
@@ -102,7 +105,7 @@ defmodule DSPEx.Program do
     _correlation_duration =
       System.convert_time_unit(System.monotonic_time() - correlation_start, :native, :microsecond)
 
-    # Step 2: Program name resolution
+    # Step 3: Program name resolution
     program_name_start = System.monotonic_time()
     program_name = program_name(program)
 
@@ -113,7 +116,7 @@ defmodule DSPEx.Program do
         :microsecond
       )
 
-    # Step 3: Start telemetry
+    # Step 4: Start telemetry
     telemetry_start_time = System.monotonic_time()
     start_time = System.monotonic_time()
 
@@ -123,7 +126,8 @@ defmodule DSPEx.Program do
       %{
         program: program_name,
         correlation_id: correlation_id,
-        input_count: map_size(inputs)
+        input_count: map_size(inputs),
+        timeout: timeout
       }
     )
 
@@ -134,14 +138,40 @@ defmodule DSPEx.Program do
         :microsecond
       )
 
-    # Step 4: Actual program execution
+    # Step 5: Actual program execution with optional timeout wrapper (SIMBA critical feature)
     execution_start = System.monotonic_time()
-    result = program.__struct__.forward(program, inputs, opts)
+
+    result = if timeout != 30_000 do
+      # Custom timeout specified - use task wrapper for timeout support
+      task = Task.async(fn ->
+        try do
+          program.__struct__.forward(program, inputs, opts)
+        catch
+          kind, reason ->
+            {:error, {kind, reason}}
+        end
+      end)
+
+            case Task.yield(task, timeout) do
+        {:ok, {:error, {kind, reason}}} ->
+          # Re-raise the original exception to maintain compatibility
+          :erlang.raise(kind, reason, [])
+        {:ok, program_result} ->
+          program_result
+        nil ->
+          # Timeout occurred - kill the task and return timeout error
+          Task.shutdown(task, :brutal_kill)
+          {:error, :timeout}
+      end
+    else
+      # Default timeout - execute directly for backward compatibility and performance
+      program.__struct__.forward(program, inputs, opts)
+    end
 
     _execution_duration =
       System.convert_time_unit(System.monotonic_time() - execution_start, :native, :microsecond)
 
-    # Step 5: Stop telemetry
+    # Step 6: Stop telemetry
     telemetry_stop_start = System.monotonic_time()
     duration = System.monotonic_time() - start_time
     success = match?({:ok, _}, result)
@@ -151,7 +181,9 @@ defmodule DSPEx.Program do
       %{duration: duration, success: success},
       %{
         program: program_name,
-        correlation_id: correlation_id
+        correlation_id: correlation_id,
+        timeout_used: timeout,
+        was_timeout: match?({:error, :timeout}, result)
       }
     )
 

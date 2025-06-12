@@ -60,7 +60,22 @@ defmodule DSPEx.Services.TelemetrySetup do
       [:dspex, :adapter, :parse, :start],
       [:dspex, :adapter, :parse, :stop],
       [:dspex, :signature, :validation, :start],
-      [:dspex, :signature, :validation, :stop]
+      [:dspex, :signature, :validation, :stop],
+      [:dspex, :program, :forward, :start],
+      [:dspex, :program, :forward, :stop],
+      [:dspex, :teleprompter, :bootstrap, :start],
+      [:dspex, :teleprompter, :bootstrap, :stop],
+      # SIMBA-specific telemetry events
+      [:dspex, :teleprompter, :simba, :start],
+      [:dspex, :teleprompter, :simba, :stop],
+      [:dspex, :teleprompter, :simba, :optimization, :start],
+      [:dspex, :teleprompter, :simba, :optimization, :stop],
+      [:dspex, :teleprompter, :simba, :instruction, :start],
+      [:dspex, :teleprompter, :simba, :instruction, :stop],
+      [:dspex, :teleprompter, :simba, :trial, :start],
+      [:dspex, :teleprompter, :simba, :trial, :stop],
+      [:dspex, :teleprompter, :simba, :bayesian, :iteration, :start],
+      [:dspex, :teleprompter, :simba, :bayesian, :iteration, :stop]
     ]
 
     # Attach Foundation's telemetry handlers
@@ -429,6 +444,196 @@ defmodule DSPEx.Services.TelemetrySetup do
         adapter: metadata[:adapter] || "default",
         signature: metadata[:signature],
         success: measurements[:success] || true
+      }
+    )
+  end
+
+  # SIMBA telemetry handlers
+  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :start], _measurements, metadata, _config) do
+    # Track SIMBA optimization start
+    Foundation.Telemetry.emit_counter(
+      [:dspex, :simba, :optimizations_started],
+      %{
+        correlation_id: metadata[:correlation_id],
+        student_type: metadata[:student_type],
+        teacher_type: metadata[:teacher_type]
+      }
+    )
+  end
+
+  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :stop], measurements, metadata, _config) do
+    # Track SIMBA optimization completion and performance
+    Foundation.Telemetry.emit_histogram(
+      [:dspex, :performance, :simba_optimization_duration],
+      measurements.duration,
+      %{
+        correlation_id: metadata[:correlation_id],
+        success: measurements[:success] || true,
+        trials_completed: metadata[:trials_completed]
+      }
+    )
+
+    Foundation.Telemetry.emit_counter(
+      [:dspex, :simba, :optimizations_completed],
+      %{
+        status: if(measurements[:success] != false, do: "success", else: "error"),
+        correlation_id: metadata[:correlation_id]
+      }
+    )
+  end
+
+  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :optimization, :start], _measurements, metadata, _config) do
+    # Track individual optimization trial start
+    Foundation.Telemetry.emit_counter(
+      [:dspex, :simba, :trials_started],
+      %{
+        correlation_id: metadata[:correlation_id],
+        trial_number: metadata[:trial_number]
+      }
+    )
+  end
+
+  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :optimization, :stop], measurements, metadata, _config) do
+    # Track optimization trial performance
+    Foundation.Telemetry.emit_histogram(
+      [:dspex, :performance, :simba_trial_duration],
+      measurements.duration,
+      %{
+        correlation_id: metadata[:correlation_id],
+        trial_number: metadata[:trial_number],
+        score: metadata[:score]
+      }
+    )
+
+    # Track trial score distribution
+    if score = metadata[:score] do
+      Foundation.Telemetry.emit_gauge(
+        [:dspex, :simba, :trial_score],
+        score,
+        %{
+          correlation_id: metadata[:correlation_id],
+          trial_number: metadata[:trial_number]
+        }
+      )
+    end
+  end
+
+  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :instruction, :start], _measurements, metadata, _config) do
+    # Track instruction generation start
+    Foundation.Telemetry.emit_counter(
+      [:dspex, :simba, :instruction_generation_started],
+      %{
+        correlation_id: metadata[:correlation_id],
+        instruction_model: metadata[:instruction_model]
+      }
+    )
+  end
+
+  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :instruction, :stop], measurements, metadata, _config) do
+    # Track instruction generation performance
+    Foundation.Telemetry.emit_histogram(
+      [:dspex, :performance, :simba_instruction_generation_duration],
+      measurements.duration,
+      %{
+        correlation_id: metadata[:correlation_id],
+        instruction_model: metadata[:instruction_model],
+        success: measurements[:success] || true
+      }
+    )
+  end
+
+  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :bayesian, :iteration, :start], _measurements, metadata, _config) do
+    # Track Bayesian optimization iteration start
+    Foundation.Telemetry.emit_counter(
+      [:dspex, :simba, :bayesian_iterations_started],
+      %{
+        correlation_id: metadata[:correlation_id],
+        iteration_number: metadata[:iteration_number]
+      }
+    )
+  end
+
+  defp do_handle_dspex_event([:dspex, :teleprompter, :simba, :bayesian, :iteration, :stop], measurements, metadata, _config) do
+    # Track Bayesian optimization iteration performance
+    Foundation.Telemetry.emit_histogram(
+      [:dspex, :performance, :simba_bayesian_iteration_duration],
+      measurements.duration,
+      %{
+        correlation_id: metadata[:correlation_id],
+        iteration_number: metadata[:iteration_number],
+        acquisition_value: metadata[:acquisition_value]
+      }
+    )
+
+    # Track acquisition function values for optimization monitoring
+    if acquisition_value = metadata[:acquisition_value] do
+      Foundation.Telemetry.emit_gauge(
+        [:dspex, :simba, :acquisition_value],
+        acquisition_value,
+        %{
+          correlation_id: metadata[:correlation_id],
+          iteration_number: metadata[:iteration_number]
+        }
+      )
+    end
+  end
+
+  defp do_handle_dspex_event([:dspex, :program, :forward, :start], _measurements, metadata, _config) do
+    # Track program forward execution start
+    Foundation.Telemetry.emit_counter(
+      [:dspex, :program, :forward_started],
+      %{
+        program: metadata[:program],
+        correlation_id: metadata[:correlation_id]
+      }
+    )
+  end
+
+  defp do_handle_dspex_event([:dspex, :program, :forward, :stop], measurements, metadata, _config) do
+    # Track program forward execution performance
+    Foundation.Telemetry.emit_histogram(
+      [:dspex, :performance, :program_forward_duration],
+      measurements.duration,
+      %{
+        program: metadata[:program],
+        correlation_id: metadata[:correlation_id],
+        success: measurements[:success] || true,
+        was_timeout: metadata[:was_timeout] || false
+      }
+    )
+
+    # Track timeout events specifically
+    if metadata[:was_timeout] do
+      Foundation.Telemetry.emit_counter(
+        [:dspex, :program, :timeouts],
+        %{
+          program: metadata[:program],
+          timeout_used: metadata[:timeout_used]
+        }
+      )
+    end
+  end
+
+  defp do_handle_dspex_event([:dspex, :teleprompter, :bootstrap, :start], _measurements, metadata, _config) do
+    # Track bootstrap teleprompter start
+    Foundation.Telemetry.emit_counter(
+      [:dspex, :teleprompter, :bootstrap_started],
+      %{
+        correlation_id: metadata[:correlation_id],
+        student_type: metadata[:student_type]
+      }
+    )
+  end
+
+  defp do_handle_dspex_event([:dspex, :teleprompter, :bootstrap, :stop], measurements, metadata, _config) do
+    # Track bootstrap teleprompter performance
+    Foundation.Telemetry.emit_histogram(
+      [:dspex, :performance, :bootstrap_duration],
+      measurements.duration,
+      %{
+        correlation_id: metadata[:correlation_id],
+        success: measurements[:success] || true,
+        demos_generated: metadata[:demos_generated]
       }
     )
   end

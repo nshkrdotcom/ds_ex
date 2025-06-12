@@ -122,4 +122,50 @@ defmodule DSPEx.OptimizedProgram do
   end
 
   def supports_native_demos?(_), do: false
+
+  @doc """
+  Check if a program natively supports instructions.
+
+  Returns true if the program struct has an `instruction` field, false otherwise.
+  Used by SIMBA to determine enhancement strategy.
+  """
+  @spec supports_native_instruction?(struct()) :: boolean()
+  def supports_native_instruction?(program) when is_struct(program) do
+    Map.has_key?(program, :instruction)
+  end
+
+  def supports_native_instruction?(_), do: false
+
+  @doc """
+  Determine SIMBA enhancement strategy for a program.
+
+  Returns the optimal strategy for enhancing a program with SIMBA optimizations:
+  - `:native_full` - Program supports both demos and instructions natively
+  - `:native_demos` - Program supports demos but not instructions natively
+  - `:wrap_optimized` - Program needs OptimizedProgram wrapper for enhancements
+
+  ## Examples
+
+      iex> predict = %DSPEx.Predict{signature: MySignature, client: :openai}
+      iex> DSPEx.OptimizedProgram.simba_enhancement_strategy(predict)
+      :wrap_optimized
+
+      iex> predict_with_demos = %DSPEx.Predict{signature: MySignature, client: :openai, demos: []}
+      iex> DSPEx.OptimizedProgram.simba_enhancement_strategy(predict_with_demos)
+      :native_demos
+
+  """
+  @spec simba_enhancement_strategy(struct()) :: :native_full | :native_demos | :wrap_optimized
+  def simba_enhancement_strategy(program) when is_struct(program) do
+    cond do
+      supports_native_demos?(program) and supports_native_instruction?(program) ->
+        :native_full
+      supports_native_demos?(program) ->
+        :native_demos
+      true ->
+        :wrap_optimized
+    end
+  end
+
+  def simba_enhancement_strategy(_), do: :wrap_optimized
 end

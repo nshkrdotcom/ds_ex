@@ -132,6 +132,24 @@ defmodule DSPEx.Services.ConfigManager do
         cache_enabled: true,
         cache_ttl: 3600
       },
+      teleprompters: %{
+        simba: %{
+          default_instruction_model: :openai,
+          default_evaluation_model: :gemini,
+          max_concurrent_operations: 20,
+          default_timeout: 60_000,
+          optimization: %{
+            max_trials: 100,
+            convergence_patience: 5,
+            improvement_threshold: 0.01
+          },
+          bayesian_optimization: %{
+            acquisition_function: :expected_improvement,
+            surrogate_model: :gaussian_process,
+            exploration_exploitation_tradeoff: 0.1
+          }
+        }
+      },
       telemetry: %{
         enabled: true,
         detailed_logging: false,
@@ -142,11 +160,13 @@ defmodule DSPEx.Services.ConfigManager do
     # Merge with Mix config (config/test.exs, config/dev.exs, etc.)
     mix_config = Application.get_env(:dspex, :providers, %{})
     mix_prediction_config = Application.get_env(:dspex, :prediction, %{})
+    mix_teleprompter_config = Application.get_env(:dspex, :teleprompters, %{})
     mix_telemetry_config = Application.get_env(:dspex, :telemetry, %{})
 
     base_config
     |> put_in([:providers], Map.merge(base_config.providers, mix_config))
     |> put_in([:prediction], Map.merge(base_config.prediction, mix_prediction_config))
+    |> put_in([:teleprompters], Map.merge(base_config.teleprompters, mix_teleprompter_config))
     |> put_in([:telemetry], Map.merge(base_config.telemetry, mix_telemetry_config))
   end
 

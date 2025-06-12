@@ -296,15 +296,51 @@ defmodule DSPEx.Teleprompter.BootstrapFewShot do
   end
 
   defp create_optimized_student(student, selected_demos, config) do
-    # Always wrap in OptimizedProgram for consistency
-    optimized =
-      DSPEx.OptimizedProgram.new(student, selected_demos, %{
-        teleprompter: :bootstrap_fewshot,
-        quality_threshold: config.quality_threshold,
-        optimization_type: :bootstrap_few_shot
-      })
+    # Enhanced to handle empty demo lists gracefully for SIMBA compatibility
+    metadata = %{
+      teleprompter: :bootstrap_fewshot,
+      quality_threshold: config.quality_threshold,
+      optimization_type: :bootstrap_few_shot,
+      demo_count: length(selected_demos)
+    }
+
+    # Add metadata for empty demo scenarios to aid debugging
+    metadata = case selected_demos do
+      [] ->
+        Map.merge(metadata, %{
+          demo_generation_result: :no_quality_demonstrations,
+          fallback_reason: "No demonstrations met quality threshold of #{config.quality_threshold}"
+        })
+      _ ->
+        Map.merge(metadata, %{
+          demo_generation_result: :success,
+          best_quality_score: get_best_quality_score(selected_demos)
+        })
+    end
+
+    # Check if the student program natively supports demos
+    optimized = case student do
+      %{demos: _} ->
+        # Student has native demo support, update it directly
+        enhanced_student = %{student | demos: selected_demos}
+        
+        # Wrap with OptimizedProgram to preserve metadata even for native programs
+        DSPEx.OptimizedProgram.new(enhanced_student, selected_demos, metadata)
+      
+      _ ->
+        # Student doesn't have native demo support, wrap with OptimizedProgram
+        DSPEx.OptimizedProgram.new(student, selected_demos, metadata)
+    end
 
     {:ok, optimized}
+  end
+
+  # Helper to extract best quality score for metadata
+  defp get_best_quality_score([]), do: nil
+  defp get_best_quality_score(demos) do
+    demos
+    |> Enum.map(fn demo -> demo.data[:__quality_score] || 0.0 end)
+    |> Enum.max()
   end
 
   defp attempt_with_retries(0, _fun), do: {:error, :max_retries_exceeded}
