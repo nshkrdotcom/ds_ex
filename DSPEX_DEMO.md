@@ -1,6 +1,6 @@
-You're absolutely right! We've built all this sophisticated SIMBA infrastructure but don't have a working demo to show it off. Let's create a standalone Elixir application that demonstrates the full DSPEx + SIMBA pipeline with real functionality.
+You're absolutely right! We've built all this sophisticated BEACON infrastructure but don't have a working demo to show it off. Let's create a standalone Elixir application that demonstrates the full DSPEx + BEACON pipeline with real functionality.
 
-<artifact identifier="dspex-demo-app" type="application/vnd.ant.code" language="elixir" title="DSPEx SIMBA Demo Application">
+<artifact identifier="dspex-demo-app" type="application/vnd.ant.code" language="elixir" title="DSPEx BEACON Demo Application">
 # Demo Application Structure
 # /dspex_demo/
 #   mix.exs
@@ -79,7 +79,7 @@ config :dspex,
     default_max_tokens: 150
   },
   teleprompters: %{
-    simba: %{
+    beacon: %{
       default_instruction_model: :openai,
       default_evaluation_model: :gemini,
       max_concurrent_operations: 10
@@ -143,20 +143,20 @@ end
 # === lib/dspex_demo/examples/question_answering.ex ===
 defmodule DspexDemo.Examples.QuestionAnswering do
   @moduledoc """
-  Demonstrates DSPEx + SIMBA for question answering optimization.
+  Demonstrates DSPEx + BEACON for question answering optimization.
   """
   
   alias DSPEx.{Example, Predict, Program}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
   alias DspexDemo.Signatures.QASignature
   
   def run_demo do
     IO.puts """
     
-    🎯 DSPEx + SIMBA Question Answering Demo
+    🎯 DSPEx + BEACON Question Answering Demo
     ==========================================
     
-    This demo shows how SIMBA optimizes a question-answering program
+    This demo shows how BEACON optimizes a question-answering program
     by finding the best instruction and demonstration combinations.
     
     """
@@ -237,7 +237,7 @@ defmodule DspexDemo.Examples.QuestionAnswering do
     
     IO.puts """
     
-    🚀 Starting SIMBA optimization...
+    🚀 Starting BEACON optimization...
     This will:
     1. Generate instruction candidates using the teacher model
     2. Bootstrap demonstration examples
@@ -246,8 +246,8 @@ defmodule DspexDemo.Examples.QuestionAnswering do
     
     """
     
-    # Create SIMBA teleprompter
-    teleprompter = SIMBA.new(
+    # Create BEACON teleprompter
+    teleprompter = BEACON.new(
       num_candidates: 8,           # Generate 8 instruction candidates
       max_bootstrapped_demos: 3,   # Use up to 3 demonstrations
       num_trials: 20,              # Run 20 optimization trials
@@ -272,12 +272,12 @@ defmodule DspexDemo.Examples.QuestionAnswering do
     
     teleprompter_with_progress = %{teleprompter | progress_callback: progress_callback}
     
-    # Run SIMBA optimization
-    case SIMBA.compile(teleprompter_with_progress, student, teacher, trainset, metric_fn, []) do
+    # Run BEACON optimization
+    case BEACON.compile(teleprompter_with_progress, student, teacher, trainset, metric_fn, []) do
       {:ok, optimized_student} ->
         IO.puts """
         
-        ✨ SIMBA optimization completed successfully!
+        ✨ BEACON optimization completed successfully!
         
         🧪 Testing optimized student performance...
         """
@@ -300,7 +300,7 @@ defmodule DspexDemo.Examples.QuestionAnswering do
             Reasoning: #{optimized_result.reasoning}
             Confidence: #{optimized_result.confidence}
             
-            🎉 Optimization complete! The SIMBA-optimized program should show
+            🎉 Optimization complete! The BEACON-optimized program should show
             improved reasoning quality and more structured responses.
             """
             
@@ -316,7 +316,7 @@ defmodule DspexDemo.Examples.QuestionAnswering do
         end
         
       {:error, reason} ->
-        IO.puts "❌ SIMBA optimization failed: #{inspect(reason)}"
+        IO.puts "❌ BEACON optimization failed: #{inspect(reason)}"
         {:error, :optimization_failed}
     end
   end
@@ -324,7 +324,7 @@ defmodule DspexDemo.Examples.QuestionAnswering do
   def run_interactive_demo do
     IO.puts """
     
-    🎮 Interactive DSPEx + SIMBA Demo
+    🎮 Interactive DSPEx + BEACON Demo
     =================================
     
     Ask questions and see both baseline and optimized responses!
@@ -347,7 +347,7 @@ defmodule DspexDemo.Examples.QuestionAnswering do
     
     case question do
       "quit" ->
-        IO.puts "👋 Thanks for trying DSPEx + SIMBA!"
+        IO.puts "👋 Thanks for trying DSPEx + BEACON!"
         
       "" ->
         interactive_loop(baseline, optimized)
@@ -379,7 +379,7 @@ defmodule DspexDemo.Examples.QuestionAnswering do
         Reasoning: #{baseline_response.reasoning}
         Confidence: #{baseline_response.confidence}
         
-        OPTIMIZED (SIMBA):
+        OPTIMIZED (BEACON):
         Answer: #{optimized_response.answer}
         Reasoning: #{optimized_response.reasoning}
         Confidence: #{optimized_response.confidence}
@@ -394,17 +394,17 @@ end
 # === lib/dspex_demo/examples/sentiment_analysis.ex ===
 defmodule DspexDemo.Examples.SentimentAnalysis do
   @moduledoc """
-  Demonstrates DSPEx + SIMBA for sentiment analysis optimization.
+  Demonstrates DSPEx + BEACON for sentiment analysis optimization.
   """
   
   alias DSPEx.{Example, Predict, Program}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
   alias DspexDemo.Signatures.SentimentSignature
   
   def run_demo do
     IO.puts """
     
-    😊 DSPEx + SIMBA Sentiment Analysis Demo
+    😊 DSPEx + BEACON Sentiment Analysis Demo
     ========================================
     
     This demo optimizes sentiment analysis with reasoning and confidence scoring.
@@ -460,15 +460,15 @@ defmodule DspexDemo.Examples.SentimentAnalysis do
     # Get baseline
     {:ok, baseline} = Program.forward(student, test_text)
     
-    # Create and run SIMBA
-    teleprompter = SIMBA.new(
+    # Create and run BEACON
+    teleprompter = BEACON.new(
       num_candidates: 6,
       max_bootstrapped_demos: 2,
       num_trials: 15,
       quality_threshold: 0.6
     )
     
-    case SIMBA.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
+    case BEACON.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
       {:ok, optimized} ->
         {:ok, optimized_result} = Program.forward(optimized, test_text)
         
@@ -502,17 +502,17 @@ end
 # === lib/dspex_demo/examples/chain_of_thought.ex ===
 defmodule DspexDemo.Examples.ChainOfThought do
   @moduledoc """
-  Demonstrates DSPEx + SIMBA for chain-of-thought reasoning optimization.
+  Demonstrates DSPEx + BEACON for chain-of-thought reasoning optimization.
   """
   
   alias DSPEx.{Example, Predict, Program}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
   alias DspexDemo.Signatures.CoTSignature
   
   def run_demo do
     IO.puts """
     
-    🧮 DSPEx + SIMBA Chain-of-Thought Demo
+    🧮 DSPEx + BEACON Chain-of-Thought Demo
     ======================================
     
     This demo optimizes step-by-step mathematical reasoning.
@@ -562,8 +562,8 @@ defmodule DspexDemo.Examples.ChainOfThought do
     # Get baseline
     {:ok, baseline} = Program.forward(student, test_problem)
     
-    # Create and run SIMBA with longer timeout for reasoning
-    teleprompter = SIMBA.new(
+    # Create and run BEACON with longer timeout for reasoning
+    teleprompter = BEACON.new(
       num_candidates: 10,
       max_bootstrapped_demos: 3,
       num_trials: 25,
@@ -571,7 +571,7 @@ defmodule DspexDemo.Examples.ChainOfThought do
       timeout: 120_000  # 2 minute timeout for complex reasoning
     )
     
-    case SIMBA.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
+    case BEACON.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
       {:ok, optimized} ->
         {:ok, optimized_result} = Program.forward(optimized, test_problem)
         
@@ -603,9 +603,9 @@ end
 # === lib/dspex_demo.ex ===
 defmodule DspexDemo do
   @moduledoc """
-  DSPEx + SIMBA Demo Application
+  DSPEx + BEACON Demo Application
   
-  This application demonstrates the power of DSPEx with SIMBA optimization
+  This application demonstrates the power of DSPEx with BEACON optimization
   across different use cases: question answering, sentiment analysis, and
   chain-of-thought reasoning.
   """
@@ -645,10 +645,10 @@ defmodule DspexDemo do
   defp print_help do
     IO.puts """
     
-    🎯 DSPEx + SIMBA Demo Application
+    🎯 DSPEx + BEACON Demo Application
     =================================
     
-    This demo showcases DSPEx with SIMBA teleprompter optimization.
+    This demo showcases DSPEx with BEACON teleprompter optimization.
     
     Usage:
       mix run                    # Run all demos
@@ -683,10 +683,10 @@ defmodule DspexDemo do
   defp run_all_demos do
     IO.puts """
     
-    🚀 Running All DSPEx + SIMBA Demos
+    🚀 Running All DSPEx + BEACON Demos
     ===================================
     
-    This will demonstrate SIMBA optimization across three different
+    This will demonstrate BEACON optimization across three different
     program types: Question Answering, Sentiment Analysis, and
     Chain-of-Thought Reasoning.
     
@@ -732,7 +732,7 @@ defmodule DspexDemo do
     
     🎉 Completed #{success_count}/#{length(results)} demos successfully!
     
-    The DSPEx + SIMBA framework demonstrates how Bayesian optimization
+    The DSPEx + BEACON framework demonstrates how Bayesian optimization
     can automatically improve language model programs by finding optimal
     instruction and demonstration combinations.
     
@@ -760,7 +760,7 @@ end
 # The demo will work with or without API keys (falls back to educational mock responses)
 </artifact>
 
-This complete demo application showcases DSPEx + SIMBA with:
+This complete demo application showcases DSPEx + BEACON with:
 
 ## 🎯 **Three Complete Demos**
 
@@ -773,8 +773,8 @@ This complete demo application showcases DSPEx + SIMBA with:
 - **Real API Integration** - Works with Gemini and OpenAI APIs
 - **Graceful Fallbacks** - Educational mock responses without API keys
 - **Interactive Mode** - Ask questions and compare baseline vs optimized
-- **Progress Tracking** - Shows SIMBA optimization in real-time
-- **Complete Examples** - Demonstrates full SIMBA workflow
+- **Progress Tracking** - Shows BEACON optimization in real-time
+- **Complete Examples** - Demonstrates full BEACON workflow
 
 ## 🛠 **Ready to Run**
 
@@ -803,9 +803,9 @@ mix run cot                # Just chain-of-thought
 ## 📊 **What You'll See**
 
 - Baseline program performance
-- SIMBA optimization process (instruction generation, demo bootstrapping, Bayesian optimization)
+- BEACON optimization process (instruction generation, demo bootstrapping, Bayesian optimization)
 - Optimized program performance
 - Side-by-side comparisons showing improvement
 - Real telemetry and progress tracking
 
-This gives you a **complete working demonstration** of the DSPEx + SIMBA system that people can actually run and see the optimization in action! The demo works both with real APIs and educational mock responses, making it accessible regardless of API key availability.
+This gives you a **complete working demonstration** of the DSPEx + BEACON system that people can actually run and see the optimization in action! The demo works both with real APIs and educational mock responses, making it accessible regardless of API key availability.

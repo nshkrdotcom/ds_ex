@@ -8,7 +8,7 @@ DSPEx currently implements DSPy concepts well but can be elevated to state-of-th
 1. **Adopting Jido's robust execution foundation** (replacing custom execution with battle-tested patterns)
 2. **Adding BAML-inspired static analysis** for compile-time safety
 3. **Leveraging Jido's signal system** for decoupled, observable optimization workflows
-4. **Enhancing SIMBA** with the new architecture (since DSPy devs specifically requested this!)
+4. **Enhancing BEACON** with the new architecture (since DSPy devs specifically requested this!)
 
 This creates a uniquely powerful framework: **DSPy's optimization intelligence + Jido's BEAM-native robustness + BAML's compile-time safety**.
 
@@ -56,7 +56,7 @@ end
 ### 1.2 Enhance Execution with Jido.Exec
 
 **Benefits Gained:**
-- **Robust timeouts**: Critical for SIMBA's concurrent optimization
+- **Robust timeouts**: Critical for BEACON's concurrent optimization
 - **Automatic retries**: Handle LLM API flakiness gracefully  
 - **Async execution**: Enable parallel evaluation in teleprompters
 - **Built-in telemetry**: Rich observability out of the box
@@ -146,7 +146,7 @@ Outputs: #{QASignature.__static_ir__().output_fields |> Enum.join(", ")}
 
 ### 3.1 Event-Driven Teleprompter Workflows
 
-**Current SIMBA (synchronous):**
+**Current BEACON (synchronous):**
 ```elixir
 def compile(student, teacher, trainset, metric_fn, opts) do
   # Blocking optimization process
@@ -156,14 +156,14 @@ def compile(student, teacher, trainset, metric_fn, opts) do
 end
 ```
 
-**Enhanced SIMBA (event-driven):**
+**Enhanced BEACON (event-driven):**
 ```elixir
 def compile(student, teacher, trainset, metric_fn, opts) do
   correlation_id = generate_correlation_id()
   
   # Start async optimization via signals
   :ok = Jido.Signal.emit(%Jido.Signal{
-    type: "dspex.simba.optimization.start",
+    type: "dspex.beacon.optimization.start",
     data: %{
       student: student,
       teacher: teacher,
@@ -184,7 +184,7 @@ end
 # Teleprompter emits progress signals
 def handle_optimization_trial(trial_data, state) do
   Jido.Signal.emit(%Jido.Signal{
-    type: "dspex.simba.trial.complete",
+    type: "dspex.beacon.trial.complete",
     data: %{
       trial_number: trial_data.number,
       score: trial_data.score,
@@ -204,11 +204,11 @@ defmodule DSPExWeb.OptimizationLive do
   
   def mount(_params, _session, socket) do
     # Subscribe to optimization events
-    Jido.Signal.subscribe("dspex.simba.*")
+    Jido.Signal.subscribe("dspex.beacon.*")
     {:ok, assign(socket, trials: [], status: :idle)}
   end
   
-  def handle_info({:signal, %{type: "dspex.simba.trial.complete"} = signal}, socket) do
+  def handle_info({:signal, %{type: "dspex.beacon.trial.complete"} = signal}, socket) do
     trial = signal.data
     trials = [trial | socket.assigns.trials]
     {:noreply, assign(socket, trials: trials)}
@@ -218,7 +218,7 @@ end
 
 ### 3.3 Distributed Optimization
 
-**Multi-Node SIMBA:**
+**Multi-Node BEACON:**
 ```elixir
 # Coordinator node
 def distribute_optimization(config) do
@@ -228,7 +228,7 @@ def distribute_optimization(config) do
   
   Enum.each(Enum.zip(chunks, available_nodes), fn {chunk, node} ->
     Jido.Signal.emit(%Jido.Signal{
-      type: "dspex.simba.worker.start",
+      type: "dspex.beacon.worker.start",
       data: %{chunk: chunk, node: node},
       jido_dispatch: {:node, target: node}
     })
@@ -236,18 +236,18 @@ def distribute_optimization(config) do
 end
 
 # Worker nodes
-def handle_signal(%{type: "dspex.simba.worker.start"} = signal) do
+def handle_signal(%{type: "dspex.beacon.worker.start"} = signal) do
   # Process chunk locally and emit results
   results = process_chunk(signal.data.chunk)
   
   Jido.Signal.emit(%Jido.Signal{
-    type: "dspex.simba.worker.complete",
+    type: "dspex.beacon.worker.complete",
     data: results
   })
 end
 ```
 
-## Phase 4: Advanced SIMBA Enhancements (6-8 weeks)
+## Phase 4: Advanced BEACON Enhancements (6-8 weeks)
 
 ### 4.1 Enhanced Bayesian Optimization
 
@@ -258,7 +258,7 @@ end
 
 **Enhanced Implementation:**
 ```elixir
-defmodule DSPEx.Teleprompter.SIMBA.Enhanced do
+defmodule DSPEx.Teleprompter.BEACON.Enhanced do
   # Multi-objective optimization
   def optimize_multi_objective(objectives, constraints) do
     # Optimize for accuracy, latency, and cost simultaneously
@@ -426,7 +426,7 @@ gantt
     BAML Features          :2024-02-12, 8w
     section Phase 3: Signals
     Event Architecture     :2024-04-08, 10w
-    section Phase 4: Advanced SIMBA
+    section Phase 4: Advanced BEACON
     Enhanced Optimization  :2024-06-17, 8w
     section Phase 5: Production
     Performance & Monitoring :2024-08-12, 6w
@@ -435,7 +435,7 @@ gantt
 ## Success Metrics
 
 **Technical Metrics:**
-- **Optimization Speed**: 50% faster SIMBA convergence through concurrency
+- **Optimization Speed**: 50% faster BEACON convergence through concurrency
 - **Reliability**: 99.9% uptime for long-running optimizations
 - **Accuracy**: Match or exceed DSPy benchmarks on standard datasets
 - **Developer Experience**: <5 minutes from signature to optimized program

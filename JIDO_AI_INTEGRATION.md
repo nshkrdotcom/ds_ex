@@ -126,7 +126,7 @@ end
 The `DSPEx.Teleprompter`'s job becomes much clearer and more powerful. Instead of optimizing a simple `Predict` module, it optimizes the *configuration* of a full `Jido.AI.Agent`.
 
 *   `BootstrapFewShot` would generate high-quality `demos`.
-*   `SIMBA` would find the optimal combination of:
+*   `BEACON` would find the optimal combination of:
     *   The `prompt_template` string.
     *   The list of `tools` to provide to the agent.
     *   The `model` configuration (e.g., finding that GPT-4 is better for instruction generation while Gemini is better for evaluation).

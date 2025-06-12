@@ -225,7 +225,7 @@ This diagram shows how the components fit together in the final, unified archite
 ```mermaid
 graph TD
     subgraph Tooling["DSPEx&nbsp;Optimization&nbsp;Plane&nbsp;(Compile&nbsp;Time&nbsp;/&nbsp;Offline)"]
-        A["<b>DSPEx.Teleprompter</b><br>(Bootstrap, SIMBA)"]
+        A["<b>DSPEx.Teleprompter</b><br>(Bootstrap, BEACON)"]
         B["<b>DSPEx.Evaluate</b>"]
         C["<b>ProgramTemplate Struct</b><br>(The 'Genome')"]
         D["Training Dataset<br>(Examples)"]

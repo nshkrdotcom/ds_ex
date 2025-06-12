@@ -31,7 +31,7 @@ graph TD
 
         subgraph OT["Optimization - Teleprompter"]
             T["teleprompter/bootstrap_fewshot.ex<br><b>BootstrapFewShot</b>"]
-            T_TODO["<b>More Teleprompters</b><br>MIPRO, SIMBA, etc"]
+            T_TODO["<b>More Teleprompters</b><br>MIPRO, BEACON, etc"]
             EVAL["evaluate.ex<br><b>DSPEx.Evaluate</b>"]
         end
 
@@ -93,7 +93,7 @@ graph TD
     *   **Caching:** Integrate `Cachex` to implement response caching, which is critical for reducing costs and latency during optimization. This is a direct parallel to `dspy.Cache`.
     *   **Circuit Breaker:** Integrate `Fuse` to protect against failing LLM API endpoints. This is a major advantage over the basic retry logic in Python's `litellm`.
     *   **Rate Limiting:** A GenServer is the perfect place to manage rate limits and implement exponential backoff strategies per-provider.
-*   **Todo: Expand Teleprompters:** `BootstrapFewShot` is a great start. The next step is to implement more advanced optimizers like `MIPRO` or `SIMBA`, which will further test the concurrency and resilience of your evaluation engine.
+*   **Todo: Expand Teleprompters:** `BootstrapFewShot` is a great start. The next step is to implement more advanced optimizers like `MIPRO` or `BEACON`, which will further test the concurrency and resilience of your evaluation engine.
 
 ---
 
@@ -264,5 +264,5 @@ graph TD
 *   **Stateless Workers:** Each task spawned by `async_stream` is a lightweight, isolated BEAM process, making the entire operation highly fault-tolerant. A single failed API call won't crash the optimization run.
 *   **The `OptimizedProgram` Struct:** Your `dspex/optimized_program.ex` is the correct functional approach to "compiling" a program. Instead of mutating the student program, you create a new, immutable struct that wraps the original program and its learned demonstrations.
 *   **Todo: Advanced Optimization Strategies:**
-    *   The current `BootstrapFewShot` is a great first step. The roadmap should include more complex optimizers like `MIPRO` or `SIMBA` from the DSPy paper, which involve iterative optimization loops. These will further benefit from Elixir's concurrency and state management capabilities.
+    *   The current `BootstrapFewShot` is a great first step. The roadmap should include more complex optimizers like `MIPRO` or `BEACON` from the DSPy paper, which involve iterative optimization loops. These will further benefit from Elixir's concurrency and state management capabilities.
     *   **Distributed Evaluation:** The `README` mentions this as a future goal. The `Task.async_stream` model can be extended to a multi-node setup using `Node.spawn_link` or a higher-level abstraction, making this a natural evolution for DSPEx.

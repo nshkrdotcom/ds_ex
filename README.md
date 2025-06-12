@@ -124,7 +124,7 @@ program = DSPEx.Predict.new(MySignature, :gemini)
 # Returns real AI-generated response from Gemini
 ```
 
-**SIMBA Optimization with Live API:**
+**BEACON Optimization with Live API:**
 ```elixir
 # Set live API mode first
 export GEMINI_API_KEY=your_key
@@ -134,15 +134,15 @@ export DSPEX_TEST_MODE=fallback
 student = DSPEx.Predict.new(QASignature, :gemini)  
 teacher = DSPEx.Predict.new(QASignature, :gemini)
 
-# SIMBA optimization makes 100+ real API calls
-{:ok, optimized} = DSPEx.Teleprompter.SIMBA.compile(
+# BEACON optimization makes 100+ real API calls
+{:ok, optimized} = DSPEx.Teleprompter.BEACON.compile(
   student, teacher, training_examples, metric_fn
 )
 ```
 
 ### Live API Demo Application
 
-DSPEx includes a comprehensive demo application showcasing SIMBA with live APIs:
+DSPEx includes a comprehensive demo application showcasing BEACON with live APIs:
 
 ```bash
 # Navigate to the demo
@@ -156,19 +156,19 @@ export GEMINI_API_KEY=your_key
 export DSPEX_TEST_MODE=fallback
 
 # Run demos with live API
-./demo qa                    # Question answering with SIMBA
+./demo qa                    # Question answering with BEACON
 ./demo sentiment             # Sentiment analysis optimization  
 ./demo cot                   # Chain-of-thought reasoning
 ./demo --interactive         # Interactive Q&A session
 
 # Run all demos with live API
-./demo                       # Complete SIMBA showcase
+./demo                       # Complete BEACON showcase
 ```
 
 **What the Demo Shows with Live API:**
 - **Real API Request Logs**: `[LIVE API REQUEST] gemini | predict-...` showing actual calls
 - **Authentic Responses**: Real AI responses, not mock data
-- **SIMBA Optimization**: Dozens of concurrent API calls during optimization
+- **BEACON Optimization**: Dozens of concurrent API calls during optimization
 - **Performance**: Real-world latency and response characteristics
 
 ### Important Notes for Live API Usage
@@ -180,7 +180,7 @@ export DSPEX_TEST_MODE=fallback
 
 **Cost Considerations:**
 - Live API calls incur costs from your provider account
-- SIMBA optimization typically makes 50-200+ API calls during optimization
+- BEACON optimization typically makes 50-200+ API calls during optimization
 - Monitor your usage through your provider's dashboard
 - Consider using `fallback` mode during development to limit costs
 

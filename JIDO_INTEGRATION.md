@@ -84,7 +84,7 @@ end
 
 The `DSPEx.Teleprompter` becomes immensely more powerful. Its goal is to find the optimal `program_template` map.
 
-The `BootstrapFewShot` or `SIMBA` teleprompters would no longer just be finding good "demos". They would be optimizing the entire agent configuration:
+The `BootstrapFewShot` or `BEACON` teleprompters would no longer just be finding good "demos". They would be optimizing the entire agent configuration:
 
 -   **Which `Skills` should be loaded?** (e.g., Does adding the `Jido.Skills.Arithmetic` skill improve performance on math problems?)
 -   **What is the optimal `prompt` template in the `initial_state`?**
@@ -166,6 +166,6 @@ graph TD
 1.  **Embrace Jido as the Target Runtime:** Position DSPEx as the "compiler" and "optimizer" for the `jido` agent framework. This is a powerful and unique value proposition in the AI engineering space.
 2.  **Deprecate DSPEx Runtime Components:** Plan a migration path to deprecate `DSPEx.Client`, `DSPEx.ClientManager`, and the execution logic within `DSPEx.Predict` in favor of using `Jido.AI` and `Jido.Exec`.
 3.  **Refactor `DSPEx.Program`:** The concept of a `DSPEx.Program` should be refactored to represent a *configuration* or *template* for a `Jido.Agent`, not an executable entity itself.
-4.  **Adapt Teleprompters:** The core work will be in adapting the `Teleprompter` modules (`BootstrapFewShot`, `SIMBA`) to generate and evaluate `Jido.Agent` configurations instead of simple few-shot demo lists.
+4.  **Adapt Teleprompters:** The core work will be in adapting the `Teleprompter` modules (`BootstrapFewShot`, `BEACON`) to generate and evaluate `Jido.Agent` configurations instead of simple few-shot demo lists.
 
 This integration would create a framework that is unmatched in the Elixir ecosystem, combining the state-of-the-art in LLM program optimization (from DSPy) with the state-of-the-art in building robust, concurrent, and distributed systems (from the BEAM, via Jido). It's a natural and powerful evolution.
