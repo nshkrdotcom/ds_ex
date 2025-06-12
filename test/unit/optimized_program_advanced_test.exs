@@ -3,7 +3,7 @@ defmodule DSPEx.OptimizedProgramAdvancedTest do
   Advanced unit tests for DSPEx.OptimizedProgram.
 
   CRITICAL: This test validates that OptimizedProgram has the exact interface
-  that SIMBA expects. SIMBA's create_optimized_student/2 function depends on
+  that BEACON expects. BEACON's create_optimized_student/2 function depends on
   OptimizedProgram.new/3, get_demos/1, and get_program/1 working correctly.
   """
   use ExUnit.Case, async: true
@@ -55,13 +55,13 @@ defmodule DSPEx.OptimizedProgramAdvancedTest do
     }
   end
 
-  describe "SIMBA interface compatibility" do
+  describe "BEACON interface compatibility" do
     test "new/3 creates optimized program with required interface", %{
       base_program: program,
       demos: demos,
       metadata: metadata
     } do
-      # Test the exact interface SIMBA expects
+      # Test the exact interface BEACON expects
       optimized = OptimizedProgram.new(program, demos, metadata)
 
       assert %OptimizedProgram{} = optimized
@@ -84,13 +84,13 @@ defmodule DSPEx.OptimizedProgramAdvancedTest do
       assert optimized.metadata.demo_count == length(demos)
     end
 
-    test "get_demos/1 returns demonstrations - SIMBA dependency", %{
+    test "get_demos/1 returns demonstrations - BEACON dependency", %{
       base_program: program,
       demos: demos
     } do
       optimized = OptimizedProgram.new(program, demos)
 
-      # SIMBA calls this function to extract demos
+      # BEACON calls this function to extract demos
       result_demos = OptimizedProgram.get_demos(optimized)
 
       assert result_demos == demos
@@ -98,13 +98,13 @@ defmodule DSPEx.OptimizedProgramAdvancedTest do
       assert Enum.all?(result_demos, &is_struct(&1, Example))
     end
 
-    test "get_program/1 returns wrapped program - SIMBA dependency", %{
+    test "get_program/1 returns wrapped program - BEACON dependency", %{
       base_program: program,
       demos: demos
     } do
       optimized = OptimizedProgram.new(program, demos)
 
-      # SIMBA calls this function to extract the original program
+      # BEACON calls this function to extract the original program
       result_program = OptimizedProgram.get_program(optimized)
 
       assert result_program == program
@@ -114,7 +114,7 @@ defmodule DSPEx.OptimizedProgramAdvancedTest do
     test "implements DSPEx.Program behavior", %{base_program: program, demos: demos} do
       optimized = OptimizedProgram.new(program, demos)
 
-      # Must implement Program behavior for SIMBA compatibility
+      # Must implement Program behavior for BEACON compatibility
       assert Program.implements_program?(OptimizedProgram)
 
       # Should be usable as a program
@@ -174,7 +174,7 @@ defmodule DSPEx.OptimizedProgramAdvancedTest do
       correlation_id = "test-correlation-123"
 
       # The correlation_id should be preserved when forwarding
-      # This is important for SIMBA's telemetry tracking
+      # This is important for BEACON's telemetry tracking
       opts = [correlation_id: correlation_id]
 
       # Even if the call fails in test mode, the structure should be preserved
@@ -189,7 +189,7 @@ defmodule DSPEx.OptimizedProgramAdvancedTest do
   describe "metadata tracking and management" do
     test "get_metadata/1 returns optimization metadata", %{base_program: program, demos: demos} do
       custom_metadata = %{
-        teleprompter: :simba,
+        teleprompter: :beacon,
         iterations: 10,
         final_score: 0.85
       }
@@ -197,7 +197,7 @@ defmodule DSPEx.OptimizedProgramAdvancedTest do
       optimized = OptimizedProgram.new(program, demos, custom_metadata)
       metadata = OptimizedProgram.get_metadata(optimized)
 
-      assert metadata.teleprompter == :simba
+      assert metadata.teleprompter == :beacon
       assert metadata.iterations == 10
       assert metadata.final_score == 0.85
       assert Map.has_key?(metadata, :optimized_at)

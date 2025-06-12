@@ -472,7 +472,7 @@ defmodule DSPEx.MockClientManager do
     :telemetry.execute([:dspex, :client_manager, :request], measurements, metadata)
   end
 
-  ## Additional functions for SIMBA test infrastructure
+  ## Additional functions for BEACON test infrastructure
 
   @doc """
   Sets mock responses for a specific provider.

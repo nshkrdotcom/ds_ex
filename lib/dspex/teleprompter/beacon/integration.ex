@@ -1,17 +1,17 @@
-defmodule DSPEx.Teleprompter.SIMBA.Integration do
+defmodule DSPEx.Teleprompter.BEACON.Integration do
   @moduledoc """
-  Integration patterns and real-world usage examples for SIMBA teleprompter.
+  Integration patterns and real-world usage examples for BEACON teleprompter.
 
-  This module demonstrates how to integrate SIMBA into larger applications
+  This module demonstrates how to integrate BEACON into larger applications
   and workflows, including monitoring, error handling, and optimization strategies.
   """
 
   alias DSPEx.{Example, Program}
-  alias DSPEx.Teleprompter.SIMBA
-  alias DSPEx.Teleprompter.SIMBA.Utils
+  alias DSPEx.Teleprompter.BEACON
+  alias DSPEx.Teleprompter.BEACON.Utils
 
   @doc """
-  Production-ready SIMBA optimization with comprehensive error handling.
+  Production-ready BEACON optimization with comprehensive error handling.
   """
   def optimize_for_production(student, teacher, trainset, metric_fn, opts \\ []) do
     correlation_id = Keyword.get(opts, :correlation_id) || Utils.generate_correlation_id()
@@ -28,7 +28,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Integration do
       progress_callback: create_production_progress_callback(correlation_id)
     ]
 
-    teleprompter = SIMBA.new(production_config)
+    teleprompter = BEACON.new(production_config)
 
     # Comprehensive error handling and monitoring
     # Pre-optimization validation
@@ -44,7 +44,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Integration do
           result =
             run_with_timeout(
               fn ->
-                SIMBA.compile(teleprompter, student, teacher, trainset, metric_fn, [])
+                BEACON.compile(teleprompter, student, teacher, trainset, metric_fn, [])
               end,
               # Extra buffer for safety
               timeout_value * 2
@@ -166,9 +166,9 @@ defmodule DSPEx.Teleprompter.SIMBA.Integration do
 
     IO.puts("   Stage 1: Exploratory optimization...")
 
-    exploratory_teleprompter = SIMBA.new(exploratory_config)
+    exploratory_teleprompter = BEACON.new(exploratory_config)
 
-    case SIMBA.compile(exploratory_teleprompter, student, teacher, trainset, metric_fn, []) do
+    case BEACON.compile(exploratory_teleprompter, student, teacher, trainset, metric_fn, []) do
       {:ok, exploratory_result} ->
         # Evaluate exploratory result
         exploratory_score =
@@ -187,9 +187,9 @@ defmodule DSPEx.Teleprompter.SIMBA.Integration do
         IO.puts("   Stage 2: Refined optimization...")
         IO.puts("   Adapted config: #{inspect(refined_config)}")
 
-        refined_teleprompter = SIMBA.new(Map.to_list(refined_config))
+        refined_teleprompter = BEACON.new(Map.to_list(refined_config))
 
-        case SIMBA.compile(refined_teleprompter, student, teacher, trainset, metric_fn, []) do
+        case BEACON.compile(refined_teleprompter, student, teacher, trainset, metric_fn, []) do
           {:ok, final_result} ->
             final_score = evaluate_program_quality(final_result, trainset, metric_fn)
 

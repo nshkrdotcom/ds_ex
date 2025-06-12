@@ -1,11 +1,11 @@
-defmodule DSPEx.Teleprompter.SIMBA.UtilsTest do
+defmodule DSPEx.Teleprompter.BEACON.UtilsTest do
   @moduledoc """
-  Comprehensive test suite for SIMBA Utils module.
+  Comprehensive test suite for BEACON Utils module.
   """
 
   use ExUnit.Case, async: true
 
-  alias DSPEx.Teleprompter.SIMBA.Utils
+  alias DSPEx.Teleprompter.BEACON.Utils
 
   describe "text similarity" do
     test "identical texts return 1.0" do
@@ -222,7 +222,7 @@ defmodule DSPEx.Teleprompter.SIMBA.UtilsTest do
     test "generates valid correlation ID" do
       id = Utils.generate_correlation_id()
       assert is_binary(id)
-      assert String.starts_with?(id, "simba-")
+      assert String.starts_with?(id, "beacon-")
       assert String.length(id) > 10
     end
 
@@ -234,7 +234,7 @@ defmodule DSPEx.Teleprompter.SIMBA.UtilsTest do
 
     test "follows expected format" do
       id = Utils.generate_correlation_id()
-      assert Regex.match?(~r/^simba-[a-f0-9]{16}$/, id)
+      assert Regex.match?(~r/^beacon-[a-f0-9]{16}$/, id)
     end
   end
 

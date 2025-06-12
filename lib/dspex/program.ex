@@ -82,7 +82,7 @@ defmodule DSPEx.Program do
     # PERFORMANCE INSTRUMENTATION - Start
     total_start = System.monotonic_time()
 
-    # Step 1: Extract timeout option (SIMBA critical feature)
+    # Step 1: Extract timeout option (BEACON critical feature)
     timeout = Keyword.get(opts, :timeout, 30_000)
 
     # Step 2: Correlation ID generation (optimized for performance)
@@ -138,7 +138,7 @@ defmodule DSPEx.Program do
         :microsecond
       )
 
-    # Step 5: Actual program execution with optional timeout wrapper (SIMBA critical feature)
+    # Step 5: Actual program execution with optional timeout wrapper (BEACON critical feature)
     execution_start = System.monotonic_time()
 
     result =

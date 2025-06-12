@@ -133,7 +133,7 @@ defmodule DSPEx.Services.ConfigManager do
         cache_ttl: 3600
       },
       teleprompters: %{
-        simba: %{
+        beacon: %{
           default_instruction_model: :openai,
           default_evaluation_model: :gemini,
           max_concurrent_operations: 20,

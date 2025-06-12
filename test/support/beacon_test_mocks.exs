@@ -1,9 +1,9 @@
-defmodule DSPEx.Test.SimbaMockProvider do
+defmodule DSPEx.Test.BeaconMockProvider do
   @moduledoc """
-  Enhanced mocking infrastructure for SIMBA optimization workflows.
+  Enhanced mocking infrastructure for BEACON optimization workflows.
 
   This module extends the existing DSPEx.MockClientManager with specialized
-  mocking capabilities needed for testing complex SIMBA optimization scenarios,
+  mocking capabilities needed for testing complex BEACON optimization scenarios,
   including bootstrapping, instruction generation, evaluation, and full
   optimization workflows.
   """
@@ -94,7 +94,7 @@ defmodule DSPEx.Test.SimbaMockProvider do
           metadata: %{
             input_pattern: pattern,
             score: score,
-            evaluation_type: :simba_metric,
+            evaluation_type: :beacon_metric,
             confidence: 0.9
           }
         }
@@ -107,14 +107,14 @@ defmodule DSPEx.Test.SimbaMockProvider do
   end
 
   @doc """
-  Sets up comprehensive mocks for full SIMBA optimization workflows.
+  Sets up comprehensive mocks for full BEACON optimization workflows.
 
   This configures all the different types of responses needed for
   a complete optimization run, including teacher responses, student
   responses, evaluation scores, and iteration feedback.
   """
-  @spec setup_simba_optimization_mocks(map()) :: :ok
-  def setup_simba_optimization_mocks(config) do
+  @spec setup_beacon_optimization_mocks(map()) :: :ok
+  def setup_beacon_optimization_mocks(config) do
     max_iterations = Map.get(config, :max_iterations, 3)
     base_score = Map.get(config, :base_score, 0.6)
     improvement_per_iteration = Map.get(config, :improvement_per_iteration, 0.1)
@@ -144,12 +144,12 @@ defmodule DSPEx.Test.SimbaMockProvider do
   end
 
   @doc """
-  Resets all SIMBA-related mocks to clean state.
+  Resets all BEACON-related mocks to clean state.
 
   This should be called between tests to ensure clean mock state.
   """
-  @spec reset_all_simba_mocks() :: :ok
-  def reset_all_simba_mocks() do
+  @spec reset_all_beacon_mocks() :: :ok
+  def reset_all_beacon_mocks() do
     # Reset all known mock providers
     providers = [
       :gpt4,
@@ -272,7 +272,7 @@ defmodule DSPEx.Test.SimbaMockProvider do
           iteration: i,
           total_iterations: iterations,
           convergence_rate: 0.1 * i,
-          optimization_method: :simba
+          optimization_method: :beacon
         }
       }
     end)

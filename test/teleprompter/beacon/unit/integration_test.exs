@@ -1,13 +1,13 @@
-defmodule DSPEx.Teleprompter.SIMBA.IntegrationTest do
+defmodule DSPEx.Teleprompter.BEACON.IntegrationTest do
   @moduledoc """
-  Comprehensive test suite for SIMBA Integration module.
+  Comprehensive test suite for BEACON Integration module.
   """
 
   use ExUnit.Case, async: false
 
   alias DSPEx.{Example, Program}
-  alias DSPEx.Teleprompter.SIMBA.Integration
-  alias DSPEx.Teleprompter.SIMBA.Utils
+  alias DSPEx.Teleprompter.BEACON.Integration
+  alias DSPEx.Teleprompter.BEACON.Utils
 
   # Mock structures for testing
   defmodule MockProgram do
@@ -469,7 +469,7 @@ defmodule DSPEx.Teleprompter.SIMBA.IntegrationTest do
 
       # Test that correlation ID is properly used and propagated
       assert is_binary(correlation_id)
-      assert String.starts_with?(correlation_id, "simba-")
+      assert String.starts_with?(correlation_id, "beacon-")
 
       # In a real optimization, the correlation ID would be used for tracking
       stage_id = "#{correlation_id}_stage_test"

@@ -1,7 +1,7 @@
 #!/usr/bin/env elixir
 
-# Simple test script for SIMBA demo
-IO.puts("🚀 Testing SIMBA Example App")
+# Simple test script for BEACON demo
+IO.puts("🚀 Testing BEACON Example App")
 
 # Test basic functionality first
 alias DSPEx.{Predict, Program}  

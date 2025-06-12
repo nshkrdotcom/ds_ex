@@ -3,12 +3,12 @@ defmodule DSPEx.Performance.RegressionBenchmarksTest do
   Performance regression testing for DSPEx.
 
   Provides automated performance regression detection and baseline metrics
-  for SIMBA performance comparison. Acts as an early warning system for
+  for BEACON performance comparison. Acts as an early warning system for
   performance degradation and maintains performance baselines.
 
   Key Functions:
   - Automated performance regression detection
-  - Baseline metrics for SIMBA performance comparison
+  - Baseline metrics for BEACON performance comparison
   - Early warning system for performance degradation
   - Performance trend tracking over time
   """
@@ -407,7 +407,7 @@ defmodule DSPEx.Performance.RegressionBenchmarksTest do
 
   describe "performance trend tracking" do
     @tag :todo_optimize
-    test "establishes baseline metrics for SIMBA comparison" do
+    test "establishes baseline metrics for BEACON comparison" do
       # Comprehensive baseline establishment
       baselines = %{}
 
@@ -445,8 +445,8 @@ defmodule DSPEx.Performance.RegressionBenchmarksTest do
       # May be 0 if bootstrap fails
       assert baselines.memory_efficiency >= 0
 
-      # Log baselines for SIMBA team
-      IO.puts("\n=== SIMBA Baseline Metrics ===")
+      # Log baselines for BEACON team
+      IO.puts("\n=== BEACON Baseline Metrics ===")
 
       for {metric, value} <- baselines do
         IO.puts("#{metric}: #{format_metric_value(metric, value)}")

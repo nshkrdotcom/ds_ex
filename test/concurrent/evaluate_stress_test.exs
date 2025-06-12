@@ -2,7 +2,7 @@ defmodule DSPEx.Concurrent.EvaluateStressTest do
   @moduledoc """
   Concurrent stress tests for DSPEx.Evaluate module.
   Tests concurrent evaluation behavior, race conditions, fault isolation,
-  and resource management under high concurrent load for SIMBA readiness.
+  and resource management under high concurrent load for BEACON readiness.
   """
   use ExUnit.Case, async: false
 

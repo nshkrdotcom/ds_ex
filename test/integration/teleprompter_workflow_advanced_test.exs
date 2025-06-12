@@ -3,8 +3,8 @@ defmodule DSPEx.Integration.TeleprompterWorkflowAdvancedTest do
   Integration tests for complete teleprompter workflows.
 
   CRITICAL: This validates the complete Student → Teacher → Optimized Student
-  pipeline that SIMBA depends on. Tests ensure all components work together
-  correctly before SIMBA's sophisticated optimization algorithms are added.
+  pipeline that BEACON depends on. Tests ensure all components work together
+  correctly before BEACON's sophisticated optimization algorithms are added.
   """
   use ExUnit.Case, async: false
   @moduletag :group_3
@@ -61,17 +61,17 @@ defmodule DSPEx.Integration.TeleprompterWorkflowAdvancedTest do
       }
     ]
 
-    # Set up mock responses using the proper SIMBA mock provider
+    # Set up mock responses using the proper BEACON mock provider
     expected_answers = ["4", "6", "Paris", "William Shakespeare", "Jupiter"]
 
     # Set up mock client manager
     {:ok, _} = DSPEx.MockClientManager.start_link(:test, %{responses: :contextual})
 
-    # Use SimbaMockProvider to set up proper bootstrap responses
+    # Use BeaconMockProvider to set up proper bootstrap responses
     # Create a large pool of correct answers to ensure matches
     large_answer_pool = List.duplicate(expected_answers, 10) |> List.flatten()
-    alias DSPEx.Test.SimbaMockProvider
-    SimbaMockProvider.setup_bootstrap_mocks(large_answer_pool)
+    alias DSPEx.Test.BeaconMockProvider
+    BeaconMockProvider.setup_bootstrap_mocks(large_answer_pool)
 
     # Create metric function for evaluation
     metric_fn = Teleprompter.exact_match(:answer)
@@ -84,14 +84,14 @@ defmodule DSPEx.Integration.TeleprompterWorkflowAdvancedTest do
     }
   end
 
-  describe "complete teleprompter workflow - SIMBA dependency" do
+  describe "complete teleprompter workflow - BEACON dependency" do
     test "BootstrapFewShot complete pipeline execution", %{
       student: student,
       teacher: teacher,
       trainset: trainset,
       metric_fn: metric_fn
     } do
-      # This is the exact workflow SIMBA will execute
+      # This is the exact workflow BEACON will execute
 
       # 1. Create teleprompter with realistic configuration
       teleprompter =
@@ -268,7 +268,7 @@ defmodule DSPEx.Integration.TeleprompterWorkflowAdvancedTest do
     end
 
     # test "workflow with different teleprompter configurations", %{student: student, teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
-    #   # Test various teleprompter configurations SIMBA might use
+    #   # Test various teleprompter configurations BEACON might use
 
     #   configurations = [
     #     # Conservative configuration

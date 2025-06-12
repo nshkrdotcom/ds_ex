@@ -65,17 +65,17 @@ defmodule DSPEx.Services.TelemetrySetup do
       [:dspex, :program, :forward, :stop],
       [:dspex, :teleprompter, :bootstrap, :start],
       [:dspex, :teleprompter, :bootstrap, :stop],
-      # SIMBA-specific telemetry events
-      [:dspex, :teleprompter, :simba, :start],
-      [:dspex, :teleprompter, :simba, :stop],
-      [:dspex, :teleprompter, :simba, :optimization, :start],
-      [:dspex, :teleprompter, :simba, :optimization, :stop],
-      [:dspex, :teleprompter, :simba, :instruction, :start],
-      [:dspex, :teleprompter, :simba, :instruction, :stop],
-      [:dspex, :teleprompter, :simba, :trial, :start],
-      [:dspex, :teleprompter, :simba, :trial, :stop],
-      [:dspex, :teleprompter, :simba, :bayesian, :iteration, :start],
-      [:dspex, :teleprompter, :simba, :bayesian, :iteration, :stop]
+      # BEACON-specific telemetry events
+      [:dspex, :teleprompter, :beacon, :start],
+      [:dspex, :teleprompter, :beacon, :stop],
+      [:dspex, :teleprompter, :beacon, :optimization, :start],
+      [:dspex, :teleprompter, :beacon, :optimization, :stop],
+      [:dspex, :teleprompter, :beacon, :instruction, :start],
+      [:dspex, :teleprompter, :beacon, :instruction, :stop],
+      [:dspex, :teleprompter, :beacon, :trial, :start],
+      [:dspex, :teleprompter, :beacon, :trial, :stop],
+      [:dspex, :teleprompter, :beacon, :bayesian, :iteration, :start],
+      [:dspex, :teleprompter, :beacon, :bayesian, :iteration, :stop]
     ]
 
     # Attach Foundation's telemetry handlers
@@ -448,16 +448,16 @@ defmodule DSPEx.Services.TelemetrySetup do
     )
   end
 
-  # SIMBA telemetry handlers
+  # BEACON telemetry handlers
   defp do_handle_dspex_event(
-         [:dspex, :teleprompter, :simba, :start],
+         [:dspex, :teleprompter, :beacon, :start],
          _measurements,
          metadata,
          _config
        ) do
-    # Track SIMBA optimization start
+    # Track BEACON optimization start
     Foundation.Telemetry.emit_counter(
-      [:dspex, :simba, :optimizations_started],
+      [:dspex, :beacon, :optimizations_started],
       %{
         correlation_id: metadata[:correlation_id],
         student_type: metadata[:student_type],
@@ -467,14 +467,14 @@ defmodule DSPEx.Services.TelemetrySetup do
   end
 
   defp do_handle_dspex_event(
-         [:dspex, :teleprompter, :simba, :stop],
+         [:dspex, :teleprompter, :beacon, :stop],
          measurements,
          metadata,
          _config
        ) do
-    # Track SIMBA optimization completion and performance
+    # Track BEACON optimization completion and performance
     Foundation.Telemetry.emit_histogram(
-      [:dspex, :performance, :simba_optimization_duration],
+      [:dspex, :performance, :beacon_optimization_duration],
       measurements.duration,
       %{
         correlation_id: metadata[:correlation_id],
@@ -484,7 +484,7 @@ defmodule DSPEx.Services.TelemetrySetup do
     )
 
     Foundation.Telemetry.emit_counter(
-      [:dspex, :simba, :optimizations_completed],
+      [:dspex, :beacon, :optimizations_completed],
       %{
         status: if(measurements[:success] != false, do: "success", else: "error"),
         correlation_id: metadata[:correlation_id]
@@ -493,14 +493,14 @@ defmodule DSPEx.Services.TelemetrySetup do
   end
 
   defp do_handle_dspex_event(
-         [:dspex, :teleprompter, :simba, :optimization, :start],
+         [:dspex, :teleprompter, :beacon, :optimization, :start],
          _measurements,
          metadata,
          _config
        ) do
     # Track individual optimization trial start
     Foundation.Telemetry.emit_counter(
-      [:dspex, :simba, :trials_started],
+      [:dspex, :beacon, :trials_started],
       %{
         correlation_id: metadata[:correlation_id],
         trial_number: metadata[:trial_number]
@@ -509,14 +509,14 @@ defmodule DSPEx.Services.TelemetrySetup do
   end
 
   defp do_handle_dspex_event(
-         [:dspex, :teleprompter, :simba, :optimization, :stop],
+         [:dspex, :teleprompter, :beacon, :optimization, :stop],
          measurements,
          metadata,
          _config
        ) do
     # Track optimization trial performance
     Foundation.Telemetry.emit_histogram(
-      [:dspex, :performance, :simba_trial_duration],
+      [:dspex, :performance, :beacon_trial_duration],
       measurements.duration,
       %{
         correlation_id: metadata[:correlation_id],
@@ -528,7 +528,7 @@ defmodule DSPEx.Services.TelemetrySetup do
     # Track trial score distribution
     if score = metadata[:score] do
       Foundation.Telemetry.emit_gauge(
-        [:dspex, :simba, :trial_score],
+        [:dspex, :beacon, :trial_score],
         score,
         %{
           correlation_id: metadata[:correlation_id],
@@ -539,14 +539,14 @@ defmodule DSPEx.Services.TelemetrySetup do
   end
 
   defp do_handle_dspex_event(
-         [:dspex, :teleprompter, :simba, :instruction, :start],
+         [:dspex, :teleprompter, :beacon, :instruction, :start],
          _measurements,
          metadata,
          _config
        ) do
     # Track instruction generation start
     Foundation.Telemetry.emit_counter(
-      [:dspex, :simba, :instruction_generation_started],
+      [:dspex, :beacon, :instruction_generation_started],
       %{
         correlation_id: metadata[:correlation_id],
         instruction_model: metadata[:instruction_model]
@@ -555,14 +555,14 @@ defmodule DSPEx.Services.TelemetrySetup do
   end
 
   defp do_handle_dspex_event(
-         [:dspex, :teleprompter, :simba, :instruction, :stop],
+         [:dspex, :teleprompter, :beacon, :instruction, :stop],
          measurements,
          metadata,
          _config
        ) do
     # Track instruction generation performance
     Foundation.Telemetry.emit_histogram(
-      [:dspex, :performance, :simba_instruction_generation_duration],
+      [:dspex, :performance, :beacon_instruction_generation_duration],
       measurements.duration,
       %{
         correlation_id: metadata[:correlation_id],
@@ -573,14 +573,14 @@ defmodule DSPEx.Services.TelemetrySetup do
   end
 
   defp do_handle_dspex_event(
-         [:dspex, :teleprompter, :simba, :bayesian, :iteration, :start],
+         [:dspex, :teleprompter, :beacon, :bayesian, :iteration, :start],
          _measurements,
          metadata,
          _config
        ) do
     # Track Bayesian optimization iteration start
     Foundation.Telemetry.emit_counter(
-      [:dspex, :simba, :bayesian_iterations_started],
+      [:dspex, :beacon, :bayesian_iterations_started],
       %{
         correlation_id: metadata[:correlation_id],
         iteration_number: metadata[:iteration_number]
@@ -589,14 +589,14 @@ defmodule DSPEx.Services.TelemetrySetup do
   end
 
   defp do_handle_dspex_event(
-         [:dspex, :teleprompter, :simba, :bayesian, :iteration, :stop],
+         [:dspex, :teleprompter, :beacon, :bayesian, :iteration, :stop],
          measurements,
          metadata,
          _config
        ) do
     # Track Bayesian optimization iteration performance
     Foundation.Telemetry.emit_histogram(
-      [:dspex, :performance, :simba_bayesian_iteration_duration],
+      [:dspex, :performance, :beacon_bayesian_iteration_duration],
       measurements.duration,
       %{
         correlation_id: metadata[:correlation_id],
@@ -608,7 +608,7 @@ defmodule DSPEx.Services.TelemetrySetup do
     # Track acquisition function values for optimization monitoring
     if acquisition_value = metadata[:acquisition_value] do
       Foundation.Telemetry.emit_gauge(
-        [:dspex, :simba, :acquisition_value],
+        [:dspex, :beacon, :acquisition_value],
         acquisition_value,
         %{
           correlation_id: metadata[:correlation_id],

@@ -1,10 +1,10 @@
 defmodule DspexDemo.Examples.ChainOfThought do
   @moduledoc """
-  Demonstrates DSPEx + SIMBA for chain-of-thought reasoning optimization.
+  Demonstrates DSPEx + BEACON for chain-of-thought reasoning optimization.
   """
   
   alias DSPEx.{Example, Predict, Program}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
   alias DspexDemo.Signatures.CoTSignature
   
   def run_demo do
@@ -13,7 +13,7 @@ defmodule DspexDemo.Examples.ChainOfThought do
     
     IO.puts """
     
-    🧮 DSPEx + SIMBA Chain-of-Thought Demo
+    🧮 DSPEx + BEACON Chain-of-Thought Demo
     ======================================
     
     This demo optimizes step-by-step mathematical reasoning.
@@ -60,11 +60,11 @@ defmodule DspexDemo.Examples.ChainOfThought do
     # Test problem
     test_problem = %{problem: "A rectangle has length 12 meters and width 8 meters. What is its area?"}
     
-    # Get baseline and run SIMBA
+    # Get baseline and run BEACON
     case Program.forward(student, test_problem) do
       {:ok, baseline} ->
-        # Create and run SIMBA with longer timeout for reasoning
-        teleprompter = SIMBA.new(
+        # Create and run BEACON with longer timeout for reasoning
+        teleprompter = BEACON.new(
           num_candidates: 10,
           max_bootstrapped_demos: 3,
           num_trials: 25,
@@ -72,7 +72,7 @@ defmodule DspexDemo.Examples.ChainOfThought do
           timeout: 120_000  # 2 minute timeout for complex reasoning
         )
         
-        case SIMBA.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
+        case BEACON.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
           {:ok, optimized} ->
             {:ok, optimized_result} = Program.forward(optimized, test_problem)
             
@@ -108,7 +108,7 @@ defmodule DspexDemo.Examples.ChainOfThought do
             Answer: #{Map.get(baseline, :answer, "N/A")}
             
             Note: 
-            - SIMBA optimization is temporarily disabled due to a technical issue.
+            - BEACON optimization is temporarily disabled due to a technical issue.
             - For full multi-field responses, set GEMINI_API_KEY or OPENAI_API_KEY.
             - This demo shows the core DSPEx prediction functionality.
             

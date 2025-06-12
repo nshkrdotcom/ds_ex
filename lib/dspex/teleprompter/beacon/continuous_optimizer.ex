@@ -1,4 +1,4 @@
-defmodule DSPEx.Teleprompter.SIMBA.ContinuousOptimizer do
+defmodule DSPEx.Teleprompter.BEACON.ContinuousOptimizer do
   @moduledoc """
   GenServer for continuous program optimization in production environments.
 
@@ -8,7 +8,7 @@ defmodule DSPEx.Teleprompter.SIMBA.ContinuousOptimizer do
 
   use GenServer
 
-  alias DSPEx.Teleprompter.SIMBA.{Integration, Utils}
+  alias DSPEx.Teleprompter.BEACON.{Integration, Utils}
 
   # Client API
 
@@ -37,7 +37,7 @@ defmodule DSPEx.Teleprompter.SIMBA.ContinuousOptimizer do
         quality_check_interval: quality_check_interval,
         opts: opts
       },
-      name: {:global, {:simba_continuous_optimizer, program}}
+      name: {:global, {:beacon_continuous_optimizer, program}}
     )
   end
 

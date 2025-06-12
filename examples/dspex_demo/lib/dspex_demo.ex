@@ -1,8 +1,8 @@
 defmodule DspexDemo do
   @moduledoc """
-  DSPEx + SIMBA Demo Application
+  DSPEx + BEACON Demo Application
   
-  This application demonstrates the power of DSPEx with SIMBA optimization
+  This application demonstrates the power of DSPEx with BEACON optimization
   across different use cases: question answering, sentiment analysis, and
   chain-of-thought reasoning.
   """
@@ -42,10 +42,10 @@ defmodule DspexDemo do
   defp print_help do
     IO.puts """
     
-    🎯 DSPEx + SIMBA Demo Application
+    🎯 DSPEx + BEACON Demo Application
     =================================
     
-    This demo showcases DSPEx with SIMBA teleprompter optimization.
+    This demo showcases DSPEx with BEACON teleprompter optimization.
     
     Usage:
       mix run                    # Run all demos
@@ -80,10 +80,10 @@ defmodule DspexDemo do
   defp run_all_demos do
     IO.puts """
     
-    🚀 Running All DSPEx + SIMBA Demos
+    🚀 Running All DSPEx + BEACON Demos
     ===================================
     
-    This will demonstrate SIMBA optimization across three different
+    This will demonstrate BEACON optimization across three different
     program types: Question Answering, Sentiment Analysis, and
     Chain-of-Thought Reasoning.
     
@@ -129,7 +129,7 @@ defmodule DspexDemo do
     
     🎉 Completed #{success_count}/#{length(results)} demos successfully!
     
-    The DSPEx + SIMBA framework demonstrates how Bayesian optimization
+    The DSPEx + BEACON framework demonstrates how Bayesian optimization
     can automatically improve language model programs by finding optimal
     instruction and demonstration combinations.
     

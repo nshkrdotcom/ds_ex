@@ -1,12 +1,12 @@
 defmodule DSPEx.Performance.MemoryPerformanceTest do
   @moduledoc """
-  Memory-focused performance tests for DSPEx SIMBA preparation.
+  Memory-focused performance tests for DSPEx BEACON preparation.
 
   Validates memory usage patterns, leak detection, and resource cleanup
-  specific to SIMBA optimization workflows. Complements existing performance
+  specific to BEACON optimization workflows. Complements existing performance
   tests with memory-focused scenarios.
 
-  Tests migrated from TODO_02_PRE_SIMBA/test/performance/pre_simba_performance_test.exs
+  Tests migrated from TODO_02_PRE_BEACON/test/performance/pre_beacon_performance_test.exs
   """
   use ExUnit.Case, async: false
 
@@ -16,9 +16,9 @@ defmodule DSPEx.Performance.MemoryPerformanceTest do
   @moduletag :group_2
   @moduletag :performance
   @moduletag :memory
-  @moduletag :simba_prep
+  @moduletag :beacon_prep
 
-  # Memory validation thresholds for SIMBA readiness
+  # Memory validation thresholds for BEACON readiness
   @max_memory_growth_mb 50
   @max_process_memory_growth_mb 20
   @large_dataset_memory_limit_mb 100
@@ -26,7 +26,7 @@ defmodule DSPEx.Performance.MemoryPerformanceTest do
 
   describe "memory usage validation" do
     test "teleprompter compilation doesn't leak memory" do
-      # SIMBA will run many optimization iterations - ensure no memory leaks
+      # BEACON will run many optimization iterations - ensure no memory leaks
       mock_provider_responses()
 
       initial_memory = :erlang.memory()
@@ -82,7 +82,7 @@ defmodule DSPEx.Performance.MemoryPerformanceTest do
     end
 
     test "large trainsets don't cause memory issues" do
-      # SIMBA might use large training sets - validate memory handling
+      # BEACON might use large training sets - validate memory handling
       mock_provider_responses()
 
       student = create_mock_program(:large_dataset_student)
@@ -147,7 +147,7 @@ defmodule DSPEx.Performance.MemoryPerformanceTest do
 
     @tag :todo_optimize
     test "memory stability under repeated optimization cycles" do
-      # Test memory stability across multiple optimization cycles (SIMBA pattern)
+      # Test memory stability across multiple optimization cycles (BEACON pattern)
       mock_provider_responses()
 
       base_memory = :erlang.memory()[:total]
@@ -212,9 +212,9 @@ defmodule DSPEx.Performance.MemoryPerformanceTest do
     end
   end
 
-  describe "SIMBA readiness performance benchmarks" do
+  describe "BEACON readiness performance benchmarks" do
     test "handles high demo counts efficiently" do
-      # SIMBA might create programs with many demonstrations
+      # BEACON might create programs with many demonstrations
       mock_provider_responses()
 
       student = create_mock_program(:high_demo_student)

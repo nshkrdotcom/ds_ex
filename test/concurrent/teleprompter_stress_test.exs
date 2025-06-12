@@ -2,7 +2,7 @@ defmodule DSPEx.Concurrent.TeleprompterStressTest do
   @moduledoc """
   Concurrent stress tests for DSPEx.Teleprompter optimization.
   Tests concurrent teacher execution, demo generation, and full optimization
-  pipeline under high load - critical for SIMBA readiness validation.
+  pipeline under high load - critical for BEACON readiness validation.
   """
   use ExUnit.Case, async: false
 

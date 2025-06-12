@@ -1,10 +1,10 @@
-defmodule DSPEx.Test.SimbaMockProvider do
+defmodule DSPEx.Test.BeaconMockProvider do
   @moduledoc """
-  Specialized mock provider for SIMBA optimization workflows and bootstrap testing.
+  Specialized mock provider for BEACON optimization workflows and bootstrap testing.
 
   This module provides high-level mock setup functions specifically designed for
   testing teleprompter optimization workflows, bootstrap few-shot learning,
-  and SIMBA-related functionality.
+  and BEACON-related functionality.
   """
 
   alias DSPEx.MockClientManager
@@ -135,13 +135,13 @@ defmodule DSPEx.Test.SimbaMockProvider do
   end
 
   @doc """
-  Sets up comprehensive SIMBA optimization workflow mocks.
+  Sets up comprehensive BEACON optimization workflow mocks.
 
   This is a high-level function that configures mocks for a complete
   optimization workflow including teacher responses, student evaluation,
   and progress tracking.
   """
-  def setup_simba_optimization_mocks(config) when is_map(config) do
+  def setup_beacon_optimization_mocks(config) when is_map(config) do
     # Set up teacher responses if provided
     if teacher_responses = config[:teacher_responses] do
       setup_bootstrap_mocks(teacher_responses)
@@ -161,9 +161,9 @@ defmodule DSPEx.Test.SimbaMockProvider do
   end
 
   @doc """
-  Resets all SIMBA-related mock state.
+  Resets all BEACON-related mock state.
   """
-  def reset_all_simba_mocks do
+  def reset_all_beacon_mocks do
     # Clear all mock responses
     MockClientManager.clear_all_mock_responses()
     :ok

@@ -1,10 +1,10 @@
 defmodule DspexDemo.Examples.SentimentAnalysis do
   @moduledoc """
-  Demonstrates DSPEx + SIMBA for sentiment analysis optimization.
+  Demonstrates DSPEx + BEACON for sentiment analysis optimization.
   """
   
   alias DSPEx.{Example, Predict, Program}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
   alias DspexDemo.Signatures.SentimentSignature
   
   def run_demo do
@@ -13,7 +13,7 @@ defmodule DspexDemo.Examples.SentimentAnalysis do
     
     IO.puts """
     
-    😊 DSPEx + SIMBA Sentiment Analysis Demo
+    😊 DSPEx + BEACON Sentiment Analysis Demo
     ========================================
     
     This demo optimizes sentiment analysis with reasoning and confidence scoring.
@@ -66,18 +66,18 @@ defmodule DspexDemo.Examples.SentimentAnalysis do
     # Test input
     test_text = %{text: "The movie was pretty good but the ending was disappointing."}
     
-    # Get baseline and run SIMBA
+    # Get baseline and run BEACON
     case Program.forward(student, test_text) do
       {:ok, baseline} ->
-        # Create and run SIMBA
-        teleprompter = SIMBA.new(
+        # Create and run BEACON
+        teleprompter = BEACON.new(
           num_candidates: 6,
           max_bootstrapped_demos: 2,
           num_trials: 15,
           quality_threshold: 0.6
         )
         
-        case SIMBA.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
+        case BEACON.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
           {:ok, optimized} ->
             {:ok, optimized_result} = Program.forward(optimized, test_text)
             
@@ -115,7 +115,7 @@ defmodule DspexDemo.Examples.SentimentAnalysis do
             Reasoning: #{Map.get(baseline, :reasoning, "N/A")}
             Confidence: #{Map.get(baseline, :confidence, "N/A")}
             
-            ❌ SIMBA optimization failed: #{inspect(reason)}
+            ❌ BEACON optimization failed: #{inspect(reason)}
             Note: Set GEMINI_API_KEY and OPENAI_API_KEY for full functionality.
             
             """

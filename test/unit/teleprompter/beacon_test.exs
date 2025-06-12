@@ -1,49 +1,49 @@
-defmodule DSPEx.Teleprompter.SIMBATest do
+defmodule DSPEx.Teleprompter.BEACONTest do
   use ExUnit.Case, async: true
 
   alias DSPEx.{Example, Predict}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
 
-  @moduletag :simba_unit_test
+  @moduletag :beacon_unit_test
   @moduletag :todo_optimize
 
-  # Test signature for SIMBA tests
+  # Test signature for BEACON tests
   defmodule TestQASignature do
-    @moduledoc "Answer questions for SIMBA testing"
+    @moduledoc "Answer questions for BEACON testing"
     use DSPEx.Signature, "question -> answer"
   end
 
-  describe "SIMBA.new/1" do
-    test "creates a SIMBA teleprompter with default options" do
-      simba = SIMBA.new()
+  describe "BEACON.new/1" do
+    test "creates a BEACON teleprompter with default options" do
+      beacon = BEACON.new()
 
-      assert %SIMBA{} = simba
-      assert simba.num_candidates == 20
-      assert simba.max_bootstrapped_demos == 4
-      assert simba.num_trials == 50
-      assert simba.quality_threshold == 0.7
-      assert simba.max_concurrency == 20
-      assert simba.timeout == 60_000
+      assert %BEACON{} = beacon
+      assert beacon.num_candidates == 20
+      assert beacon.max_bootstrapped_demos == 4
+      assert beacon.num_trials == 50
+      assert beacon.quality_threshold == 0.7
+      assert beacon.max_concurrency == 20
+      assert beacon.timeout == 60_000
     end
 
-    test "creates a SIMBA teleprompter with custom options" do
-      simba =
-        SIMBA.new(
+    test "creates a BEACON teleprompter with custom options" do
+      beacon =
+        BEACON.new(
           num_candidates: 10,
           max_bootstrapped_demos: 2,
           num_trials: 25,
           quality_threshold: 0.8
         )
 
-      assert %SIMBA{} = simba
-      assert simba.num_candidates == 10
-      assert simba.max_bootstrapped_demos == 2
-      assert simba.num_trials == 25
-      assert simba.quality_threshold == 0.8
+      assert %BEACON{} = beacon
+      assert beacon.num_candidates == 10
+      assert beacon.max_bootstrapped_demos == 2
+      assert beacon.num_trials == 25
+      assert beacon.quality_threshold == 0.8
     end
   end
 
-  describe "SIMBA.compile/5" do
+  describe "BEACON.compile/5" do
     setup do
       # Create student and teacher programs using the test signature
       student = %Predict{signature: TestQASignature, client: :test_mock}
@@ -90,19 +90,19 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     } do
       # Test invalid student
       assert {:error, :invalid_student_program} =
-               SIMBA.compile("not_a_struct", teacher, trainset, metric_fn, [])
+               BEACON.compile("not_a_struct", teacher, trainset, metric_fn, [])
 
       # Test invalid teacher
       assert {:error, :invalid_teacher_program} =
-               SIMBA.compile(student, "not_a_struct", trainset, metric_fn, [])
+               BEACON.compile(student, "not_a_struct", trainset, metric_fn, [])
 
       # Test empty trainset
       assert {:error, :invalid_or_empty_trainset} =
-               SIMBA.compile(student, teacher, [], metric_fn, [])
+               BEACON.compile(student, teacher, [], metric_fn, [])
 
       # Test invalid metric function
       assert {:error, :invalid_metric_function} =
-               SIMBA.compile(student, teacher, trainset, "not_a_function", [])
+               BEACON.compile(student, teacher, trainset, "not_a_function", [])
     end
 
     @tag :skip_live_test
@@ -122,7 +122,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
         timeout: 5_000
       ]
 
-      result = SIMBA.compile(student, teacher, trainset, metric_fn, opts)
+      result = BEACON.compile(student, teacher, trainset, metric_fn, opts)
 
       # Should return an optimized program
       assert {:ok, optimized_program} = result
@@ -149,7 +149,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
         timeout: 5_000
       ]
 
-      result = SIMBA.compile(student, teacher, trainset, metric_fn, opts)
+      result = BEACON.compile(student, teacher, trainset, metric_fn, opts)
 
       # Should handle bootstrap failure gracefully when bootstrap actually fails
       case result do
@@ -202,7 +202,7 @@ defmodule DSPEx.Teleprompter.SIMBATest do
       DSPEx.MockClientManager.set_mock_responses(:test_mock, [%{answer: "Mock answer"}])
 
       # This should work without wrapping in OptimizedProgram
-      result = SIMBA.compile(student, teacher, trainset, metric_fn, opts)
+      result = BEACON.compile(student, teacher, trainset, metric_fn, opts)
 
       case result do
         {:ok, optimized} ->
@@ -223,10 +223,10 @@ defmodule DSPEx.Teleprompter.SIMBATest do
       test_pid = self()
 
       :telemetry.attach_many(
-        "simba-test-telemetry",
+        "beacon-test-telemetry",
         [
-          [:dspex, :teleprompter, :simba, :start],
-          [:dspex, :teleprompter, :simba, :stop]
+          [:dspex, :teleprompter, :beacon, :start],
+          [:dspex, :teleprompter, :beacon, :stop]
         ],
         fn event, measurements, metadata, _config ->
           send(test_pid, {:telemetry, event, measurements, metadata})
@@ -257,15 +257,15 @@ defmodule DSPEx.Teleprompter.SIMBATest do
       ]
 
       # Execute compilation
-      _result = SIMBA.compile(student, teacher, trainset, metric_fn, opts)
+      _result = BEACON.compile(student, teacher, trainset, metric_fn, opts)
 
       # Check that telemetry events were emitted
-      assert_receive {:telemetry, [:dspex, :teleprompter, :simba, :start], _, metadata}, 1000
+      assert_receive {:telemetry, [:dspex, :teleprompter, :beacon, :start], _, metadata}, 1000
       assert Map.has_key?(metadata, :correlation_id)
       assert Map.has_key?(metadata, :trainset_size)
 
       # Clean up telemetry handler
-      :telemetry.detach("simba-test-telemetry")
+      :telemetry.detach("beacon-test-telemetry")
     end
   end
 end

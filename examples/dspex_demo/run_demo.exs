@@ -1,6 +1,6 @@
 #!/usr/bin/env elixir
 
-# DSPEx + SIMBA Demo Runner Script
+# DSPEx + BEACON Demo Runner Script
 
 # Get command line arguments
 args = System.argv()

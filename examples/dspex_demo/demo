@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# DSPEx + SIMBA Demo Runner
+# DSPEx + BEACON Demo Runner
 # Usage: ./demo [qa|sentiment|cot|--help|--interactive]
 
 case "$1" in

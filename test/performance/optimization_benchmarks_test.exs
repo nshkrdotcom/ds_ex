@@ -2,7 +2,7 @@ defmodule DSPEx.Performance.OptimizationBenchmarksTest do
   @moduledoc """
   Performance benchmark tests for DSPEx optimization workflows.
 
-  Establishes performance baselines for SIMBA integration:
+  Establishes performance baselines for BEACON integration:
   - Optimization time scaling with dataset size
   - Concurrent vs sequential execution performance
   - Memory usage patterns during optimization
@@ -60,7 +60,7 @@ defmodule DSPEx.Performance.OptimizationBenchmarksTest do
       assert scaling_factor < 1.5,
              "Performance should scale roughly linearly (factor: #{scaling_factor})"
 
-      # Document baseline performance for SIMBA
+      # Document baseline performance for BEACON
       IO.puts("\n=== Evaluation Performance Baselines ===")
 
       for result <- results do

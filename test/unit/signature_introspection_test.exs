@@ -2,7 +2,7 @@ defmodule DSPEx.SignatureIntrospectionTest do
   @moduledoc """
   Unit tests for DSPEx.Signature introspection capabilities.
 
-  CRITICAL: SIMBA references DSPEx.Signature introspection functions for
+  CRITICAL: BEACON references DSPEx.Signature introspection functions for
   validation and compatibility checking. These functions are essential
   for signature analysis and optimization workflows.
   """
@@ -348,15 +348,15 @@ defmodule DSPEx.SignatureIntrospectionTest do
     end
   end
 
-  describe "SIMBA-specific requirements" do
-    test "all SIMBA-required functions exist and work" do
-      # SIMBA requires these exact functions to exist
+  describe "BEACON-specific requirements" do
+    test "all BEACON-required functions exist and work" do
+      # BEACON requires these exact functions to exist
       assert function_exported?(Signature, :validate_signature_compatibility, 2)
       assert function_exported?(Signature, :introspect, 1)
       assert function_exported?(Signature, :validate_signature_implementation, 1)
       assert function_exported?(Signature, :field_statistics, 1)
 
-      # Test with realistic SIMBA usage scenarios
+      # Test with realistic BEACON usage scenarios
       assert :ok = Signature.validate_signature_implementation(SimpleSignature)
 
       {:ok, metadata} = Signature.introspect(SimpleSignature)
@@ -366,8 +366,8 @@ defmodule DSPEx.SignatureIntrospectionTest do
       assert is_map(stats)
     end
 
-    test "compatibility checking works for SIMBA chaining scenarios" do
-      # SIMBA might chain multiple signatures
+    test "compatibility checking works for BEACON chaining scenarios" do
+      # BEACON might chain multiple signatures
       defmodule StepOne do
         use DSPEx.Signature, "problem -> intermediate_result"
       end
@@ -387,10 +387,10 @@ defmodule DSPEx.SignatureIntrospectionTest do
       assert step2_info.inputs == [:intermediate_result]
     end
 
-    test "introspection data is suitable for SIMBA optimization metrics" do
+    test "introspection data is suitable for BEACON optimization metrics" do
       {:ok, metadata} = Signature.introspect(ComplexSignature)
 
-      # SIMBA needs this data for optimization decisions
+      # BEACON needs this data for optimization decisions
       assert is_atom(metadata.module)
       assert is_list(metadata.inputs)
       assert is_list(metadata.outputs)
@@ -407,7 +407,7 @@ defmodule DSPEx.SignatureIntrospectionTest do
     end
 
     test "validation works with extended signatures" do
-      # SIMBA extends signatures for ChainOfThought
+      # BEACON extends signatures for ChainOfThought
       additional_fields = %{reasoning: "reasoning field"}
       {:ok, extended_module} = Signature.extend(SimpleSignature, additional_fields)
 

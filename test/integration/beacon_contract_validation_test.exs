@@ -1,13 +1,13 @@
-defmodule DSPEx.SIMBAContractValidationTest do
+defmodule DSPEx.BEACONContractValidationTest do
   @moduledoc """
-  Validates all APIs that SIMBA depends on work correctly.
-  This test suite ensures the DSPEx-SIMBA contract is fulfilled.
+  Validates all APIs that BEACON depends on work correctly.
+  This test suite ensures the DSPEx-BEACON contract is fulfilled.
 
-  These tests validate the critical API contract that SIMBA requires:
+  These tests validate the critical API contract that BEACON requires:
   - Program.forward/3 with timeout and correlation_id support
   - Program introspection functions (program_type, safe_program_info, has_demos?)
-  - ConfigManager SIMBA configuration paths
-  - OptimizedProgram SIMBA strategy detection
+  - ConfigManager BEACON configuration paths
+  - OptimizedProgram BEACON strategy detection
   - Client response format stability
   - Foundation service integration
   """
@@ -18,11 +18,11 @@ defmodule DSPEx.SIMBAContractValidationTest do
   alias DSPEx.Services.ConfigManager
   alias DSPEx.Teleprompter.BootstrapFewShot
 
-  defmodule SIMBATestSignature do
+  defmodule BEACONTestSignature do
     use DSPEx.Signature, "question -> answer"
   end
 
-  defmodule SIMBAAdvancedSignature do
+  defmodule BEACONAdvancedSignature do
     use DSPEx.Signature, "question -> answer, reasoning"
   end
 
@@ -38,11 +38,11 @@ defmodule DSPEx.SIMBAContractValidationTest do
     defstruct [:signature, :client]
   end
 
-  describe "SIMBA Core Program Contract" do
+  describe "BEACON Core Program Contract" do
     test "Program.forward/3 with timeout and correlation_id" do
-      program = %Predict{signature: SIMBATestSignature, client: :test}
+      program = %Predict{signature: BEACONTestSignature, client: :test}
       inputs = %{question: "Contract test"}
-      correlation_id = "simba-contract-#{System.unique_integer()}"
+      correlation_id = "beacon-contract-#{System.unique_integer()}"
 
       # Test timeout option with reasonable timeout
       assert {:ok, outputs} = Program.forward(program, inputs, timeout: 10_000)
@@ -73,7 +73,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
     end
 
     test "Program introspection functions work correctly" do
-      student = %Predict{signature: SIMBATestSignature, client: :test}
+      student = %Predict{signature: BEACONTestSignature, client: :test}
 
       demo = %Example{
         data: %{question: "test", answer: "response"},
@@ -95,7 +95,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
                type: :predict,
                name: "Predict",
                has_demos: false,
-               signature: SIMBATestSignature,
+               signature: BEACONTestSignature,
                demo_count: 0
              } = info
 
@@ -111,7 +111,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
 
       # Test with program that has demos field but empty list
       student_with_empty_demos = %Predict{
-        signature: SIMBATestSignature,
+        signature: BEACONTestSignature,
         client: :test,
         demos: []
       }
@@ -120,7 +120,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
 
       # Test with program that has demos
       student_with_demos = %Predict{
-        signature: SIMBATestSignature,
+        signature: BEACONTestSignature,
         client: :test,
         demos: [demo]
       }
@@ -129,7 +129,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
     end
 
     test "Program.forward/2 maintains backward compatibility" do
-      program = %Predict{signature: SIMBATestSignature, client: :test}
+      program = %Predict{signature: BEACONTestSignature, client: :test}
       inputs = %{question: "Backward compatibility test"}
 
       # forward/2 should still work exactly as before
@@ -138,13 +138,13 @@ defmodule DSPEx.SIMBAContractValidationTest do
     end
   end
 
-  describe "SIMBA Client Contract" do
+  describe "BEACON Client Contract" do
     test "Client.request/2 response format stability" do
-      messages = [%{role: "user", content: "SIMBA instruction generation test"}]
+      messages = [%{role: "user", content: "BEACON instruction generation test"}]
 
       case Client.request(messages, %{provider: :test}) do
         {:ok, response} ->
-          # Validate structure SIMBA expects
+          # Validate structure BEACON expects
           assert %{choices: choices} = response
           assert is_list(choices)
           assert length(choices) > 0
@@ -154,9 +154,9 @@ defmodule DSPEx.SIMBAContractValidationTest do
           assert is_binary(content)
 
         {:error, reason} ->
-          # Validate error is categorized as SIMBA expects
+          # Validate error is categorized as BEACON expects
           assert is_atom(reason)
-          # Common error types that SIMBA should handle
+          # Common error types that BEACON should handle
           _acceptable_errors = [
             :timeout,
             :network_error,
@@ -198,16 +198,16 @@ defmodule DSPEx.SIMBAContractValidationTest do
     end
   end
 
-  describe "SIMBA Configuration Contract" do
-    test "ConfigManager.get_with_default/2 for SIMBA paths" do
-      # Test critical SIMBA configuration paths exist and return valid values
+  describe "BEACON Configuration Contract" do
+    test "ConfigManager.get_with_default/2 for BEACON paths" do
+      # Test critical BEACON configuration paths exist and return valid values
       default_provider = ConfigManager.get_with_default([:prediction, :default_provider], :gemini)
       assert default_provider in [:gemini, :openai, :anthropic, :test]
 
-      # Test SIMBA teleprompter config paths
+      # Test BEACON teleprompter config paths
       instruction_model =
         ConfigManager.get_with_default(
-          [:teleprompters, :simba, :default_instruction_model],
+          [:teleprompters, :beacon, :default_instruction_model],
           :openai
         )
 
@@ -215,7 +215,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
 
       evaluation_model =
         ConfigManager.get_with_default(
-          [:teleprompters, :simba, :default_evaluation_model],
+          [:teleprompters, :beacon, :default_evaluation_model],
           :gemini
         )
 
@@ -223,7 +223,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
 
       max_concurrent =
         ConfigManager.get_with_default(
-          [:teleprompters, :simba, :max_concurrent_operations],
+          [:teleprompters, :beacon, :max_concurrent_operations],
           20
         )
 
@@ -231,7 +231,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
 
       default_timeout =
         ConfigManager.get_with_default(
-          [:teleprompters, :simba, :default_timeout],
+          [:teleprompters, :beacon, :default_timeout],
           60_000
         )
 
@@ -246,11 +246,11 @@ defmodule DSPEx.SIMBAContractValidationTest do
       assert single_key == :default
     end
 
-    test "ConfigManager handles nested SIMBA optimization config" do
+    test "ConfigManager handles nested BEACON optimization config" do
       # Test nested optimization configuration
       max_trials =
         ConfigManager.get_with_default(
-          [:teleprompters, :simba, :optimization, :max_trials],
+          [:teleprompters, :beacon, :optimization, :max_trials],
           100
         )
 
@@ -259,7 +259,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
       # Test Bayesian optimization config
       acquisition_fn =
         ConfigManager.get_with_default(
-          [:teleprompters, :simba, :bayesian_optimization, :acquisition_function],
+          [:teleprompters, :beacon, :bayesian_optimization, :acquisition_function],
           :expected_improvement
         )
 
@@ -267,9 +267,9 @@ defmodule DSPEx.SIMBAContractValidationTest do
     end
   end
 
-  describe "SIMBA OptimizedProgram Contract" do
-    test "OptimizedProgram metadata support for SIMBA" do
-      student = %Predict{signature: SIMBATestSignature, client: :test}
+  describe "BEACON OptimizedProgram Contract" do
+    test "OptimizedProgram metadata support for BEACON" do
+      student = %Predict{signature: BEACONTestSignature, client: :test}
 
       demos = [
         %Example{
@@ -278,10 +278,10 @@ defmodule DSPEx.SIMBAContractValidationTest do
         }
       ]
 
-      # Test SIMBA metadata storage
-      simba_metadata = %{
-        optimization_method: :simba,
-        instruction: "Test instruction for SIMBA optimization",
+      # Test BEACON metadata storage
+      beacon_metadata = %{
+        optimization_method: :beacon,
+        instruction: "Test instruction for BEACON optimization",
         optimization_score: 0.85,
         optimization_stats: %{
           trials: 25,
@@ -299,11 +299,11 @@ defmodule DSPEx.SIMBAContractValidationTest do
         }
       }
 
-      optimized = OptimizedProgram.new(student, demos, simba_metadata)
+      optimized = OptimizedProgram.new(student, demos, beacon_metadata)
 
       # Validate metadata preservation
-      assert optimized.metadata.optimization_method == :simba
-      assert optimized.metadata.instruction == "Test instruction for SIMBA optimization"
+      assert optimized.metadata.optimization_method == :beacon
+      assert optimized.metadata.instruction == "Test instruction for BEACON optimization"
       assert optimized.metadata.optimization_score == 0.85
       assert optimized.metadata.optimization_stats.trials == 25
       assert length(optimized.metadata.bayesian_trials) == 2
@@ -315,8 +315,8 @@ defmodule DSPEx.SIMBAContractValidationTest do
     end
 
     test "native support detection functions" do
-      basic_program = %Predict{signature: SIMBATestSignature, client: :test}
-      demo_program = %Predict{signature: SIMBATestSignature, client: :test, demos: []}
+      basic_program = %Predict{signature: BEACONTestSignature, client: :test}
+      demo_program = %Predict{signature: BEACONTestSignature, client: :test, demos: []}
 
       # Test supports_native_demos?/1 - Both Predict programs have demos field
       assert OptimizedProgram.supports_native_demos?(demo_program)
@@ -332,7 +332,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
 
       # Test with custom program that has instruction field
       custom_program = %CustomProgramWithInstruction{
-        signature: SIMBATestSignature,
+        signature: BEACONTestSignature,
         instruction: "custom instruction",
         demos: []
       }
@@ -341,34 +341,34 @@ defmodule DSPEx.SIMBAContractValidationTest do
       assert OptimizedProgram.supports_native_demos?(custom_program)
     end
 
-    test "SIMBA enhancement strategy selection" do
-      basic_program = %Predict{signature: SIMBATestSignature, client: :test}
-      demo_program = %Predict{signature: SIMBATestSignature, client: :test, demos: []}
+    test "BEACON enhancement strategy selection" do
+      basic_program = %Predict{signature: BEACONTestSignature, client: :test}
+      demo_program = %Predict{signature: BEACONTestSignature, client: :test, demos: []}
 
       # Test strategy selection - Predict programs have native demo support
-      assert OptimizedProgram.simba_enhancement_strategy(demo_program) == :native_demos
-      assert OptimizedProgram.simba_enhancement_strategy(basic_program) == :native_demos
-      assert OptimizedProgram.simba_enhancement_strategy(nil) == :wrap_optimized
+      assert OptimizedProgram.beacon_enhancement_strategy(demo_program) == :native_demos
+      assert OptimizedProgram.beacon_enhancement_strategy(basic_program) == :native_demos
+      assert OptimizedProgram.beacon_enhancement_strategy(nil) == :wrap_optimized
 
       # Test with program that supports both demos and instructions
       full_support_program = %FullSupportProgram{
-        signature: SIMBATestSignature,
+        signature: BEACONTestSignature,
         instruction: "custom instruction",
         demos: []
       }
 
-      assert OptimizedProgram.simba_enhancement_strategy(full_support_program) == :native_full
+      assert OptimizedProgram.beacon_enhancement_strategy(full_support_program) == :native_full
 
       # Test with program that has no native support
-      minimal_program = %BasicProgram{signature: SIMBATestSignature, client: :test}
-      assert OptimizedProgram.simba_enhancement_strategy(minimal_program) == :wrap_optimized
+      minimal_program = %BasicProgram{signature: BEACONTestSignature, client: :test}
+      assert OptimizedProgram.beacon_enhancement_strategy(minimal_program) == :wrap_optimized
     end
   end
 
-  describe "SIMBA Teleprompter Contract" do
+  describe "BEACON Teleprompter Contract" do
     test "BootstrapFewShot handles empty demo scenarios gracefully" do
-      student = %Predict{signature: SIMBATestSignature, client: :test}
-      teacher = %Predict{signature: SIMBATestSignature, client: :test}
+      student = %Predict{signature: BEACONTestSignature, client: :test}
+      teacher = %Predict{signature: BEACONTestSignature, client: :test}
 
       # Empty trainset should not crash
       empty_trainset = []
@@ -398,8 +398,8 @@ defmodule DSPEx.SIMBAContractValidationTest do
     end
 
     test "BootstrapFewShot with high quality threshold (tests empty quality demos)" do
-      student = %Predict{signature: SIMBATestSignature, client: :test}
-      teacher = %Predict{signature: SIMBATestSignature, client: :test}
+      student = %Predict{signature: BEACONTestSignature, client: :test}
+      teacher = %Predict{signature: BEACONTestSignature, client: :test}
 
       # Small trainset
       trainset = [
@@ -437,7 +437,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
     end
   end
 
-  describe "SIMBA Foundation Service Integration" do
+  describe "BEACON Foundation Service Integration" do
     test "ConfigManager handles service conflicts gracefully" do
       # ConfigManager should work even if Foundation services are already started
       # This tests the service lifecycle conflict resolution
@@ -450,15 +450,15 @@ defmodule DSPEx.SIMBAContractValidationTest do
       assert is_atom(result1)
     end
 
-    test "Telemetry events are properly structured for SIMBA" do
+    test "Telemetry events are properly structured for BEACON" do
       # Test that telemetry events can be emitted without crashing
       # This validates the telemetry event structure
 
-      correlation_id = "simba-telemetry-test-#{System.unique_integer()}"
+      correlation_id = "beacon-telemetry-test-#{System.unique_integer()}"
 
       # Test telemetry emission doesn't crash
       :telemetry.execute(
-        [:dspex, :teleprompter, :simba, :start],
+        [:dspex, :teleprompter, :beacon, :start],
         %{system_time: System.system_time()},
         %{
           correlation_id: correlation_id,
@@ -468,7 +468,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
       )
 
       :telemetry.execute(
-        [:dspex, :teleprompter, :simba, :stop],
+        [:dspex, :teleprompter, :beacon, :stop],
         %{duration: 1000, success: true},
         %{
           correlation_id: correlation_id,
@@ -478,7 +478,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
 
       # Test instruction generation events
       :telemetry.execute(
-        [:dspex, :teleprompter, :simba, :instruction, :start],
+        [:dspex, :teleprompter, :beacon, :instruction, :start],
         %{system_time: System.system_time()},
         %{
           correlation_id: correlation_id,
@@ -487,7 +487,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
       )
 
       :telemetry.execute(
-        [:dspex, :teleprompter, :simba, :instruction, :stop],
+        [:dspex, :teleprompter, :beacon, :instruction, :stop],
         %{duration: 500, success: true},
         %{
           correlation_id: correlation_id,
@@ -500,11 +500,11 @@ defmodule DSPEx.SIMBAContractValidationTest do
     end
   end
 
-  describe "SIMBA Integration Smoke Test" do
-    test "minimal SIMBA workflow compatibility" do
-      # This test validates the essential SIMBA workflow components
-      student = %Predict{signature: SIMBAAdvancedSignature, client: :test}
-      teacher = %Predict{signature: SIMBAAdvancedSignature, client: :test}
+  describe "BEACON Integration Smoke Test" do
+    test "minimal BEACON workflow compatibility" do
+      # This test validates the essential BEACON workflow components
+      student = %Predict{signature: BEACONAdvancedSignature, client: :test}
+      teacher = %Predict{signature: BEACONAdvancedSignature, client: :test}
 
       # Step 1: Create minimal training set
       trainset = [
@@ -555,7 +555,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
       assert String.length(instruction) > 10
 
       # Step 5: Test program enhancement strategy
-      enhancement_strategy = OptimizedProgram.simba_enhancement_strategy(student)
+      enhancement_strategy = OptimizedProgram.beacon_enhancement_strategy(student)
       assert enhancement_strategy in [:native_full, :native_demos, :wrap_optimized]
 
       # Step 6: Test enhanced program creation
@@ -566,7 +566,7 @@ defmodule DSPEx.SIMBAContractValidationTest do
 
           :wrap_optimized ->
             OptimizedProgram.new(student, [trainset |> List.first()], %{
-              optimization_method: :simba_smoke_test,
+              optimization_method: :beacon_smoke_test,
               instruction: instruction,
               enhancement_strategy: enhancement_strategy
             })

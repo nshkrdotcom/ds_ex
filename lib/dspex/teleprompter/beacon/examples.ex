@@ -1,22 +1,22 @@
-defmodule DSPEx.Teleprompter.SIMBA.Examples do
+defmodule DSPEx.Teleprompter.BEACON.Examples do
   @moduledoc """
-  Real-world usage examples for SIMBA teleprompter.
+  Real-world usage examples for BEACON teleprompter.
 
   Demonstrates common optimization patterns and best practices for using
-  SIMBA across different types of programs and datasets.
+  BEACON across different types of programs and datasets.
   """
 
   alias DSPEx.{Example, Predict, OptimizedProgram}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
 
   @doc """
   Example: Question answering optimization
 
-  Shows how to use SIMBA to optimize a simple question-answering program
+  Shows how to use BEACON to optimize a simple question-answering program
   with different instruction strategies and demonstration selection.
   """
   def question_answering_example do
-    IO.puts("=== SIMBA Question Answering Optimization Example ===\n")
+    IO.puts("=== BEACON Question Answering Optimization Example ===\n")
 
     # Define signature for question answering
     defmodule QASignature do
@@ -75,9 +75,9 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
       if expected == actual, do: 1.0, else: 0.0
     end
 
-    # Create SIMBA teleprompter with balanced configuration
+    # Create BEACON teleprompter with balanced configuration
     teleprompter =
-      SIMBA.new(
+      BEACON.new(
         # Generate 15 instruction variants
         num_candidates: 15,
         # Use up to 3 demonstrations
@@ -100,9 +100,9 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
     IO.puts("")
 
     # Perform optimization
-    IO.puts("Starting SIMBA optimization...")
+    IO.puts("Starting BEACON optimization...")
 
-    case SIMBA.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
+    case BEACON.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
       {:ok, optimized} ->
         IO.puts("✓ Optimization completed successfully!")
 
@@ -147,11 +147,11 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
   @doc """
   Example: Classification optimization
 
-  Demonstrates SIMBA optimization for text classification tasks with
+  Demonstrates BEACON optimization for text classification tasks with
   multiple categories and confidence scoring.
   """
   def classification_example do
-    IO.puts("=== SIMBA Text Classification Optimization Example ===\n")
+    IO.puts("=== BEACON Text Classification Optimization Example ===\n")
 
     # Define signature for classification
     defmodule ClassificationSignature do
@@ -213,9 +213,9 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
       category_score + confidence_score
     end
 
-    # Create SIMBA teleprompter optimized for classification
+    # Create BEACON teleprompter optimized for classification
     teleprompter =
-      SIMBA.new(
+      BEACON.new(
         # More candidates for complex classification
         num_candidates: 20,
         # More demos for better context
@@ -229,7 +229,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
 
     IO.puts("Starting classification optimization...")
 
-    case SIMBA.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
+    case BEACON.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
       {:ok, optimized} ->
         IO.puts("✓ Classification optimization completed!")
 
@@ -263,11 +263,11 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
   @doc """
   Example: Chain of thought reasoning optimization
 
-  Shows how SIMBA can optimize complex reasoning programs that require
+  Shows how BEACON can optimize complex reasoning programs that require
   step-by-step thinking and intermediate steps.
   """
   def chain_of_thought_example do
-    IO.puts("=== SIMBA Chain of Thought Reasoning Example ===\n")
+    IO.puts("=== BEACON Chain of Thought Reasoning Example ===\n")
 
     # Define signature for chain of thought reasoning
     defmodule ChainOfThoughtSignature do
@@ -332,9 +332,9 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
       end
     end
 
-    # Create SIMBA teleprompter for complex reasoning
+    # Create BEACON teleprompter for complex reasoning
     teleprompter =
-      SIMBA.new(
+      BEACON.new(
         # Many instruction variants for reasoning
         num_candidates: 25,
         # Good examples are crucial for reasoning
@@ -350,7 +350,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
 
     IO.puts("Optimizing chain of thought reasoning...")
 
-    case SIMBA.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
+    case BEACON.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
       {:ok, optimized} ->
         IO.puts("✓ Chain of thought optimization completed!")
 
@@ -382,7 +382,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
   processing steps and intermediate results.
   """
   def multi_step_workflow_example do
-    IO.puts("=== SIMBA Multi-Step Workflow Optimization Example ===\n")
+    IO.puts("=== BEACON Multi-Step Workflow Optimization Example ===\n")
 
     # Define signature for document analysis workflow
     defmodule DocumentAnalysisSignature do
@@ -447,9 +447,9 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
       Enum.sum(scores)
     end
 
-    # Create SIMBA teleprompter for complex workflows
+    # Create BEACON teleprompter for complex workflows
     teleprompter =
-      SIMBA.new(
+      BEACON.new(
         # Many variants for complex multi-output tasks
         num_candidates: 30,
         # Complex examples, fewer needed
@@ -465,7 +465,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
 
     IO.puts("Optimizing multi-step document analysis workflow...")
 
-    case SIMBA.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
+    case BEACON.compile(teleprompter, student, teacher, trainset, metric_fn, []) do
       {:ok, optimized} ->
         IO.puts("✓ Multi-step workflow optimization completed!")
 
@@ -497,26 +497,26 @@ defmodule DSPEx.Teleprompter.SIMBA.Examples do
   end
 
   @doc """
-  Run all SIMBA examples in sequence.
+  Run all BEACON examples in sequence.
 
-  Demonstrates the full range of SIMBA capabilities across different
+  Demonstrates the full range of BEACON capabilities across different
   types of optimization scenarios.
   """
   def run_all_examples do
-    IO.puts("🚀 Running comprehensive SIMBA examples...\n")
+    IO.puts("🚀 Running comprehensive BEACON examples...\n")
 
     question_answering_example()
     classification_example()
     chain_of_thought_example()
     multi_step_workflow_example()
 
-    IO.puts("✅ All SIMBA examples completed!")
-    IO.puts("These examples demonstrate SIMBA's versatility across:")
+    IO.puts("✅ All BEACON examples completed!")
+    IO.puts("These examples demonstrate BEACON's versatility across:")
     IO.puts("• Simple question-answering tasks")
     IO.puts("• Multi-criteria classification")
     IO.puts("• Complex reasoning and chain of thought")
     IO.puts("• Multi-step workflow optimization")
-    IO.puts("\nSIMBA provides robust optimization capabilities for diverse NLP tasks.")
+    IO.puts("\nBEACON provides robust optimization capabilities for diverse NLP tasks.")
   end
 
   # Helper functions

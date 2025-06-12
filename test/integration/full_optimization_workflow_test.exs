@@ -9,7 +9,7 @@ defmodule DSPEx.Integration.FullOptimizationWorkflowTest do
   4. Multi-step reasoning pipeline
   5. Error recovery and fault tolerance
 
-  Critical for SIMBA readiness - validates the exact workflow SIMBA will depend on.
+  Critical for BEACON readiness - validates the exact workflow BEACON will depend on.
 
   Based on migration from test_phase2/end_to_end/complete_workflow_test.exs
   """

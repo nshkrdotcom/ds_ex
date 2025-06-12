@@ -1,8 +1,8 @@
-defmodule DSPEx.Integration.SIMBAPerformanceValidationTest do
+defmodule DSPEx.Integration.BEACONPerformanceValidationTest do
   @moduledoc """
-  Comprehensive performance validation tests for SIMBA teleprompter.
+  Comprehensive performance validation tests for BEACON teleprompter.
 
-  Validates that SIMBA meets performance requirements and works correctly
+  Validates that BEACON meets performance requirements and works correctly
   across different configurations and workload sizes.
   """
   use ExUnit.Case, async: false
@@ -11,8 +11,8 @@ defmodule DSPEx.Integration.SIMBAPerformanceValidationTest do
   setup :verify_on_exit!
 
   alias DSPEx.{Program, Predict}
-  alias DSPEx.Teleprompter.SIMBA
-  alias DSPEx.Teleprompter.SIMBA.Benchmark
+  alias DSPEx.Teleprompter.BEACON
+  alias DSPEx.Teleprompter.BEACON.Benchmark
   alias DSPEx.Test.MockProvider
 
   @moduletag :integration
@@ -31,7 +31,7 @@ defmodule DSPEx.Integration.SIMBAPerformanceValidationTest do
     %{signature: PerformanceSignature}
   end
 
-  describe "SIMBA performance benchmarks" do
+  describe "BEACON performance benchmarks" do
     test "benchmark module runs without errors", %{signature: _signature} do
       # Test that the benchmark module can execute
       assert_capture_io(fn ->
@@ -94,10 +94,10 @@ defmodule DSPEx.Integration.SIMBAPerformanceValidationTest do
     end
   end
 
-  describe "SIMBA teleprompter performance validation" do
-    test "SIMBA module can be instantiated without errors", %{signature: _signature} do
+  describe "BEACON teleprompter performance validation" do
+    test "BEACON module can be instantiated without errors", %{signature: _signature} do
       teleprompter =
-        SIMBA.new(
+        BEACON.new(
           num_candidates: 5,
           max_bootstrapped_demos: 2,
           num_trials: 10,
@@ -112,7 +112,7 @@ defmodule DSPEx.Integration.SIMBAPerformanceValidationTest do
       assert teleprompter.timeout == 10_000
     end
 
-    test "SIMBA programs can be created with different configurations", %{signature: _signature} do
+    test "BEACON programs can be created with different configurations", %{signature: _signature} do
       # Test with varying configurations
       configs = [
         %{candidates: 5, demos: 2, trials: 10},
@@ -122,7 +122,7 @@ defmodule DSPEx.Integration.SIMBAPerformanceValidationTest do
 
       for config <- configs do
         teleprompter =
-          SIMBA.new(
+          BEACON.new(
             num_candidates: config.candidates,
             max_bootstrapped_demos: config.demos,
             num_trials: config.trials
@@ -134,13 +134,13 @@ defmodule DSPEx.Integration.SIMBAPerformanceValidationTest do
       end
     end
 
-    test "SIMBA supports different concurrency configurations", %{signature: _signature} do
+    test "BEACON supports different concurrency configurations", %{signature: _signature} do
       # Test different concurrency levels
       concurrency_levels = [1, 5, 10, 20]
 
       for concurrency <- concurrency_levels do
         teleprompter =
-          SIMBA.new(
+          BEACON.new(
             num_candidates: 3,
             max_bootstrapped_demos: 1,
             num_trials: 3,
@@ -158,10 +158,10 @@ defmodule DSPEx.Integration.SIMBAPerformanceValidationTest do
   describe "Bayesian optimizer performance" do
     test "BayesianOptimizer module is available and can be referenced" do
       # Test that the module exists and is accessible
-      assert Code.ensure_loaded?(DSPEx.Teleprompter.SIMBA.BayesianOptimizer)
+      assert Code.ensure_loaded?(DSPEx.Teleprompter.BEACON.BayesianOptimizer)
 
       # Test that the optimize function exists
-      assert function_exported?(DSPEx.Teleprompter.SIMBA.BayesianOptimizer, :optimize, 4)
+      assert function_exported?(DSPEx.Teleprompter.BEACON.BayesianOptimizer, :optimize, 4)
     end
 
     test "Bayesian optimizer can be configured with different options" do
@@ -181,10 +181,10 @@ defmodule DSPEx.Integration.SIMBAPerformanceValidationTest do
   end
 
   describe "integration with existing DSPEx components" do
-    test "SIMBA integrates correctly with Program module", %{signature: signature} do
+    test "BEACON integrates correctly with Program module", %{signature: signature} do
       student = %Predict{signature: signature, client: :test}
 
-      # Test program introspection functions with SIMBA
+      # Test program introspection functions with BEACON
       assert Program.program_type(student) == :predict
       assert Program.has_demos?(student) == false
 
@@ -193,17 +193,17 @@ defmodule DSPEx.Integration.SIMBAPerformanceValidationTest do
       assert Map.has_key?(program_info, :has_demos)
     end
 
-    test "SIMBA integrates with telemetry infrastructure", %{signature: _signature} do
-      # Test that SIMBA module can be loaded and has telemetry support
-      assert Code.ensure_loaded?(DSPEx.Teleprompter.SIMBA)
+    test "BEACON integrates with telemetry infrastructure", %{signature: _signature} do
+      # Test that BEACON module can be loaded and has telemetry support
+      assert Code.ensure_loaded?(DSPEx.Teleprompter.BEACON)
 
-      # Verify SIMBA compile function exists
-      assert function_exported?(DSPEx.Teleprompter.SIMBA, :compile, 5)
-      assert function_exported?(DSPEx.Teleprompter.SIMBA, :new, 1)
+      # Verify BEACON compile function exists
+      assert function_exported?(DSPEx.Teleprompter.BEACON, :compile, 5)
+      assert function_exported?(DSPEx.Teleprompter.BEACON, :new, 1)
 
       # Test basic telemetry event names are defined as atoms
-      start_event = [:dspex, :teleprompter, :simba, :start]
-      stop_event = [:dspex, :teleprompter, :simba, :stop]
+      start_event = [:dspex, :teleprompter, :beacon, :start]
+      stop_event = [:dspex, :teleprompter, :beacon, :stop]
 
       assert is_list(start_event)
       assert is_list(stop_event)

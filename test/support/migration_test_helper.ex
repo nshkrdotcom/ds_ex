@@ -1,10 +1,10 @@
 defmodule DSPEx.Test.MigrationTestHelper do
   @moduledoc """
-  Utilities for migrated tests from TODO_02_PRE_SIMBA and test_phase2.
+  Utilities for migrated tests from TODO_02_PRE_BEACON and test_phase2.
 
   This module provides specialized helper functions needed during the test
   migration process, particularly for complex optimization test scenarios
-  and SIMBA-related workflows.
+  and BEACON-related workflows.
   """
 
   alias DSPEx.{Program, Signature, Predict, OptimizedProgram}

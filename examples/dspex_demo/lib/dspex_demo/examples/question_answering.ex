@@ -1,10 +1,10 @@
 defmodule DspexDemo.Examples.QuestionAnswering do
   @moduledoc """
-  Demonstrates DSPEx + SIMBA for question answering optimization.
+  Demonstrates DSPEx + BEACON for question answering optimization.
   """
   
   alias DSPEx.{Example, Predict, Program}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
   alias DspexDemo.Signatures.QASignature
   
   def run_demo do
@@ -13,10 +13,10 @@ defmodule DspexDemo.Examples.QuestionAnswering do
     
     IO.puts """
     
-    🎯 DSPEx + SIMBA Question Answering Demo
+    🎯 DSPEx + BEACON Question Answering Demo
     ==========================================
     
-    This demo shows how SIMBA optimizes a question-answering program
+    This demo shows how BEACON optimizes a question-answering program
     by finding the best instruction and demonstration combinations.
     
     """
@@ -93,7 +93,7 @@ defmodule DspexDemo.Examples.QuestionAnswering do
         
         IO.puts """
         
-        🚀 Starting SIMBA optimization...
+        🚀 Starting BEACON optimization...
     This will:
     1. Generate instruction candidates using the teacher model
     2. Bootstrap demonstration examples
@@ -102,8 +102,8 @@ defmodule DspexDemo.Examples.QuestionAnswering do
     
     """
     
-    # Create SIMBA teleprompter
-    teleprompter = SIMBA.new(
+    # Create BEACON teleprompter
+    teleprompter = BEACON.new(
       num_candidates: 8,           # Generate 8 instruction candidates
       max_bootstrapped_demos: 3,   # Use up to 3 demonstrations
       num_trials: 20,              # Run 20 optimization trials
@@ -128,12 +128,12 @@ defmodule DspexDemo.Examples.QuestionAnswering do
     
     teleprompter_with_progress = %{teleprompter | progress_callback: progress_callback}
     
-    # Run SIMBA optimization
-    case SIMBA.compile(teleprompter_with_progress, student, teacher, trainset, metric_fn, []) do
+    # Run BEACON optimization
+    case BEACON.compile(teleprompter_with_progress, student, teacher, trainset, metric_fn, []) do
       {:ok, optimized_student} ->
         IO.puts """
         
-        ✨ SIMBA optimization completed successfully!
+        ✨ BEACON optimization completed successfully!
         
         🧪 Testing optimized student performance...
         """
@@ -156,7 +156,7 @@ defmodule DspexDemo.Examples.QuestionAnswering do
             Reasoning: #{Map.get(optimized_result, :reasoning, "N/A")}
             Confidence: #{Map.get(optimized_result, :confidence, "N/A")}
             
-            🎉 Optimization complete! The SIMBA-optimized program should show
+            🎉 Optimization complete! The BEACON-optimized program should show
             improved reasoning quality and more structured responses.
             """
             
@@ -184,7 +184,7 @@ defmodule DspexDemo.Examples.QuestionAnswering do
         Reasoning: #{Map.get(baseline_result, :reasoning, "N/A")}
         Confidence: #{Map.get(baseline_result, :confidence, "N/A")}
         
-        ❌ SIMBA optimization failed: #{inspect(reason)}
+        ❌ BEACON optimization failed: #{inspect(reason)}
         Note: Set GEMINI_API_KEY and OPENAI_API_KEY for full functionality.
         
         """
@@ -200,7 +200,7 @@ defmodule DspexDemo.Examples.QuestionAnswering do
   def run_interactive_demo do
     IO.puts """
     
-    🎮 Interactive DSPEx + SIMBA Demo
+    🎮 Interactive DSPEx + BEACON Demo
     =================================
     
     Ask questions and see both baseline and optimized responses!
@@ -223,7 +223,7 @@ defmodule DspexDemo.Examples.QuestionAnswering do
     
     case question do
       "quit" ->
-        IO.puts "👋 Thanks for trying DSPEx + SIMBA!"
+        IO.puts "👋 Thanks for trying DSPEx + BEACON!"
         
       "" ->
         interactive_loop(baseline, optimized)
@@ -255,7 +255,7 @@ defmodule DspexDemo.Examples.QuestionAnswering do
         Reasoning: #{baseline_response.reasoning}
         Confidence: #{baseline_response.confidence}
         
-        OPTIMIZED (SIMBA):
+        OPTIMIZED (BEACON):
         Answer: #{optimized_response.answer}
         Reasoning: #{optimized_response.reasoning}
         Confidence: #{optimized_response.confidence}

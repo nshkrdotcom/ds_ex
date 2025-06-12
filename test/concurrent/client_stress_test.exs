@@ -2,7 +2,7 @@ defmodule DSPEx.Concurrent.ClientStressTest do
   @moduledoc """
   Concurrent stress tests for DSPEx.Client behavior.
   Tests concurrent request patterns, resource management, and error handling
-  under high concurrent load to validate SIMBA readiness.
+  under high concurrent load to validate BEACON readiness.
   """
   use ExUnit.Case, async: false
 

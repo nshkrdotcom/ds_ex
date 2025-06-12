@@ -1,14 +1,14 @@
 defmodule DSPEx.Test.MockProvider do
   @moduledoc """
-  Enhanced mock provider for testing SIMBA optimization workflows.
+  Enhanced mock provider for testing BEACON optimization workflows.
 
   This module provides a test-focused wrapper around DSPEx.MockClientManager
-  with specialized functions for SIMBA testing scenarios including bootstrap
+  with specialized functions for BEACON testing scenarios including bootstrap
   learning, instruction generation, and optimization workflows.
   """
 
   use GenServer
-  alias DSPEx.{MockClientManager, Test.SimbaMockProvider}
+  alias DSPEx.{MockClientManager, Test.BeaconMockProvider}
 
   defstruct [:client_pid, :mode, :opts, :call_history]
 
@@ -25,21 +25,21 @@ defmodule DSPEx.Test.MockProvider do
   Sets up bootstrap few-shot learning mock responses.
   """
   def setup_bootstrap_mocks(teacher_responses) do
-    SimbaMockProvider.setup_bootstrap_mocks(teacher_responses)
+    BeaconMockProvider.setup_bootstrap_mocks(teacher_responses)
   end
 
   @doc """
   Sets up instruction generation mock responses.
   """
   def setup_instruction_generation_mocks(instruction_responses) do
-    SimbaMockProvider.setup_instruction_generation_mocks(instruction_responses)
+    BeaconMockProvider.setup_instruction_generation_mocks(instruction_responses)
   end
 
   @doc """
   Sets up evaluation mock responses with specific scores.
   """
   def setup_evaluation_mocks(score_map) when is_map(score_map) do
-    SimbaMockProvider.setup_evaluation_mocks(score_map)
+    BeaconMockProvider.setup_evaluation_mocks(score_map)
   end
 
   def setup_evaluation_mocks(scores) when is_list(scores) do
@@ -49,19 +49,19 @@ defmodule DSPEx.Test.MockProvider do
       |> Enum.with_index()
       |> Enum.into(%{}, fn {score, index} -> {"evaluation_#{index}", score} end)
 
-    SimbaMockProvider.setup_evaluation_mocks(score_map)
+    BeaconMockProvider.setup_evaluation_mocks(score_map)
   end
 
   @doc """
-  Sets up comprehensive SIMBA optimization workflow mocks.
+  Sets up comprehensive BEACON optimization workflow mocks.
   """
-  def setup_simba_optimization_mocks(config) when is_list(config) do
+  def setup_beacon_optimization_mocks(config) when is_list(config) do
     config_map = Enum.into(config, %{})
-    SimbaMockProvider.setup_simba_optimization_mocks(config_map)
+    BeaconMockProvider.setup_beacon_optimization_mocks(config_map)
   end
 
-  def setup_simba_optimization_mocks(config) when is_map(config) do
-    SimbaMockProvider.setup_simba_optimization_mocks(config)
+  def setup_beacon_optimization_mocks(config) when is_map(config) do
+    BeaconMockProvider.setup_beacon_optimization_mocks(config)
   end
 
   @doc """
@@ -131,7 +131,7 @@ defmodule DSPEx.Test.MockProvider do
   @impl GenServer
   def handle_call(:reset, _from, state) do
     # Clear call history and reset mock responses
-    SimbaMockProvider.reset_all_simba_mocks()
+    BeaconMockProvider.reset_all_beacon_mocks()
     MockClientManager.clear_all_mock_responses()
 
     new_state = %{state | call_history: []}

@@ -1,8 +1,8 @@
-defmodule DSPEx.Teleprompter.SIMBA do
+defmodule DSPEx.Teleprompter.BEACON do
   @moduledoc """
-  SIMBA (SIMple BAyesian) teleprompter for DSPEx program optimization.
+  BEACON (Bayesian Exploration and Adaptive Compilation Of Narratives) teleprompter for DSPEx program optimization.
 
-  SIMBA is a simple yet effective Bayesian optimization teleprompter that:
+  BEACON is a simple yet effective Bayesian optimization teleprompter that:
   1. Bootstrap generates candidate demonstrations using a teacher program
   2. Uses Bayesian optimization to find the best instruction/demonstration combinations
   3. Evaluates candidates on a validation set to select optimal configurations
@@ -24,8 +24,8 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   ## Example Usage
 
-      # Create SIMBA teleprompter
-      teleprompter = DSPEx.Teleprompter.SIMBA.new(
+      # Create BEACON teleprompter
+      teleprompter = DSPEx.Teleprompter.BEACON.new(
         num_candidates: 20,
         max_bootstrapped_demos: 4,
         num_trials: 50,
@@ -45,7 +45,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   alias DSPEx.{Program, Example, OptimizedProgram, Client}
   alias DSPEx.Teleprompter.BootstrapFewShot
-  alias DSPEx.Teleprompter.SIMBA.BayesianOptimizer
+  alias DSPEx.Teleprompter.BEACON.BayesianOptimizer
   alias DSPEx.Services.ConfigManager
 
   @enforce_keys []
@@ -98,7 +98,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
         }
 
   @doc """
-  Create a new SIMBA teleprompter with given options.
+  Create a new BEACON teleprompter with given options.
 
   ## Options
 
@@ -145,7 +145,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     start_time = System.monotonic_time()
 
     emit_telemetry(
-      [:dspex, :teleprompter, :simba, :start],
+      [:dspex, :teleprompter, :beacon, :start],
       %{system_time: System.system_time()},
       %{
         correlation_id: correlation_id,
@@ -185,7 +185,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     success = match?({:ok, _}, result)
 
     emit_telemetry(
-      [:dspex, :teleprompter, :simba, :stop],
+      [:dspex, :teleprompter, :beacon, :stop],
       %{duration: duration, success: success},
       %{correlation_id: correlation_id}
     )
@@ -214,7 +214,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   defp bootstrap_demonstrations(teacher, trainset, config, correlation_id) do
     emit_telemetry(
-      [:dspex, :teleprompter, :simba, :bootstrap, :start],
+      [:dspex, :teleprompter, :beacon, :bootstrap, :start],
       %{system_time: System.system_time()},
       %{correlation_id: correlation_id, trainset_size: length(trainset)}
     )
@@ -247,7 +247,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
           end)
 
         emit_telemetry(
-          [:dspex, :teleprompter, :simba, :bootstrap, :stop],
+          [:dspex, :teleprompter, :beacon, :bootstrap, :stop],
           %{duration: System.monotonic_time()},
           %{correlation_id: correlation_id, candidates_generated: length(demo_candidates)}
         )
@@ -256,7 +256,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
       {:error, reason} ->
         emit_telemetry(
-          [:dspex, :teleprompter, :simba, :bootstrap, :exception],
+          [:dspex, :teleprompter, :beacon, :bootstrap, :exception],
           %{},
           %{correlation_id: correlation_id, error: reason}
         )
@@ -269,7 +269,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     start_time = System.monotonic_time()
 
     emit_telemetry(
-      [:dspex, :teleprompter, :simba, :instruction, :start],
+      [:dspex, :teleprompter, :beacon, :instruction, :start],
       %{system_time: System.system_time()},
       %{correlation_id: correlation_id, num_candidates: config.num_candidates}
     )
@@ -312,7 +312,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     duration = System.monotonic_time() - start_time
 
     emit_telemetry(
-      [:dspex, :teleprompter, :simba, :instruction, :stop],
+      [:dspex, :teleprompter, :beacon, :instruction, :stop],
       %{duration: duration, success: length(candidates) > 0},
       %{
         correlation_id: correlation_id,
@@ -355,7 +355,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
          correlation_id
        ) do
     emit_telemetry(
-      [:dspex, :teleprompter, :simba, :optimization, :start],
+      [:dspex, :teleprompter, :beacon, :optimization, :start],
       %{system_time: System.system_time()},
       %{
         correlation_id: correlation_id,
@@ -373,7 +373,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
     # Create objective function that evaluates configurations
     objective_function = fn bayesian_config ->
-      # Convert Bayesian optimizer config to SIMBA config format
+      # Convert Bayesian optimizer config to BEACON config format
       instruction = Enum.find(instruction_candidates, &(&1.id == bayesian_config.instruction_id))
 
       demos =
@@ -414,7 +414,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
            correlation_id: correlation_id
          ) do
       {:ok, bayesian_result} ->
-        # Convert Bayesian result back to SIMBA format
+        # Convert Bayesian result back to BEACON format
         best_instruction =
           Enum.find(
             instruction_candidates,
@@ -432,7 +432,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
           best_instruction: best_instruction.instruction,
           best_demos: best_demos,
           score: bayesian_result.best_score,
-          trials: convert_bayesian_trials_to_simba_format(bayesian_result.observations),
+          trials: convert_bayesian_trials_to_beacon_format(bayesian_result.observations),
           stats:
             Map.merge(bayesian_result.stats, %{
               bayesian_optimization: true,
@@ -441,7 +441,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
         }
 
         emit_telemetry(
-          [:dspex, :teleprompter, :simba, :optimization, :stop],
+          [:dspex, :teleprompter, :beacon, :optimization, :stop],
           %{duration: System.monotonic_time()},
           %{
             correlation_id: correlation_id,
@@ -455,7 +455,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
       {:error, reason} ->
         emit_telemetry(
-          [:dspex, :teleprompter, :simba, :optimization, :exception],
+          [:dspex, :teleprompter, :beacon, :optimization, :exception],
           %{},
           %{correlation_id: correlation_id, error: reason}
         )
@@ -464,7 +464,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     end
   end
 
-  defp convert_bayesian_trials_to_simba_format(observations) do
+  defp convert_bayesian_trials_to_beacon_format(observations) do
     Enum.map(observations, fn obs ->
       %{
         instruction_id: obs.configuration.instruction_id,
@@ -476,7 +476,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   defp create_test_program(student, config) do
-    case OptimizedProgram.simba_enhancement_strategy(student) do
+    case OptimizedProgram.beacon_enhancement_strategy(student) do
       :native_full ->
         %{student | instruction: config.instruction, demos: config.demos}
 
@@ -527,7 +527,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   defp create_optimized_student(student, optimization_result, _config) do
-    case OptimizedProgram.simba_enhancement_strategy(student) do
+    case OptimizedProgram.beacon_enhancement_strategy(student) do
       :native_full ->
         optimized = %{
           student
@@ -548,7 +548,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
             optimization_result.best_demos,
             %{
               instruction: optimization_result.best_instruction,
-              simba_optimization: optimization_result.stats,
+              beacon_optimization: optimization_result.stats,
               optimized_at: DateTime.utc_now()
             }
           )
@@ -688,24 +688,15 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   defp signature_name(signature) do
-    cond do
-      is_nil(signature) ->
+    case signature do
+      nil ->
         "Unknown"
 
-      is_atom(signature) ->
+      signature when is_atom(signature) ->
         # signature is a module atom
         signature
         |> Module.split()
         |> List.last()
-
-      is_struct(signature) ->
-        # signature is a struct, get the module
-        signature.__struct__
-        |> Module.split()
-        |> List.last()
-
-      true ->
-        "Unknown"
     end
   end
 
@@ -737,7 +728,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   defp get_default_instruction_model do
     # Use the ConfigManager to get the default model for instruction generation
-    ConfigManager.get_with_default([:teleprompters, :simba, :default_instruction_model], :gemini)
+    ConfigManager.get_with_default([:teleprompters, :beacon, :default_instruction_model], :gemini)
   end
 
   defp build_default_instruction(signature) do
@@ -761,7 +752,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     node_hash = :erlang.phash2(node(), 65_536)
     timestamp = System.unique_integer([:positive])
     random = :erlang.unique_integer([:positive])
-    "simba-#{node_hash}-#{timestamp}-#{random}"
+    "beacon-#{node_hash}-#{timestamp}-#{random}"
   end
 
   defp emit_telemetry(event, measurements, metadata) do

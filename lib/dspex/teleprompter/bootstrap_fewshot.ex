@@ -297,7 +297,7 @@ defmodule DSPEx.Teleprompter.BootstrapFewShot do
   end
 
   defp create_optimized_student(student, selected_demos, config) do
-    # Enhanced to handle empty demo lists gracefully for SIMBA compatibility
+    # Enhanced to handle empty demo lists gracefully for BEACON compatibility
     metadata = %{
       teleprompter: :bootstrap_fewshot,
       quality_threshold: config.quality_threshold,

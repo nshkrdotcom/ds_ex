@@ -2,8 +2,8 @@ defmodule DSPEx.TeleprompterAdvancedTest do
   @moduledoc """
   Advanced unit tests for DSPEx.Teleprompter behavior.
 
-  CRITICAL: This test validates the teleprompter behavior that SIMBA depends on.
-  Without this behavior properly defined, SIMBA will fail to compile.
+  CRITICAL: This test validates the teleprompter behavior that BEACON depends on.
+  Without this behavior properly defined, BEACON will fail to compile.
   """
   use ExUnit.Case, async: true
   @moduletag :group_3
@@ -45,7 +45,7 @@ defmodule DSPEx.TeleprompterAdvancedTest do
     test "behavior info includes required callbacks" do
       callbacks = DSPEx.Teleprompter.behaviour_info(:callbacks)
 
-      # Must include compile/5 callback for SIMBA compatibility
+      # Must include compile/5 callback for BEACON compatibility
       assert {:compile, 5} in callbacks
     end
 

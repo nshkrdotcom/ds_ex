@@ -1,11 +1,11 @@
-# DSPEx + SIMBA Demo Application 🚀
+# DSPEx + BEACON Demo Application 🚀
 
-A comprehensive demonstration of the DSPEx framework with **SIMBA teleprompter optimization**, showcasing how Bayesian optimization can automatically improve language model programs.
+A comprehensive demonstration of the DSPEx framework with **BEACON teleprompter optimization**, showcasing how Bayesian optimization can automatically improve language model programs.
 
 ## ✅ Status: FULLY WORKING
 
 This demo application successfully demonstrates:
-- **Complete SIMBA optimization pipeline** 
+- **Complete BEACON optimization pipeline** 
 - **Real-time Bayesian optimization** with instruction and demonstration tuning
 - **End-to-end teleprompter workflows** from bootstrap to optimized programs
 
@@ -58,7 +58,7 @@ mix run -e "DspexDemo.main([\"--interactive\"])"   # Interactive mode
 Each demo shows:
 
 1. **Baseline Performance** - Initial program output
-2. **SIMBA Optimization Process** - Real-time progress of:
+2. **BEACON Optimization Process** - Real-time progress of:
    - Instruction candidate generation
    - Demonstration bootstrapping
    - Bayesian optimization trials
@@ -67,7 +67,7 @@ Each demo shows:
 
 ## 🛠 How It Works
 
-### SIMBA Optimization Process
+### BEACON Optimization Process
 
 1. **Teacher-Student Setup** - Uses different models (e.g., GPT-4 as teacher, Gemini as student)
 2. **Instruction Generation** - Teacher generates multiple instruction candidates
@@ -132,7 +132,7 @@ Answer: 12
 Reasoning: 144 is a perfect square
 Confidence: medium
 
-OPTIMIZED (SIMBA):
+OPTIMIZED (BEACON):
 Answer: 12
 Reasoning: To find the square root of 144, I need to find what number multiplied by itself equals 144. Since 12 × 12 = 144, the square root of 144 is 12.
 Confidence: high
@@ -143,9 +143,9 @@ Confidence: high
 After running the demo, you can:
 
 1. Modify the training examples to see different optimization results
-2. Adjust SIMBA parameters (num_candidates, num_trials, etc.)
+2. Adjust BEACON parameters (num_candidates, num_trials, etc.)
 3. Create new signatures for different tasks
 4. Experiment with different evaluation metrics
 5. Use the optimized programs in your own applications
 
-The demo provides a complete foundation for understanding and extending DSPEx + SIMBA capabilities!
+The demo provides a complete foundation for understanding and extending DSPEx + BEACON capabilities!

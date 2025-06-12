@@ -2,8 +2,8 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
   @moduledoc """
   Integration tests for DSPEx client reliability under load.
 
-  CRITICAL: SIMBA will make 100+ concurrent requests during optimization.
-  This test validates that the client architecture can handle SIMBA's
+  CRITICAL: BEACON will make 100+ concurrent requests during optimization.
+  This test validates that the client architecture can handle BEACON's
   concurrent load patterns without failures or memory leaks.
   """
   use ExUnit.Case, async: false
@@ -26,19 +26,19 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
     :ok
   end
 
-  describe "concurrent request handling - SIMBA usage pattern" do
+  describe "concurrent request handling - BEACON usage pattern" do
     test "handles 100+ concurrent requests without failures" do
-      # This simulates SIMBA's bootstrap generation phase
+      # This simulates BEACON's bootstrap generation phase
       messages = [%{role: "user", content: "Generate bootstrap demonstration"}]
 
-      # SIMBA makes many concurrent teacher requests during bootstrap
+      # BEACON makes many concurrent teacher requests during bootstrap
       concurrent_count = 100
 
       results =
         Task.async_stream(
           1..concurrent_count,
           fn i ->
-            correlation_id = "simba-bootstrap-#{i}"
+            correlation_id = "beacon-bootstrap-#{i}"
 
             Client.request(messages, %{
               provider: :gemini,
@@ -58,7 +58,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
           _ -> false
         end)
 
-      # SIMBA needs high reliability - should succeed most of the time
+      # BEACON needs high reliability - should succeed most of the time
       success_rate = successes / concurrent_count
       assert success_rate >= 0.9, "Success rate too low: #{success_rate * 100}%"
 
@@ -68,7 +68,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
     end
 
     test "rapid provider switching under concurrent load" do
-      # SIMBA switches between providers for teacher/student programs
+      # BEACON switches between providers for teacher/student programs
       messages = [%{role: "user", content: "Provider switching test"}]
       providers = [:openai, :gemini]
 
@@ -100,13 +100,13 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
     end
 
     test "correlation_id propagation under load" do
-      # SIMBA heavily uses correlation IDs for tracking optimization progress
+      # BEACON heavily uses correlation IDs for tracking optimization progress
       messages = [%{role: "user", content: "Correlation tracking test"}]
 
       # Use unique correlation IDs to verify tracking
       correlation_ids =
         Enum.map(1..20, fn i ->
-          "simba-optimization-#{System.unique_integer()}-#{i}"
+          "beacon-optimization-#{System.unique_integer()}-#{i}"
         end)
 
       results =
@@ -137,7 +137,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
     end
 
     test "memory stability during sustained concurrent load" do
-      # SIMBA runs optimization for extended periods
+      # BEACON runs optimization for extended periods
       messages = [%{role: "user", content: "Memory stability test"}]
 
       initial_memory = :erlang.memory(:total)
@@ -178,7 +178,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
 
   describe "error recovery and resilience" do
     test "recovers gracefully from temporary failures" do
-      # SIMBA needs robust error recovery during long optimizations
+      # BEACON needs robust error recovery during long optimizations
       messages = [%{role: "user", content: "Error recovery test"}]
 
       # Mix of requests that might fail and succeed
@@ -253,7 +253,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
     end
 
     test "timeout handling under concurrent load" do
-      # SIMBA needs predictable timeout behavior
+      # BEACON needs predictable timeout behavior
       messages = [
         %{
           role: "user",
@@ -299,7 +299,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
 
   describe "managed client architecture" do
     test "ClientManager handles concurrent clients" do
-      # SIMBA might use managed clients for better resource control
+      # BEACON might use managed clients for better resource control
 
       # Start multiple managed clients
       {:ok, client1} = ClientManager.start_link(:gemini)
@@ -335,7 +335,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
     end
 
     test "managed client statistics tracking" do
-      # SIMBA uses statistics for optimization decisions
+      # BEACON uses statistics for optimization decisions
       {:ok, client} = ClientManager.start_link(:gemini)
 
       messages = [%{role: "user", content: "Statistics test"}]
@@ -386,8 +386,8 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
   end
 
   describe "performance characteristics under load" do
-    test "request throughput meets SIMBA requirements" do
-      # SIMBA needs sufficient throughput for optimization efficiency
+    test "request throughput meets BEACON requirements" do
+      # BEACON needs sufficient throughput for optimization efficiency
       messages = [%{role: "user", content: "Throughput test"}]
 
       request_count = 50
@@ -420,7 +420,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
       # requests per second
       throughput = successes / (duration_ms / 1000)
 
-      # SIMBA needs reasonable throughput for optimization efficiency
+      # BEACON needs reasonable throughput for optimization efficiency
       assert throughput >= 5.0, "Throughput too low: #{Float.round(throughput, 2)} req/sec"
 
       IO.puts(
@@ -429,7 +429,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
     end
 
     test "latency distribution under concurrent load" do
-      # SIMBA optimization needs predictable latency
+      # BEACON optimization needs predictable latency
       messages = [%{role: "user", content: "Latency test"}]
 
       latencies =
@@ -460,7 +460,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
       max_latency = Enum.max(latencies)
       min_latency = Enum.min(latencies)
 
-      # Latency should be reasonable for SIMBA optimization
+      # Latency should be reasonable for BEACON optimization
       assert avg_latency < 5000, "Average latency too high: #{avg_latency}ms"
       assert max_latency < 10000, "Max latency too high: #{max_latency}ms"
 
@@ -470,7 +470,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
     end
 
     test "resource usage remains stable under extended load" do
-      # SIMBA runs optimizations for extended periods
+      # BEACON runs optimizations for extended periods
       messages = [%{role: "user", content: "Extended load test"}]
 
       initial_process_count = length(Process.list())
@@ -517,7 +517,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
 
   describe "edge cases and stress testing" do
     test "handles malformed requests gracefully" do
-      # SIMBA might generate edge case requests during optimization
+      # BEACON might generate edge case requests during optimization
 
       malformed_requests = [
         # Empty messages
@@ -554,7 +554,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
     end
 
     test "stress test with burst traffic" do
-      # SIMBA might create burst traffic during certain optimization phases
+      # BEACON might create burst traffic during certain optimization phases
       messages = [%{role: "user", content: "Burst traffic test"}]
 
       # Create sudden burst of requests
@@ -628,9 +628,9 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
     end
   end
 
-  describe "SIMBA-specific usage patterns" do
+  describe "BEACON-specific usage patterns" do
     test "teacher-student concurrent pattern" do
-      # SIMBA uses teacher and student programs concurrently
+      # BEACON uses teacher and student programs concurrently
       teacher_messages = [%{role: "user", content: "Teacher: Generate demonstration"}]
       student_messages = [%{role: "user", content: "Student: Learn from demonstration"}]
 
@@ -642,7 +642,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
             if rem(i, 2) == 0 do
               # Teacher request
               Client.request(teacher_messages, %{
-                # SIMBA might use different providers
+                # BEACON might use different providers
                 provider: :openai,
                 correlation_id: "teacher-#{i}"
               })
@@ -669,7 +669,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
     end
 
     test "optimization iteration pattern" do
-      # SIMBA runs multiple optimization iterations
+      # BEACON runs multiple optimization iterations
       messages = [%{role: "user", content: "Optimization iteration"}]
 
       # Simulate multiple optimization rounds

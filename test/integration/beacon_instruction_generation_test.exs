@@ -1,11 +1,11 @@
-defmodule DSPEx.SIMBAInstructionGenerationTest do
+defmodule DSPEx.BEACONInstructionGenerationTest do
   use ExUnit.Case, async: false
 
   @moduletag :integration
   @moduletag :phase2_features
 
   alias DSPEx.{Predict, Example}
-  alias DSPEx.Teleprompter.SIMBA
+  alias DSPEx.Teleprompter.BEACON
 
   defmodule TestSignature do
     use DSPEx.Signature, "question -> answer"
@@ -28,9 +28,9 @@ defmodule DSPEx.SIMBAInstructionGenerationTest do
         }
       ]
 
-      # Create SIMBA config with few candidates for testing
+      # Create BEACON config with few candidates for testing
       config =
-        SIMBA.new(
+        BEACON.new(
           num_candidates: 3,
           max_bootstrapped_demos: 1,
           num_trials: 2,
@@ -96,7 +96,7 @@ defmodule DSPEx.SIMBAInstructionGenerationTest do
 
       # Create config that may cause failures (very short timeout)
       config =
-        SIMBA.new(
+        BEACON.new(
           num_candidates: 2,
           # Very short timeout to potentially cause failures
           timeout: 1
@@ -141,7 +141,7 @@ defmodule DSPEx.SIMBAInstructionGenerationTest do
         }
       ]
 
-      config = SIMBA.new(num_candidates: 1, timeout: 30_000)
+      config = BEACON.new(num_candidates: 1, timeout: 30_000)
       correlation_id = "test-signature-#{System.unique_integer()}"
 
       result =
@@ -170,7 +170,7 @@ defmodule DSPEx.SIMBAInstructionGenerationTest do
 
   defp call_generate_instruction_candidates({_config, student, trainset, _correlation_id}) do
     # Since generate_instruction_candidates is private, we'll test it indirectly
-    # by creating a minimal SIMBA compilation that exercises the instruction generation
+    # by creating a minimal BEACON compilation that exercises the instruction generation
 
     # Mock the bootstrap to return empty to focus on instruction generation
     DSPEx.MockClientManager.set_mock_responses(:test, [

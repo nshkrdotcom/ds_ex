@@ -1,27 +1,27 @@
-defmodule DSPEx.Integration.SIMBAReadinessTest.SIMBACompatSignature do
-  @moduledoc "SIMBA-compatible signature for validation testing"
+defmodule DSPEx.Integration.BEACONReadinessTest.BEACONCompatSignature do
+  @moduledoc "BEACON-compatible signature for validation testing"
   use DSPEx.Signature, "question -> answer"
 end
 
-defmodule DSPEx.Integration.SIMBAReadinessTest do
+defmodule DSPEx.Integration.BEACONReadinessTest do
   use ExUnit.Case, async: false
   @moduletag :group_3
 
   alias DSPEx.{Teleprompter, Example, Predict, OptimizedProgram, Program}
   alias DSPEx.Test.MockProvider
   alias DSPEx.Teleprompter.BootstrapFewShot
-  alias __MODULE__.SIMBACompatSignature
+  alias __MODULE__.BEACONCompatSignature
 
   @moduletag :phase5a
   @moduletag :integration_test
 
   setup_all do
-    # Comprehensive setup that mirrors what SIMBA will need
+    # Comprehensive setup that mirrors what BEACON will need
     {:ok, _mock} = MockProvider.start_link(mode: :contextual)
     :ok
   end
 
-  describe "SIMBA interface compatibility validation" do
+  describe "BEACON interface compatibility validation" do
     test "all required behaviors and modules exist and are complete" do
       # Test 1: DSPEx.Teleprompter behavior exists and defines compile/5 callback
       assert Code.ensure_loaded?(DSPEx.Teleprompter), "DSPEx.Teleprompter module not loaded"
@@ -66,13 +66,13 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
     end
 
     test "teleprompter behavior validation functions work correctly" do
-      # Create test programs exactly as SIMBA will
-      student = %Predict{signature: SIMBACompatSignature, client: :test}
-      teacher = %Predict{signature: SIMBACompatSignature, client: :test}
+      # Create test programs exactly as BEACON will
+      student = %Predict{signature: BEACONCompatSignature, client: :test}
+      teacher = %Predict{signature: BEACONCompatSignature, client: :test}
 
       trainset = [
         %Example{
-          data: %{question: "SIMBA test question", answer: "SIMBA test response"},
+          data: %{question: "BEACON test question", answer: "BEACON test response"},
           input_keys: MapSet.new([:question])
         }
       ]
@@ -96,9 +96,9 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
              "False positive: Predict shouldn't implement Teleprompter"
     end
 
-    test "OptimizedProgram interface matches SIMBA expectations exactly" do
-      # Create programs exactly as SIMBA will
-      base_program = %Predict{signature: SIMBACompatSignature, client: :test}
+    test "OptimizedProgram interface matches BEACON expectations exactly" do
+      # Create programs exactly as BEACON will
+      base_program = %Predict{signature: BEACONCompatSignature, client: :test}
 
       demos = [
         %Example{
@@ -112,30 +112,30 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
       ]
 
       metadata = %{
-        teleprompter: :simba,
+        teleprompter: :beacon,
         optimization_time: DateTime.utc_now(),
         optimization_score: 0.85
       }
 
-      # Test OptimizedProgram.new/3 interface exactly as SIMBA uses it
+      # Test OptimizedProgram.new/3 interface exactly as BEACON uses it
       optimized = OptimizedProgram.new(base_program, demos, metadata)
 
-      # Test interface functions SIMBA depends on
+      # Test interface functions BEACON depends on
       retrieved_demos = OptimizedProgram.get_demos(optimized)
       retrieved_program = OptimizedProgram.get_program(optimized)
       retrieved_metadata = OptimizedProgram.get_metadata(optimized)
 
-      # Verify exact matches (SIMBA expects these to be identical)
+      # Verify exact matches (BEACON expects these to be identical)
       assert retrieved_demos == demos, "get_demos/1 doesn't return identical demos"
       assert retrieved_program == base_program, "get_program/1 doesn't return identical program"
-      assert retrieved_metadata.teleprompter == :simba, "Metadata not preserved correctly"
+      assert retrieved_metadata.teleprompter == :beacon, "Metadata not preserved correctly"
       assert retrieved_metadata.optimization_score == 0.85, "Custom metadata not preserved"
 
       # Test that optimized program implements Program behavior
       assert Program.implements_program?(OptimizedProgram),
              "OptimizedProgram must implement Program behavior"
 
-      # Test forward function works (critical for SIMBA)
+      # Test forward function works (critical for BEACON)
       MockProvider.setup_evaluation_mocks([0.9])
       inputs = %{question: "Test forward call"}
 
@@ -163,10 +163,10 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
       end
     end
 
-    test "all function signatures match SIMBA usage patterns exactly" do
-      # Test compile/5 signature (what SIMBA will call)
-      student = %Predict{signature: SIMBACompatSignature, client: :test}
-      teacher = %Predict{signature: SIMBACompatSignature, client: :test}
+    test "all function signatures match BEACON usage patterns exactly" do
+      # Test compile/5 signature (what BEACON will call)
+      student = %Predict{signature: BEACONCompatSignature, client: :test}
+      teacher = %Predict{signature: BEACONCompatSignature, client: :test}
 
       trainset = [
         %Example{
@@ -180,7 +180,7 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
 
       MockProvider.setup_bootstrap_mocks(["Response"])
 
-      # This is the exact call pattern SIMBA will use
+      # This is the exact call pattern BEACON will use
       start_time = System.monotonic_time()
 
       result =
@@ -212,8 +212,8 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
       assert length(demos) > 0, "Optimized student must have demonstrations"
       assert Enum.all?(demos, &is_struct(&1, Example)), "All demos must be Example structs"
 
-      # Validate performance (SIMBA needs reasonable performance)
-      assert duration_ms < 5000, "Compilation took too long: #{duration_ms}ms (SIMBA needs < 5s)"
+      # Validate performance (BEACON needs reasonable performance)
+      assert duration_ms < 5000, "Compilation took too long: #{duration_ms}ms (BEACON needs < 5s)"
 
       # Validate demo quality
       quality_scores =
@@ -236,12 +236,12 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
              "Demo metadata structure must be complete"
     end
 
-    test "handles edge cases that SIMBA might encounter" do
-      student = %Predict{signature: SIMBACompatSignature, client: :test}
-      teacher = %Predict{signature: SIMBACompatSignature, client: :test}
+    test "handles edge cases that BEACON might encounter" do
+      student = %Predict{signature: BEACONCompatSignature, client: :test}
+      teacher = %Predict{signature: BEACONCompatSignature, client: :test}
       metric_fn = Teleprompter.exact_match(:answer)
 
-      # Test 1: Minimal trainset (SIMBA might start with few examples)
+      # Test 1: Minimal trainset (BEACON might start with few examples)
       minimal_trainset = [
         %Example{
           data: %{question: "Single example", answer: "Response"},
@@ -263,7 +263,7 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
       # Should succeed even with minimal data
       assert {:ok, _optimized} = result, "Should handle minimal trainset"
 
-      # Test 2: High quality threshold (SIMBA might be picky)
+      # Test 2: High quality threshold (BEACON might be picky)
       high_quality_trainset = [
         %Example{
           data: %{question: "High quality test", answer: "Expected"},
@@ -303,7 +303,7 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
           :ok
       end
 
-      # Test 3: Teacher failures (SIMBA needs robustness)
+      # Test 3: Teacher failures (BEACON needs robustness)
       failure_trainset = [
         %Example{
           data: %{question: "Test 1", answer: "Response 1"},
@@ -340,10 +340,10 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
              "Should handle teacher failures gracefully"
     end
 
-    test "concurrent optimization doesn't interfere (SIMBA parallel pattern)" do
-      # SIMBA might run multiple optimizations in parallel
-      student = %Predict{signature: SIMBACompatSignature, client: :test}
-      teacher = %Predict{signature: SIMBACompatSignature, client: :test}
+    test "concurrent optimization doesn't interfere (BEACON parallel pattern)" do
+      # BEACON might run multiple optimizations in parallel
+      student = %Predict{signature: BEACONCompatSignature, client: :test}
+      teacher = %Predict{signature: BEACONCompatSignature, client: :test}
       metric_fn = Teleprompter.exact_match(:answer)
 
       # Create different training sets for parallel optimization
@@ -419,10 +419,10 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
   end
 
   describe "program name and telemetry utilities" do
-    test "program_name function works for all program types SIMBA will encounter" do
-      # Test program_name with various program types SIMBA will use
+    test "program_name function works for all program types BEACON will encounter" do
+      # Test program_name with various program types BEACON will use
 
-      predict_program = %Predict{signature: SIMBACompatSignature, client: :test}
+      predict_program = %Predict{signature: BEACONCompatSignature, client: :test}
       assert Program.program_name(predict_program) == :Predict, "Predict program name incorrect"
 
       optimized_program = OptimizedProgram.new(predict_program, [], %{})
@@ -432,7 +432,7 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
       assert String.contains?(Atom.to_string(optimized_name), "Optimized"),
              "OptimizedProgram name should contain 'Optimized'"
 
-      # Test with invalid input (SIMBA error handling)
+      # Test with invalid input (BEACON error handling)
       assert Program.program_name("not a program") == :unknown,
              "Should handle invalid input gracefully"
 
@@ -443,8 +443,8 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
     end
 
     test "safe program info extraction for telemetry" do
-      # Test safe info extraction that SIMBA telemetry will use
-      program = %Predict{signature: SIMBACompatSignature, client: :test}
+      # Test safe info extraction that BEACON telemetry will use
+      program = %Predict{signature: BEACONCompatSignature, client: :test}
 
       info = Program.safe_program_info(program)
 
@@ -452,7 +452,7 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
       assert %{
                type: :predict,
                name: "Predict",
-               signature: SIMBACompatSignature,
+               signature: BEACONCompatSignature,
                has_demos: false
              } = info,
              "Safe program info structure incorrect"
@@ -478,7 +478,7 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
     end
 
     test "telemetry utilities provide consistent JSON-serializable data" do
-      program = %Predict{signature: SIMBACompatSignature, client: :test}
+      program = %Predict{signature: BEACONCompatSignature, client: :test}
 
       # Get all utility outputs
       utilities_output = %{
@@ -489,7 +489,7 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
         implements_program: Program.implements_program?(Predict)
       }
 
-      # Should be JSON-serializable (critical for SIMBA telemetry)
+      # Should be JSON-serializable (critical for BEACON telemetry)
       json_result =
         try do
           Jason.encode!(utilities_output)
@@ -498,7 +498,8 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
           error -> {:error, error}
         end
 
-      assert json_result == :ok, "Program utilities must be JSON-serializable for SIMBA telemetry"
+      assert json_result == :ok,
+             "Program utilities must be JSON-serializable for BEACON telemetry"
 
       # Test multiple calls for consistency
       results =
@@ -519,16 +520,16 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
   end
 
   describe "client architecture validation" do
-    test "client handles concurrent requests reliably (SIMBA load pattern)" do
-      # SIMBA will make many concurrent requests during optimization
-      messages = [%{role: "user", content: "SIMBA concurrent test"}]
+    test "client handles concurrent requests reliably (BEACON load pattern)" do
+      # BEACON will make many concurrent requests during optimization
+      messages = [%{role: "user", content: "BEACON concurrent test"}]
 
-      # Test concurrent usage pattern that SIMBA will create
+      # Test concurrent usage pattern that BEACON will create
       concurrent_requests =
         Task.async_stream(
           1..50,
           fn i ->
-            correlation_id = "simba-concurrent-#{i}"
+            correlation_id = "beacon-concurrent-#{i}"
 
             DSPEx.Client.request(messages, %{
               provider: :gemini,
@@ -547,11 +548,11 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
           _ -> false
         end)
 
-      # Should handle most requests successfully (SIMBA requirement)
+      # Should handle most requests successfully (BEACON requirement)
       success_rate = successes / 50
 
       assert success_rate >= 0.8,
-             "Client success rate too low for SIMBA: #{success_rate * 100}% (need ≥80%)"
+             "Client success rate too low for BEACON: #{success_rate * 100}% (need ≥80%)"
 
       # Verify response structure consistency
       successful_responses =
@@ -569,20 +570,20 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
              "All successful responses must have proper structure"
     end
 
-    test "correlation_id propagation works for SIMBA tracking" do
-      # SIMBA heavily uses correlation IDs for tracking optimization
+    test "correlation_id propagation works for BEACON tracking" do
+      # BEACON heavily uses correlation IDs for tracking optimization
       messages = [%{role: "user", content: "Correlation test"}]
 
-      # Test with SIMBA-style correlation IDs
-      simba_correlation_ids = [
-        "simba-bootstrap-iteration-1",
-        "simba-teacher-request-batch-2",
-        "simba-student-evaluation-phase-3",
-        "simba-optimization-cycle-4"
+      # Test with BEACON-style correlation IDs
+      beacon_correlation_ids = [
+        "beacon-bootstrap-iteration-1",
+        "beacon-teacher-request-batch-2",
+        "beacon-student-evaluation-phase-3",
+        "beacon-optimization-cycle-4"
       ]
 
       correlation_results =
-        Enum.map(simba_correlation_ids, fn correlation_id ->
+        Enum.map(beacon_correlation_ids, fn correlation_id ->
           result =
             DSPEx.Client.request(messages, %{
               provider: :gemini,
@@ -599,25 +600,25 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
           _ -> false
         end)
 
-      assert successes == length(simba_correlation_ids),
-             "Correlation ID requests failed: #{successes}/#{length(simba_correlation_ids)}"
+      assert successes == length(beacon_correlation_ids),
+             "Correlation ID requests failed: #{successes}/#{length(beacon_correlation_ids)}"
 
       # In a real implementation, we'd verify the correlation_id
       # was properly propagated through telemetry events
       # For now, just verify the requests succeed
     end
 
-    test "provider switching works for SIMBA multi-model strategy" do
-      # SIMBA might use different providers for teacher vs student
+    test "provider switching works for BEACON multi-model strategy" do
+      # BEACON might use different providers for teacher vs student
       messages = [%{role: "user", content: "Provider switching test"}]
 
-      # Test SIMBA pattern: different providers for different roles
+      # Test BEACON pattern: different providers for different roles
       teacher_requests =
         Enum.map(1..5, fn i ->
           DSPEx.Client.request(messages, %{
             # Strong teacher model
             provider: :openai,
-            correlation_id: "simba-teacher-#{i}"
+            correlation_id: "beacon-teacher-#{i}"
           })
         end)
 
@@ -626,7 +627,7 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
           DSPEx.Client.request(messages, %{
             # Fast student model
             provider: :gemini,
-            correlation_id: "simba-student-#{i}"
+            correlation_id: "beacon-student-#{i}"
           })
         end)
 
@@ -652,10 +653,10 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
   end
 
   describe "error handling and recovery" do
-    test "graceful handling of teacher failures during bootstrap (SIMBA robustness)" do
-      # SIMBA needs robust error handling when teacher calls fail
-      student = %Predict{signature: SIMBACompatSignature, client: :test}
-      teacher = %Predict{signature: SIMBACompatSignature, client: :test}
+    test "graceful handling of teacher failures during bootstrap (BEACON robustness)" do
+      # BEACON needs robust error handling when teacher calls fail
+      student = %Predict{signature: BEACONCompatSignature, client: :test}
+      teacher = %Predict{signature: BEACONCompatSignature, client: :test}
 
       trainset = [
         %Example{
@@ -674,7 +675,7 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
 
       metric_fn = Teleprompter.exact_match(:answer)
 
-      # Set up mixed success/failure responses (realistic SIMBA scenario)
+      # Set up mixed success/failure responses (realistic BEACON scenario)
       # We need more successes than failures for bootstrap to work
       MockProvider.setup_bootstrap_mocks([
         # First succeeds
@@ -696,11 +697,11 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
           trainset,
           metric_fn,
           max_bootstrapped_demos: 3,
-          # SIMBA would configure retries
+          # BEACON would configure retries
           teacher_retries: 2
         )
 
-      # Should succeed with partial results (critical for SIMBA)
+      # Should succeed with partial results (critical for BEACON)
       assert {:ok, optimized} = result, "Should handle teacher failures gracefully"
 
       # Should have at least some demos from successful examples
@@ -720,17 +721,17 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
       end
     end
 
-    test "recovery from client connection issues (SIMBA reliability)" do
-      # Test that SIMBA can recover from temporary client issues
+    test "recovery from client connection issues (BEACON reliability)" do
+      # Test that BEACON can recover from temporary client issues
       messages = [%{role: "user", content: "Recovery test"}]
 
-      # Simulate intermittent failures that SIMBA might encounter
+      # Simulate intermittent failures that BEACON might encounter
       results =
         Enum.map(1..10, fn i ->
           # Some requests might fail, but system should recover
           DSPEx.Client.request(messages, %{
             provider: :gemini,
-            correlation_id: "simba-recovery-#{i}",
+            correlation_id: "beacon-recovery-#{i}",
             # Shorter timeout to potentially trigger failures
             timeout: 2000
           })
@@ -743,17 +744,17 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
           _ -> false
         end)
 
-      # SIMBA needs at least 70% success rate for reliability
+      # BEACON needs at least 70% success rate for reliability
       success_rate = successes / 10
 
       assert success_rate >= 0.7,
-             "Recovery rate too low for SIMBA: #{success_rate * 100}% (need ≥70%)"
+             "Recovery rate too low for BEACON: #{success_rate * 100}% (need ≥70%)"
     end
 
     test "error propagation maintains correlation tracking" do
-      # SIMBA needs proper error correlation for debugging
-      student = %Predict{signature: SIMBACompatSignature, client: :test}
-      teacher = %Predict{signature: SIMBACompatSignature, client: :test}
+      # BEACON needs proper error correlation for debugging
+      student = %Predict{signature: BEACONCompatSignature, client: :test}
+      teacher = %Predict{signature: BEACONCompatSignature, client: :test}
 
       # Create scenario that will cause errors
       invalid_trainset = [
@@ -767,7 +768,7 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
       MockProvider.setup_bootstrap_mocks([{:error, :deliberate_test_error}])
 
       metric_fn = Teleprompter.exact_match(:answer)
-      correlation_id = "simba-error-tracking-test"
+      correlation_id = "beacon-error-tracking-test"
 
       result =
         BootstrapFewShot.compile(
@@ -788,17 +789,17 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
         {:error, reason} ->
           # Error should be properly categorized
           assert is_atom(reason) or is_tuple(reason) or is_binary(reason),
-                 "Error should be properly formatted for SIMBA tracking"
+                 "Error should be properly formatted for BEACON tracking"
       end
     end
   end
 
-  describe "performance validation for SIMBA" do
+  describe "performance validation for BEACON" do
     test "bootstrap generation completes within acceptable time" do
-      student = %Predict{signature: SIMBACompatSignature, client: :test}
-      teacher = %Predict{signature: SIMBACompatSignature, client: :test}
+      student = %Predict{signature: BEACONCompatSignature, client: :test}
+      teacher = %Predict{signature: BEACONCompatSignature, client: :test}
 
-      # SIMBA-scale training set
+      # BEACON-scale training set
       trainset =
         Enum.map(1..20, fn i ->
           %Example{
@@ -828,9 +829,9 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
       end_time = System.monotonic_time()
       duration_ms = System.convert_time_unit(end_time - start_time, :native, :millisecond)
 
-      # SIMBA performance requirement: < 10 seconds for 20 examples
+      # BEACON performance requirement: < 10 seconds for 20 examples
       assert duration_ms < 10_000,
-             "Bootstrap generation too slow for SIMBA: #{duration_ms}ms (need < 10s)"
+             "Bootstrap generation too slow for BEACON: #{duration_ms}ms (need < 10s)"
 
       # Calculate throughput
       throughput = 20 / (duration_ms / 1000)
@@ -838,8 +839,8 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
     end
 
     test "memory usage remains stable during repeated optimizations" do
-      student = %Predict{signature: SIMBACompatSignature, client: :test}
-      teacher = %Predict{signature: SIMBACompatSignature, client: :test}
+      student = %Predict{signature: BEACONCompatSignature, client: :test}
+      teacher = %Predict{signature: BEACONCompatSignature, client: :test}
 
       trainset = [
         %Example{
@@ -854,7 +855,7 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
       :erlang.garbage_collect()
       initial_memory = :erlang.memory()[:total]
 
-      # Run multiple optimization cycles (SIMBA pattern)
+      # Run multiple optimization cycles (BEACON pattern)
       Enum.each(1..10, fn i ->
         MockProvider.reset()
         MockProvider.setup_bootstrap_mocks(["Response"])
@@ -878,17 +879,17 @@ defmodule DSPEx.Integration.SIMBAReadinessTest do
       :erlang.garbage_collect()
       final_memory = :erlang.memory()[:total]
 
-      # Memory growth should be reasonable for SIMBA
+      # Memory growth should be reasonable for BEACON
       memory_growth_mb = (final_memory - initial_memory) / (1024 * 1024)
 
       assert memory_growth_mb < 25,
-             "Memory growth too high for SIMBA: #{memory_growth_mb}MB (need < 25MB)"
+             "Memory growth too high for BEACON: #{memory_growth_mb}MB (need < 25MB)"
     end
 
     test "concurrent optimization doesn't degrade individual performance" do
-      # SIMBA might run multiple optimization experiments in parallel
-      student = %Predict{signature: SIMBACompatSignature, client: :test}
-      teacher = %Predict{signature: SIMBACompatSignature, client: :test}
+      # BEACON might run multiple optimization experiments in parallel
+      student = %Predict{signature: BEACONCompatSignature, client: :test}
+      teacher = %Predict{signature: BEACONCompatSignature, client: :test}
 
       trainset = [
         %Example{

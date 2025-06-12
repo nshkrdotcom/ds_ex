@@ -21,7 +21,7 @@ config :dspex,
     default_max_tokens: 150
   },
   teleprompters: %{
-    simba: %{
+    beacon: %{
       default_instruction_model: :openai,
       default_evaluation_model: :gemini,
       max_concurrent_operations: 10

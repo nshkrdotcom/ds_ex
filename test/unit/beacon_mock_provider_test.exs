@@ -1,23 +1,23 @@
-defmodule DSPEx.SimbaMockProviderTest do
+defmodule DSPEx.BeaconMockProviderTest do
   @moduledoc """
-  Unit tests for SIMBA mock provider infrastructure.
+  Unit tests for BEACON mock provider infrastructure.
 
-  Tests the enhanced mocking capabilities needed for SIMBA optimization workflows,
+  Tests the enhanced mocking capabilities needed for BEACON optimization workflows,
   including bootstrap scenarios, instruction generation, and evaluation workflows.
   """
   use ExUnit.Case, async: false
 
-  alias DSPEx.{Test.SimbaMockProvider, MockClientManager}
+  alias DSPEx.{Test.BeaconMockProvider, MockClientManager}
 
   @moduletag :group_2
 
   setup do
     # Clean up any existing mock state
-    SimbaMockProvider.reset_all_simba_mocks()
+    BeaconMockProvider.reset_all_beacon_mocks()
     MockClientManager.clear_all_mock_responses()
 
     on_exit(fn ->
-      SimbaMockProvider.reset_all_simba_mocks()
+      BeaconMockProvider.reset_all_beacon_mocks()
       MockClientManager.clear_all_mock_responses()
     end)
 
@@ -32,7 +32,7 @@ defmodule DSPEx.SimbaMockProviderTest do
         "Paris is the capital city of France"
       ]
 
-      assert :ok = SimbaMockProvider.setup_bootstrap_mocks(teacher_responses)
+      assert :ok = BeaconMockProvider.setup_bootstrap_mocks(teacher_responses)
 
       # Verify responses were stored
       gpt4_responses = MockClientManager.get_mock_responses(:gpt4)
@@ -49,7 +49,7 @@ defmodule DSPEx.SimbaMockProviderTest do
     end
 
     test "setup_bootstrap_mocks/1 handles empty list" do
-      assert :ok = SimbaMockProvider.setup_bootstrap_mocks([])
+      assert :ok = BeaconMockProvider.setup_bootstrap_mocks([])
 
       responses = MockClientManager.get_mock_responses(:gpt4)
       assert responses == []
@@ -64,7 +64,7 @@ defmodule DSPEx.SimbaMockProviderTest do
         "Use specific examples to support your conclusions"
       ]
 
-      assert :ok = SimbaMockProvider.setup_instruction_generation_mocks(instruction_responses)
+      assert :ok = BeaconMockProvider.setup_instruction_generation_mocks(instruction_responses)
 
       # Verify responses were stored
       instruction_responses_stored = MockClientManager.get_mock_responses(:instruction_model)
@@ -86,7 +86,7 @@ defmodule DSPEx.SimbaMockProviderTest do
         "pattern3" => 0.7
       }
 
-      assert :ok = SimbaMockProvider.setup_evaluation_mocks(score_map)
+      assert :ok = BeaconMockProvider.setup_evaluation_mocks(score_map)
 
       # Verify responses were stored
       eval_responses = MockClientManager.get_mock_responses(:evaluator)
@@ -95,19 +95,19 @@ defmodule DSPEx.SimbaMockProviderTest do
       # Verify response structure
       first_response = hd(eval_responses)
       assert %{content: "Evaluation complete", metadata: metadata} = first_response
-      assert %{evaluation_type: :simba_metric, confidence: 0.9} = metadata
+      assert %{evaluation_type: :beacon_metric, confidence: 0.9} = metadata
     end
   end
 
-  describe "comprehensive SIMBA optimization mocks" do
-    test "setup_simba_optimization_mocks/1 configures full workflow" do
+  describe "comprehensive BEACON optimization mocks" do
+    test "setup_beacon_optimization_mocks/1 configures full workflow" do
       config = %{
         max_iterations: 3,
         base_score: 0.6,
         improvement_per_iteration: 0.1
       }
 
-      assert :ok = SimbaMockProvider.setup_simba_optimization_mocks(config)
+      assert :ok = BeaconMockProvider.setup_beacon_optimization_mocks(config)
 
       # Verify different provider responses were configured
       teacher_responses = MockClientManager.get_mock_responses(:teacher)
@@ -132,8 +132,8 @@ defmodule DSPEx.SimbaMockProviderTest do
       assert Enum.sort(student_scores) == student_scores
     end
 
-    test "setup_simba_optimization_mocks/1 uses default configuration" do
-      assert :ok = SimbaMockProvider.setup_simba_optimization_mocks(%{})
+    test "setup_beacon_optimization_mocks/1 uses default configuration" do
+      assert :ok = BeaconMockProvider.setup_beacon_optimization_mocks(%{})
 
       # Should still create responses with defaults
       teacher_responses = MockClientManager.get_mock_responses(:teacher)
@@ -143,11 +143,11 @@ defmodule DSPEx.SimbaMockProviderTest do
   end
 
   describe "mock reset functionality" do
-    test "reset_all_simba_mocks/0 clears all configured responses" do
+    test "reset_all_beacon_mocks/0 clears all configured responses" do
       # Set up various mocks
-      SimbaMockProvider.setup_bootstrap_mocks(["response1", "response2"])
-      SimbaMockProvider.setup_instruction_generation_mocks(["instruction1"])
-      SimbaMockProvider.setup_evaluation_mocks(%{"pattern" => 0.8})
+      BeaconMockProvider.setup_bootstrap_mocks(["response1", "response2"])
+      BeaconMockProvider.setup_instruction_generation_mocks(["instruction1"])
+      BeaconMockProvider.setup_evaluation_mocks(%{"pattern" => 0.8})
 
       # Verify mocks are set
       assert length(MockClientManager.get_mock_responses(:teacher)) > 0
@@ -155,7 +155,7 @@ defmodule DSPEx.SimbaMockProviderTest do
       assert length(MockClientManager.get_mock_responses(:evaluator)) > 0
 
       # Reset all mocks
-      assert :ok = SimbaMockProvider.reset_all_simba_mocks()
+      assert :ok = BeaconMockProvider.reset_all_beacon_mocks()
 
       # Verify all mocks are cleared
       assert MockClientManager.get_mock_responses(:teacher) == []
@@ -169,7 +169,7 @@ defmodule DSPEx.SimbaMockProviderTest do
       concurrency_level = 5
       opts = [base_delay: 10, max_delay: 100]
 
-      assert :ok = SimbaMockProvider.setup_concurrent_optimization_mocks(concurrency_level, opts)
+      assert :ok = BeaconMockProvider.setup_concurrent_optimization_mocks(concurrency_level, opts)
 
       # Verify concurrent responses were configured
       concurrent_teacher = MockClientManager.get_mock_responses(:concurrent_teacher)
@@ -188,7 +188,7 @@ defmodule DSPEx.SimbaMockProviderTest do
 
   describe "error recovery mocks" do
     test "setup_error_recovery_mocks/0 configures mixed success/error responses" do
-      assert :ok = SimbaMockProvider.setup_error_recovery_mocks()
+      assert :ok = BeaconMockProvider.setup_error_recovery_mocks()
 
       # Verify error recovery responses were configured
       error_responses = MockClientManager.get_mock_responses(:error_prone)
@@ -210,20 +210,20 @@ defmodule DSPEx.SimbaMockProviderTest do
     test "validate_mock_setup/0 checks required providers" do
       # Initially should fail - no mocks set up
       assert {:error, {:no_mock_providers_configured, _all_providers}} =
-               SimbaMockProvider.validate_mock_setup()
+               BeaconMockProvider.validate_mock_setup()
 
       # Set up some mocks (any mocks should pass)
-      SimbaMockProvider.setup_bootstrap_mocks(["Test response"])
+      BeaconMockProvider.setup_bootstrap_mocks(["Test response"])
 
       # Should now pass
-      assert :ok = SimbaMockProvider.validate_mock_setup()
+      assert :ok = BeaconMockProvider.validate_mock_setup()
     end
   end
 
   describe "integration with mock client manager" do
     test "mock responses integrate with existing MockClientManager" do
-      # This test verifies that our SIMBA mocks work with the existing mock infrastructure
-      SimbaMockProvider.setup_bootstrap_mocks(["Test teacher response"])
+      # This test verifies that our BEACON mocks work with the existing mock infrastructure
+      BeaconMockProvider.setup_bootstrap_mocks(["Test teacher response"])
 
       # Start a mock client manager for the teacher provider
       {:ok, client_pid} = MockClientManager.start_link(:teacher)
@@ -247,7 +247,7 @@ defmodule DSPEx.SimbaMockProviderTest do
       # Test that setting up mocks doesn't take too long
       {time, :ok} =
         :timer.tc(fn ->
-          SimbaMockProvider.setup_simba_optimization_mocks(%{max_iterations: 10})
+          BeaconMockProvider.setup_beacon_optimization_mocks(%{max_iterations: 10})
         end)
 
       # Should complete quickly (< 10ms)
@@ -257,13 +257,13 @@ defmodule DSPEx.SimbaMockProviderTest do
 
     test "mock reset is efficient" do
       # Set up multiple mock configurations
-      SimbaMockProvider.setup_bootstrap_mocks(Enum.map(1..50, &"Response #{&1}"))
-      SimbaMockProvider.setup_instruction_generation_mocks(Enum.map(1..50, &"Instruction #{&1}"))
+      BeaconMockProvider.setup_bootstrap_mocks(Enum.map(1..50, &"Response #{&1}"))
+      BeaconMockProvider.setup_instruction_generation_mocks(Enum.map(1..50, &"Instruction #{&1}"))
 
       # Time the reset operation
       {time, :ok} =
         :timer.tc(fn ->
-          SimbaMockProvider.reset_all_simba_mocks()
+          BeaconMockProvider.reset_all_beacon_mocks()
         end)
 
       # Should complete quickly even with many mocks
@@ -272,14 +272,14 @@ defmodule DSPEx.SimbaMockProviderTest do
     end
   end
 
-  describe "SIMBA workflow simulation readiness" do
+  describe "BEACON workflow simulation readiness" do
     test "all required mock types can be configured simultaneously" do
-      # This test ensures all SIMBA mock types can work together
-      assert :ok = SimbaMockProvider.setup_bootstrap_mocks(["Teacher response"])
-      assert :ok = SimbaMockProvider.setup_instruction_generation_mocks(["Instruction"])
-      assert :ok = SimbaMockProvider.setup_evaluation_mocks(%{"test" => 0.8})
-      assert :ok = SimbaMockProvider.setup_concurrent_optimization_mocks(3)
-      assert :ok = SimbaMockProvider.setup_error_recovery_mocks()
+      # This test ensures all BEACON mock types can work together
+      assert :ok = BeaconMockProvider.setup_bootstrap_mocks(["Teacher response"])
+      assert :ok = BeaconMockProvider.setup_instruction_generation_mocks(["Instruction"])
+      assert :ok = BeaconMockProvider.setup_evaluation_mocks(%{"test" => 0.8})
+      assert :ok = BeaconMockProvider.setup_concurrent_optimization_mocks(3)
+      assert :ok = BeaconMockProvider.setup_error_recovery_mocks()
 
       # Verify all mock types are present
       providers = [
@@ -297,18 +297,18 @@ defmodule DSPEx.SimbaMockProviderTest do
       end)
 
       # Verify we can validate the complete setup
-      assert :ok = SimbaMockProvider.validate_mock_setup()
+      assert :ok = BeaconMockProvider.validate_mock_setup()
     end
 
-    test "mock infrastructure supports expected SIMBA data flow" do
-      # Configure a realistic SIMBA workflow scenario
+    test "mock infrastructure supports expected BEACON data flow" do
+      # Configure a realistic BEACON workflow scenario
       config = %{
         max_iterations: 5,
         base_score: 0.5,
         improvement_per_iteration: 0.15
       }
 
-      SimbaMockProvider.setup_simba_optimization_mocks(config)
+      BeaconMockProvider.setup_beacon_optimization_mocks(config)
 
       # Verify teacher responses are available
       teacher_responses = MockClientManager.get_mock_responses(:teacher)

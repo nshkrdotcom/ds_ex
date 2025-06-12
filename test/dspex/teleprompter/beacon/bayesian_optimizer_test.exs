@@ -1,7 +1,7 @@
-defmodule DSPEx.Teleprompter.SIMBA.BayesianOptimizerTest do
+defmodule DSPEx.Teleprompter.BEACON.BayesianOptimizerTest do
   use ExUnit.Case, async: true
 
-  alias DSPEx.Teleprompter.SIMBA.BayesianOptimizer
+  alias DSPEx.Teleprompter.BEACON.BayesianOptimizer
 
   describe "new/1" do
     test "creates optimizer with default values" do
@@ -190,10 +190,10 @@ defmodule DSPEx.Teleprompter.SIMBA.BayesianOptimizerTest do
       :telemetry.attach_many(
         handler_id,
         [
-          [:dspex, :simba, :bayesian_optimizer, :start],
-          [:dspex, :simba, :bayesian_optimizer, :stop],
-          [:dspex, :simba, :bayesian_optimizer, :initialization, :start],
-          [:dspex, :simba, :bayesian_optimizer, :iteration, :start]
+          [:dspex, :beacon, :bayesian_optimizer, :start],
+          [:dspex, :beacon, :bayesian_optimizer, :stop],
+          [:dspex, :beacon, :bayesian_optimizer, :initialization, :start],
+          [:dspex, :beacon, :bayesian_optimizer, :iteration, :start]
         ],
         fn event, measurements, metadata, _ ->
           send(test_pid, {:telemetry, event, measurements, metadata})
@@ -232,13 +232,13 @@ defmodule DSPEx.Teleprompter.SIMBA.BayesianOptimizerTest do
         )
 
       # Should receive start and stop events
-      assert_receive {:telemetry, [:dspex, :simba, :bayesian_optimizer, :start], _, metadata}
+      assert_receive {:telemetry, [:dspex, :beacon, :bayesian_optimizer, :start], _, metadata}
       assert metadata.correlation_id == "test-correlation-id"
 
-      assert_receive {:telemetry, [:dspex, :simba, :bayesian_optimizer, :initialization, :start],
+      assert_receive {:telemetry, [:dspex, :beacon, :bayesian_optimizer, :initialization, :start],
                       _, _}
 
-      assert_receive {:telemetry, [:dspex, :simba, :bayesian_optimizer, :stop], measurements, _}
+      assert_receive {:telemetry, [:dspex, :beacon, :bayesian_optimizer, :stop], measurements, _}
       assert is_integer(measurements.duration)
       assert measurements.success == true
     end
