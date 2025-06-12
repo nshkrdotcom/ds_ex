@@ -4,7 +4,7 @@
 
 The DSPEx foundation has undergone **major debugging and stabilization**. Critical test failures have been resolved through systematic bug fixes. System is now **highly stable** with **651+ tests passing** out of 653 total tests.
 
-**📋 Next Action:** Final performance optimization and system readiness validation for SIMBA integration
+**📋 Next Action:** Phase 6 - Critical Contract Validation for SIMBA Integration
 
 ---
 
@@ -490,7 +490,151 @@ mix test test/performance/ --max-failures 1
 - Memory usage patterns meet SIMBA integration requirements
 
 ### **Ready for Next Phase:**
-**Next Phase:** Phase 6 (Final Integration and Cleanup) - Ready for HANDOFF
+**Next Phase:** Phase 6 (Critical Contract Validation) - Ready for Implementation
 **System Status:** SIMBA-ready foundation with comprehensive memory validation
 **Memory Characteristics:** Excellent - All SIMBA memory requirements validated
-**Performance Baselines:** Documented and verified for SIMBA planning
+**Critical Need:** API contract validation for SIMBA's core dependencies
+
+---
+
+# Phase 6: Critical Contract Validation for SIMBA Readiness
+
+**Date:** June 11, 2025  
+**Status:** Ready for Implementation  
+**Objective:** Validate API contracts that SIMBA's Bayesian optimization absolutely depends on
+
+## Context: SIMBA Architecture Analysis Complete
+
+After analyzing the actual SIMBA implementation in `TODO_03_simbaPlanning/`, it's clear that SIMBA is a sophisticated **Bayesian optimization teleprompter** with critical dependencies on specific DSPEx contracts:
+
+**SIMBA's Core Dependencies:**
+- **DSPEx.Program.forward/2** - Called thousands of times during optimization trials
+- **DSPEx.Client.request/2** - Used for LLM-based instruction generation
+- **DSPEx.Example data structures** - Essential for demonstration generation
+- **DSPEx.OptimizedProgram** - Wrapper for enhanced program output
+- **Telemetry infrastructure** - Progress tracking and observability
+
+## Phase 6 Implementation Plan
+
+### **Step 1: Deep Context Gathering (Essential)**
+
+**Complete Context File List:**
+
+**Documentation (Essential Reading):**
+```
+TASK_6_REVIEW_CLAUDE.md
+TODO_02_PRE_SIMBA/TEST_MIGRATION_PLAN.md
+TODO_03_simbaPlanning/simba_01_integration_claude.md
+TODO_03_simbaPlanning/simba_02_bayesian_optimizer.md
+TODO_03_simbaPlanning/simba_04_integration_documentation.md
+```
+
+**SIMBA Implementation (Architecture Understanding):**
+```
+TODO_03_simbaPlanning/lib/ds_ex/teleprompter/simba/integration.ex
+TODO_03_simbaPlanning/lib/ds_ex/teleprompter/simba/continuous_optimizer.ex
+TODO_03_simbaPlanning/lib/ds_ex/teleprompter/simba/utils.ex
+```
+
+**Core DSPEx Contracts (Critical Dependencies):**
+```
+lib/dspex/program.ex
+lib/dspex/predict.ex
+lib/dspex/client.ex
+lib/dspex/example.ex
+lib/dspex/optimized_program.ex
+lib/dspex/teleprompter.ex
+lib/dspex/teleprompter/bootstrap_fewshot.ex
+```
+
+**Service Infrastructure (Foundation Integration):**
+```
+lib/dspex/services/config_manager.ex
+lib/dspex/services/telemetry_setup.ex
+lib/dspex/client_manager.ex
+lib/dspex/mock_client_manager.ex
+```
+
+**Data Structures and Utilities:**
+```
+lib/dspex/signature.ex
+lib/dspex/adapter.ex
+lib/dspex/evaluate.ex
+lib/dspex/application.ex
+```
+
+**Test Files to Migrate (Contract Validation):**
+```
+TODO_02_PRE_SIMBA/test/integration/foundation_integration_test.exs
+TODO_02_PRE_SIMBA/test/integration/compatbility_test.exs
+TODO_02_PRE_SIMBA/test/integration/error_recovery_test.exs
+TODO_02_PRE_SIMBA/test/unit/program_utilites_test.exs
+```
+
+**Reference Test Infrastructure (If Needed):**
+```
+test/support/mock_provider.ex
+test/support/simba_test_mocks.ex
+test/test_helper.exs
+```
+
+### **Step 2: Contract Test Migration (Critical)**
+
+**Priority 1: Foundation Integration**
+```bash
+cp TODO_02_PRE_SIMBA/test/integration/foundation_integration_test.exs test/integration/
+# Validates ConfigManager, TelemetrySetup, service lifecycle
+```
+
+**Priority 2: Program Contract Validation**
+```bash
+cp TODO_02_PRE_SIMBA/test/integration/compatbility_test.exs test/integration/
+# Validates Program.forward/2 stability, concurrent execution safety
+```
+
+**Priority 3: Client Interface Validation**
+```bash
+cp TODO_02_PRE_SIMBA/test/integration/error_recovery_test.exs test/integration/
+# Validates Client.request/2 interface, response format stability
+```
+
+**Priority 4: Program Utilities**
+```bash
+cp TODO_02_PRE_SIMBA/test/unit/program_utilites_test.exs test/unit/
+# Validates OptimizedProgram.new/3, program metadata handling
+```
+
+### **Step 3: Critical Contract Validation**
+
+**Validation Commands:**
+```bash
+# Test each contract individually
+mix test test/integration/foundation_integration_test.exs --max-failures 1
+mix test test/integration/compatbility_test.exs --max-failures 1  
+mix test test/integration/error_recovery_test.exs --max-failures 1
+mix test test/unit/program_utilites_test.exs --max-failures 1
+
+# Full contract validation
+mix test test/integration/ test/unit/ --max-failures 3
+mix dialyzer  # Zero warnings required
+```
+
+### **Success Criteria:**
+
+**Critical SIMBA Contract Validation:**
+- ✅ Program.forward/2 returns consistent `{:ok, outputs}` format
+- ✅ Client.request/2 maintains stable response.choices[0].message.content structure
+- ✅ Example.new/1, inputs/1, outputs/1 methods work reliably
+- ✅ OptimizedProgram.new/3 supports custom metadata for SIMBA optimization data
+- ✅ Telemetry events maintain correlation_id and measurement structure
+- ✅ ConfigManager returns valid provider atoms for instruction generation
+
+**System Readiness Status:**
+- Phase 5C: ✅ Memory performance validated  
+- Phase 6: ⚠️ **IN PROGRESS** - API contract validation for SIMBA integration
+
+## Critical Implementation Notes
+
+**SIMBA makes thousands of API calls** during optimization and depends on these contracts being stable. Contract validation is **essential** to prevent SIMBA optimization failures.
+
+**Next Action:** Begin Phase 6 contract test migration and validation immediately.
