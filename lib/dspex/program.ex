@@ -93,7 +93,7 @@ defmodule DSPEx.Program do
         nil ->
           # Use fast UUID generation to avoid crypto cold start
           # Format: test-{node}-{timestamp}-{random}
-          node_hash = :erlang.phash2(node(), 65536)
+          node_hash = :erlang.phash2(node(), 65_536)
           timestamp = System.unique_integer([:positive])
           random = :erlang.unique_integer([:positive])
           "test-#{node_hash}-#{timestamp}-#{random}"

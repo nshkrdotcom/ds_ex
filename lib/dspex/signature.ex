@@ -68,69 +68,67 @@ defmodule DSPEx.Signature do
   ## Examples
 
       {:ok, extended} = DSPEx.Signature.extend(
-        QASignature, 
+        QASignature,
         %{reasoning: :text, confidence: :float}
       )
-      
+
       # Can now use extended signature with reasoning field
       result = extended.new(%{question: "What is 2+2?", reasoning: "Basic math", answer: "4"})
   """
   @spec extend(module(), map()) :: {:ok, module()} | {:error, term()}
   def extend(base_signature, additional_fields)
       when is_atom(base_signature) and is_map(additional_fields) do
-    try do
-      # Validate base signature implements behavior
-      unless Code.ensure_loaded?(base_signature) and
-               function_exported?(base_signature, :input_fields, 0) and
-               function_exported?(base_signature, :output_fields, 0) and
-               function_exported?(base_signature, :instructions, 0) do
-        raise ArgumentError, "Base module must implement DSPEx.Signature behavior"
-      end
-
-      # Get existing fields from base signature
-      base_inputs = base_signature.input_fields()
-      base_outputs = base_signature.output_fields()
-      base_instructions = base_signature.instructions()
-
-      # Process additional fields
-      {new_inputs, new_outputs} =
-        categorize_additional_fields(additional_fields, base_inputs, base_outputs)
-
-      # Create extended field lists
-      extended_inputs = base_inputs ++ new_inputs
-      extended_outputs = base_outputs ++ new_outputs
-      all_extended_fields = extended_inputs ++ extended_outputs
-
-      # Generate unique module name based on base signature and extension
-      module_name = generate_extended_module_name(base_signature, additional_fields)
-
-      # Create new signature string for the extended signature
-      _extended_signature_string = create_signature_string(extended_inputs, extended_outputs)
-
-      # Create the extended module definition
-      module_definition =
-        create_extended_module(
-          module_name,
-          base_instructions,
-          extended_inputs,
-          extended_outputs,
-          all_extended_fields
-        )
-
-      # Check if module already exists and purge it if necessary
-      if Code.ensure_loaded?(module_name) do
-        :code.purge(module_name)
-        :code.delete(module_name)
-      end
-
-      # Compile and load the new module
-      {_result, _binding} = Code.eval_quoted(module_definition)
-
-      {:ok, module_name}
-    rescue
-      error ->
-        {:error, error}
+    # Validate base signature implements behavior
+    unless Code.ensure_loaded?(base_signature) and
+             function_exported?(base_signature, :input_fields, 0) and
+             function_exported?(base_signature, :output_fields, 0) and
+             function_exported?(base_signature, :instructions, 0) do
+      raise ArgumentError, "Base module must implement DSPEx.Signature behavior"
     end
+
+    # Get existing fields from base signature
+    base_inputs = base_signature.input_fields()
+    base_outputs = base_signature.output_fields()
+    base_instructions = base_signature.instructions()
+
+    # Process additional fields
+    {new_inputs, new_outputs} =
+      categorize_additional_fields(additional_fields, base_inputs, base_outputs)
+
+    # Create extended field lists
+    extended_inputs = base_inputs ++ new_inputs
+    extended_outputs = base_outputs ++ new_outputs
+    all_extended_fields = extended_inputs ++ extended_outputs
+
+    # Generate unique module name based on base signature and extension
+    module_name = generate_extended_module_name(base_signature, additional_fields)
+
+    # Create new signature string for the extended signature
+    _extended_signature_string = create_signature_string(extended_inputs, extended_outputs)
+
+    # Create the extended module definition
+    module_definition =
+      create_extended_module(
+        module_name,
+        base_instructions,
+        extended_inputs,
+        extended_outputs,
+        all_extended_fields
+      )
+
+    # Check if module already exists and purge it if necessary
+    if Code.ensure_loaded?(module_name) do
+      :code.purge(module_name)
+      :code.delete(module_name)
+    end
+
+    # Compile and load the new module
+    {_result, _binding} = Code.eval_quoted(module_definition)
+
+    {:ok, module_name}
+  rescue
+    error ->
+      {:error, error}
   end
 
   @doc """
@@ -193,8 +191,8 @@ defmodule DSPEx.Signature do
 
   @spec create_signature_string([atom()], [atom()]) :: String.t()
   defp create_signature_string(inputs, outputs) do
-    inputs_str = inputs |> Enum.map(&Atom.to_string/1) |> Enum.join(", ")
-    outputs_str = outputs |> Enum.map(&Atom.to_string/1) |> Enum.join(", ")
+    inputs_str = Enum.map_join(inputs, ", ", &Atom.to_string/1)
+    outputs_str = Enum.map_join(outputs, ", ", &Atom.to_string/1)
 
     "#{inputs_str} -> #{outputs_str}"
   end
@@ -226,16 +224,16 @@ defmodule DSPEx.Signature do
 
         # Implement behavior callbacks
         @impl DSPEx.Signature
-        def instructions(), do: @instructions
+        def instructions, do: @instructions
 
         @impl DSPEx.Signature
-        def input_fields(), do: @input_fields
+        def input_fields, do: @input_fields
 
         @impl DSPEx.Signature
-        def output_fields(), do: @output_fields
+        def output_fields, do: @output_fields
 
         @impl DSPEx.Signature
-        def fields(), do: @all_fields
+        def fields, do: @all_fields
 
         # Helper functions
         def new(fields \\ %{}) when is_map(fields) do
@@ -324,22 +322,22 @@ defmodule DSPEx.Signature do
       @doc "Returns the instruction string extracted from @moduledoc or auto-generated"
       @spec instructions() :: String.t()
       @impl DSPEx.Signature
-      def instructions(), do: @instructions
+      def instructions, do: @instructions
 
       @doc "Returns the list of input field names as atoms"
       @spec input_fields() :: [atom()]
       @impl DSPEx.Signature
-      def input_fields(), do: @input_fields
+      def input_fields, do: @input_fields
 
       @doc "Returns the list of output field names as atoms"
       @spec output_fields() :: [atom()]
       @impl DSPEx.Signature
-      def output_fields(), do: @output_fields
+      def output_fields, do: @output_fields
 
       @doc "Returns all fields (inputs + outputs) as a combined list"
       @spec fields() :: [atom()]
       @impl DSPEx.Signature
-      def fields(), do: @all_fields
+      def fields, do: @all_fields
 
       @doc """
       Creates a new signature struct instance.

@@ -1,11 +1,25 @@
 defmodule Dspex.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
-  @moduledoc false
+  @moduledoc """
+  Application module for DSPEx (Declarative Self-improving Programs in Elixir).
+
+  This module implements the OTP Application behavior and is responsible for starting
+  the supervision tree for DSPEx services. It manages the lifecycle of core services
+  including configuration management, telemetry setup, and HTTP client pools.
+
+  ## Supervised Services
+
+  - `DSPEx.Services.ConfigManager` - Configuration management service
+  - `DSPEx.Services.TelemetrySetup` - Telemetry and metrics setup
+  - `Finch` - HTTP client pool for external API calls
+
+  The supervision strategy is `:one_for_one`, meaning if any child process crashes,
+  only that process will be restarted.
+  """
 
   use Application
 
-  @impl true
+  @impl Application
+  @spec start(Application.start_type(), term()) :: {:ok, pid()} | {:error, term()}
   def start(_type, _args) do
     children = [
       # DSPEx-specific services (Foundation starts automatically)

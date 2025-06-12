@@ -465,13 +465,13 @@ defmodule DSPEx.Evaluate do
 
   # Utility functions
 
-  defp cluster_available?() do
+  defp cluster_available? do
     # Check if we're running in a cluster
     nodes = Node.list()
     length(nodes) > 0
   end
 
-  defp get_available_nodes() do
+  defp get_available_nodes do
     # Include self and connected nodes
     [node() | Node.list()]
   end

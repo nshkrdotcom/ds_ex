@@ -606,7 +606,7 @@ defmodule DSPEx.Client do
     end
   end
 
-  defp should_log_live?() do
+  defp should_log_live? do
     case DSPEx.TestModeConfig.get_test_mode() do
       :live -> true
       :fallback -> true

@@ -405,18 +405,16 @@ defmodule DSPEx.ClientManager do
   defp execute_with_circuit_breaker(circuit_breaker_name, function) do
     # For now, execute directly with circuit breaker preparation
     # This prepares the infrastructure for future Foundation circuit breaker integration
-    try do
-      result = function.()
+    result = function.()
 
-      # Log that circuit breaker is being bypassed (temporary)
-      Logger.debug("Executing request for #{circuit_breaker_name} (circuit breaker bypassed)")
+    # Log that circuit breaker is being bypassed (temporary)
+    Logger.debug("Executing request for #{circuit_breaker_name} (circuit breaker bypassed)")
 
-      result
-    rescue
-      error ->
-        Logger.error("Request execution failed for #{circuit_breaker_name}: #{inspect(error)}")
-        {:error, :execution_failed}
-    end
+    result
+  rescue
+    error ->
+      Logger.error("Request execution failed for #{circuit_breaker_name}: #{inspect(error)}")
+      {:error, :execution_failed}
   end
 
   # Determine whether to force mock or allow API attempts based on test mode
@@ -486,14 +484,12 @@ defmodule DSPEx.ClientManager do
 
   @spec emit_telemetry(list(atom()), map(), map()) :: :ok
   defp emit_telemetry(event, measurements, metadata) do
-    try do
-      :telemetry.execute(event, measurements, metadata)
-    rescue
-      # Ignore telemetry errors
-      _ -> :ok
-    catch
-      _ -> :ok
-    end
+    :telemetry.execute(event, measurements, metadata)
+  rescue
+    # Ignore telemetry errors
+    _ -> :ok
+  catch
+    _ -> :ok
   end
 
   @spec update_stats(t(), {:ok, response()} | {:error, error_reason()}) :: t()
@@ -539,13 +535,11 @@ defmodule DSPEx.ClientManager do
 
   @spec generate_correlation_id() :: String.t()
   defp generate_correlation_id do
-    try do
-      Foundation.Utils.generate_correlation_id()
-    rescue
-      _ ->
-        # Fallback for when Foundation is not available
-        "test-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
-    end
+    Foundation.Utils.generate_correlation_id()
+  rescue
+    _ ->
+      # Fallback for when Foundation is not available
+      "test-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
   end
 
   # HTTP request handling functions (adapted from DSPEx.Client)
@@ -639,32 +633,30 @@ defmodule DSPEx.ClientManager do
         headers = build_headers(provider_config)
         timeout = Map.get(provider_config, :timeout, 30_000)
 
-        try do
-          case Req.post(url, json: body, headers: headers, receive_timeout: timeout) do
-            {:ok, %Req.Response{status: 200} = response} ->
-              {:ok, response}
+        case Req.post(url, json: body, headers: headers, receive_timeout: timeout) do
+          {:ok, %Req.Response{status: 200} = response} ->
+            {:ok, response}
 
-            {:ok, %Req.Response{status: status}} when status >= 400 ->
-              {:error, :api_error}
+          {:ok, %Req.Response{status: status}} when status >= 400 ->
+            {:error, :api_error}
 
-            {:error, %{__exception__: true} = exception} ->
-              error_type =
-                case exception do
-                  %{reason: :timeout} -> :timeout
-                  %{reason: :closed} -> :network_error
-                  _ -> :network_error
-                end
+          {:error, %{__exception__: true} = exception} ->
+            error_type =
+              case exception do
+                %{reason: :timeout} -> :timeout
+                %{reason: :closed} -> :network_error
+                _ -> :network_error
+              end
 
-              {:error, error_type}
-          end
-        rescue
-          # Handle test environment where HTTP clients might not be available
-          ArgumentError -> {:error, :network_error}
-          _ -> {:error, :network_error}
-        catch
-          _ -> {:error, :network_error}
+            {:error, error_type}
         end
     end
+  rescue
+    # Handle test environment where HTTP clients might not be available
+    ArgumentError -> {:error, :network_error}
+    _ -> {:error, :network_error}
+  catch
+    _ -> {:error, :network_error}
   end
 
   # Check if we have a valid API key for the provider

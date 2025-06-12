@@ -40,7 +40,7 @@ defmodule DSPEx.Teleprompter.BootstrapFewShot do
 
   @behaviour DSPEx.Teleprompter
 
-  alias DSPEx.{Program, Example}
+  alias DSPEx.{Example, Program}
 
   defstruct max_bootstrapped_demos: 4,
             max_labeled_demos: 16,

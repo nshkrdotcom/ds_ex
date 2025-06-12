@@ -506,7 +506,7 @@ defmodule DSPEx.MockClientManager do
   Clears all mock responses.
   """
   @spec clear_all_mock_responses() :: :ok
-  def clear_all_mock_responses() do
+  def clear_all_mock_responses do
     # Get all persistent_term keys and clear mock-related ones
     :persistent_term.get()
     |> Enum.each(fn

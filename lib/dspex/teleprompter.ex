@@ -13,7 +13,7 @@ defmodule DSPEx.Teleprompter do
 
       defmodule MyTeleprompter do
         @behaviour DSPEx.Teleprompter
-        
+
         @impl true
         def compile(student, teacher, trainset, metric_fn, opts) do
           # Optimization logic here
@@ -113,7 +113,7 @@ defmodule DSPEx.Teleprompter do
                 ])
             )
 
-          # Check if any significant word from expected appears in actual  
+          # Check if any significant word from expected appears in actual
           has_common_word =
             Enum.any?(expected_words, fn word ->
               String.length(word) > 2 and String.contains?(actual_lower, word)
