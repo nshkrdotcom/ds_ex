@@ -305,39 +305,43 @@ defmodule DSPEx.Teleprompter.BootstrapFewShot do
     }
 
     # Add metadata for empty demo scenarios to aid debugging
-    metadata = case selected_demos do
-      [] ->
-        Map.merge(metadata, %{
-          demo_generation_result: :no_quality_demonstrations,
-          fallback_reason: "No demonstrations met quality threshold of #{config.quality_threshold}"
-        })
-      _ ->
-        Map.merge(metadata, %{
-          demo_generation_result: :success,
-          best_quality_score: get_best_quality_score(selected_demos)
-        })
-    end
+    metadata =
+      case selected_demos do
+        [] ->
+          Map.merge(metadata, %{
+            demo_generation_result: :no_quality_demonstrations,
+            fallback_reason:
+              "No demonstrations met quality threshold of #{config.quality_threshold}"
+          })
+
+        _ ->
+          Map.merge(metadata, %{
+            demo_generation_result: :success,
+            best_quality_score: get_best_quality_score(selected_demos)
+          })
+      end
 
     # Check if the student program natively supports demos
-    optimized = case student do
-      %{demos: _} ->
-        # Student has native demo support, update it directly
-        enhanced_student = %{student | demos: selected_demos}
-        
-        # Wrap with OptimizedProgram to preserve metadata even for native programs
-        DSPEx.OptimizedProgram.new(enhanced_student, selected_demos, metadata)
-      
-      _ ->
-        # Student doesn't have native demo support, wrap with OptimizedProgram
-        DSPEx.OptimizedProgram.new(student, selected_demos, metadata)
-    end
+    optimized =
+      case student do
+        %{demos: _} ->
+          # Student has native demo support, update it directly
+          enhanced_student = %{student | demos: selected_demos}
+
+          # Wrap with OptimizedProgram to preserve metadata even for native programs
+          DSPEx.OptimizedProgram.new(enhanced_student, selected_demos, metadata)
+
+        _ ->
+          # Student doesn't have native demo support, wrap with OptimizedProgram
+          DSPEx.OptimizedProgram.new(student, selected_demos, metadata)
+      end
 
     {:ok, optimized}
   end
 
   # Helper to extract best quality score for metadata
-  defp get_best_quality_score([]), do: nil
-  defp get_best_quality_score(demos) do
+  # Note: This function is only called when demos list is guaranteed to be non-empty
+  defp get_best_quality_score(demos) when is_list(demos) and length(demos) > 0 do
     demos
     |> Enum.map(fn demo -> demo.data[:__quality_score] || 0.0 end)
     |> Enum.max()
