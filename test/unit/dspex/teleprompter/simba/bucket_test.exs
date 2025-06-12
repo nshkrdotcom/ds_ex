@@ -55,47 +55,54 @@ defmodule DSPEx.Teleprompter.SIMBA.BucketTest do
       assert length(bucket_data.trajectories) == 4
       assert bucket_data.max_score == 0.9
       assert bucket_data.min_score == 0.6
-      assert bucket_data.avg_score == 0.75  # (0.9 + 0.7 + 0.6 + 0.8) / 4
-      assert_in_delta bucket_data.max_to_min_gap, 0.3, 0.001  # 0.9 - 0.6
-      assert_in_delta bucket_data.max_to_avg_gap, 0.15, 0.001  # 0.9 - 0.75
+      # (0.9 + 0.7 + 0.6 + 0.8) / 4
+      assert bucket_data.avg_score == 0.75
+      # 0.9 - 0.6
+      assert_in_delta bucket_data.max_to_min_gap, 0.3, 0.001
+      # 0.9 - 0.75
+      assert_in_delta bucket_data.max_to_avg_gap, 0.15, 0.001
     end
   end
 
   describe "improvement potential analysis" do
     test "bucket with significant gap shows potential" do
-      bucket_data = create_bucket_from_trajectories([
-        create_test_trajectory_mock(0.9),
-        create_test_trajectory_mock(0.5)
-      ])
+      bucket_data =
+        create_bucket_from_trajectories([
+          create_test_trajectory_mock(0.9),
+          create_test_trajectory_mock(0.5)
+        ])
 
       # Gap of 0.4 should show improvement potential
       assert has_improvement_potential?(bucket_data)
     end
 
     test "bucket with small gap shows no potential" do
-      bucket_data = create_bucket_from_trajectories([
-        create_test_trajectory_mock(0.8),
-        create_test_trajectory_mock(0.79)
-      ])
+      bucket_data =
+        create_bucket_from_trajectories([
+          create_test_trajectory_mock(0.8),
+          create_test_trajectory_mock(0.79)
+        ])
 
       # Gap of 0.01 should not show improvement potential
       refute has_improvement_potential?(bucket_data)
     end
 
     test "bucket with low max score shows no potential" do
-      bucket_data = create_bucket_from_trajectories([
-        create_test_trajectory_mock(0.05),
-        create_test_trajectory_mock(0.01)
-      ])
+      bucket_data =
+        create_bucket_from_trajectories([
+          create_test_trajectory_mock(0.05),
+          create_test_trajectory_mock(0.01)
+        ])
 
       refute has_improvement_potential?(bucket_data)
     end
 
     test "uses custom threshold for potential analysis" do
-      bucket_data = create_bucket_from_trajectories([
-        create_test_trajectory_mock(0.8),
-        create_test_trajectory_mock(0.6)
-      ])
+      bucket_data =
+        create_bucket_from_trajectories([
+          create_test_trajectory_mock(0.8),
+          create_test_trajectory_mock(0.6)
+        ])
 
       # With default threshold (0.1), gap of 0.2 should show potential
       assert has_improvement_potential?(bucket_data)
@@ -109,7 +116,8 @@ defmodule DSPEx.Teleprompter.SIMBA.BucketTest do
     test "identifies best trajectory" do
       trajectories = [
         create_test_trajectory_mock(0.7),
-        create_test_trajectory_mock(0.9),  # This should be best
+        # This should be best
+        create_test_trajectory_mock(0.9),
         create_test_trajectory_mock(0.6)
       ]
 
@@ -155,7 +163,8 @@ defmodule DSPEx.Teleprompter.SIMBA.BucketTest do
       assert stats.successful_count == 3
       assert stats.max_score == 0.9
       assert stats.min_score == 0.5
-      assert_in_delta stats.avg_score, 0.725, 0.001  # (0.9 + 0.7 + 0.5 + 0.8) / 4
+      # (0.9 + 0.7 + 0.5 + 0.8) / 4
+      assert_in_delta stats.avg_score, 0.725, 0.001
       assert is_float(stats.score_variance)
       assert stats.score_variance >= 0.0
       assert is_boolean(stats.improvement_potential)
@@ -235,16 +244,20 @@ defmodule DSPEx.Teleprompter.SIMBA.BucketTest do
   defp calculate_bucket_statistics(bucket_data) do
     successful_trajectories = get_successful_trajectories(bucket_data)
 
-    score_variance = if length(bucket_data.trajectories) <= 1 do
-      0.0
-    else
-      scores = Enum.map(bucket_data.trajectories, & &1.score)
-      mean = bucket_data.avg_score
-      variance_sum = Enum.reduce(scores, 0.0, fn score, acc ->
-        acc + :math.pow(score - mean, 2)
-      end)
-      variance_sum / length(scores)
-    end
+    score_variance =
+      if length(bucket_data.trajectories) <= 1 do
+        0.0
+      else
+        scores = Enum.map(bucket_data.trajectories, & &1.score)
+        mean = bucket_data.avg_score
+
+        variance_sum =
+          Enum.reduce(scores, 0.0, fn score, acc ->
+            acc + :math.pow(score - mean, 2)
+          end)
+
+        variance_sum / length(scores)
+      end
 
     %{
       trajectory_count: length(bucket_data.trajectories),

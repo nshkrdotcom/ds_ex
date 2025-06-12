@@ -28,9 +28,11 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
 
       assert stats.total_buckets == 1
       assert stats.total_trajectories == 3
-      assert stats.avg_bucket_score == 0.9  # max score of the bucket
+      # max score of the bucket
+      assert stats.avg_bucket_score == 0.9
       assert stats.max_bucket_score == 0.9
-      assert stats.improvement_potential == 0.4  # max_to_min_gap
+      # max_to_min_gap
+      assert stats.improvement_potential == 0.4
     end
 
     test "analyzes multiple buckets" do
@@ -41,24 +43,29 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
       stats = mock_analyze_buckets([bucket1, bucket2, bucket3])
 
       assert stats.total_buckets == 3
-      assert stats.total_trajectories == 6  # 2 + 3 + 1
-      assert stats.avg_bucket_score == (0.9 + 0.8 + 0.95) / 3  # avg of max scores
+      # 2 + 3 + 1
+      assert stats.total_trajectories == 6
+      # avg of max scores
+      assert stats.avg_bucket_score == (0.9 + 0.8 + 0.95) / 3
       assert stats.max_bucket_score == 0.95
 
       # Improvement potential: avg of max_to_min_gaps
-      expected_improvement = ((0.9 - 0.7) + (0.8 - 0.4) + (0.95 - 0.95)) / 3
+      expected_improvement = (0.9 - 0.7 + (0.8 - 0.4) + (0.95 - 0.95)) / 3
       assert_in_delta stats.improvement_potential, expected_improvement, 0.01
     end
 
     test "calculates viable buckets count" do
       # High potential bucket
-      high_potential = create_test_bucket_data([0.9, 0.5])  # Large gap
+      # Large gap
+      high_potential = create_test_bucket_data([0.9, 0.5])
       # Low potential bucket
-      low_potential = create_test_bucket_data([0.8, 0.79])  # Small gap
+      # Small gap
+      low_potential = create_test_bucket_data([0.8, 0.79])
 
       stats = mock_analyze_buckets([high_potential, low_potential])
 
-      assert stats.viable_buckets == 1  # Only high_potential bucket
+      # Only high_potential bucket
+      assert stats.viable_buckets == 1
     end
   end
 
@@ -118,12 +125,13 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
       # Mock metric function that gives higher scores for improved program
       metric_fn = fn _example, _outputs -> 0.8 end
 
-      improvement = mock_calculate_improvement(
-        original_program,
-        improved_program,
-        examples,
-        metric_fn
-      )
+      improvement =
+        mock_calculate_improvement(
+          original_program,
+          improved_program,
+          examples,
+          metric_fn
+        )
 
       assert Map.has_key?(improvement, :original_score)
       assert Map.has_key?(improvement, :improved_score)
@@ -145,12 +153,13 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
 
       metric_fn = fn _example, _outputs -> 0.0 end
 
-      improvement = mock_calculate_improvement(
-        original_program,
-        improved_program,
-        examples,
-        metric_fn
-      )
+      improvement =
+        mock_calculate_improvement(
+          original_program,
+          improved_program,
+          examples,
+          metric_fn
+        )
 
       assert improvement.original_score == 0.0
       assert improvement.relative_improvement == 0.0
@@ -163,12 +172,13 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
 
       metric_fn = fn _example, _outputs -> 0.8 end
 
-      improvement = mock_calculate_improvement(
-        original_program,
-        improved_program,
-        examples,
-        metric_fn
-      )
+      improvement =
+        mock_calculate_improvement(
+          original_program,
+          improved_program,
+          examples,
+          metric_fn
+        )
 
       assert improvement.original_score == 0.0
       assert improvement.improved_score == 0.0
@@ -194,15 +204,17 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
       bucket_data = create_test_bucket_data([0.8, 0.8, 0.8])
       stats = mock_analyze_buckets([bucket_data])
 
-      assert stats.improvement_potential == 0.0  # No gap between max and min
+      # No gap between max and min
+      assert stats.improvement_potential == 0.0
     end
 
     test "handles very large bucket collections" do
       # Create many buckets with different characteristics
-      buckets = for i <- 1..100 do
-        score = i / 100.0
-        create_test_bucket_data([score])
-      end
+      buckets =
+        for i <- 1..100 do
+          score = i / 100.0
+          create_test_bucket_data([score])
+        end
 
       stats = mock_analyze_buckets(buckets)
 
@@ -216,9 +228,10 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
   # Helper functions for testing performance logic without actual implementation
 
   defp create_test_bucket_data(scores) do
-    trajectories = Enum.map(scores, fn score ->
-      %{score: score, success: score > 0.0}
-    end)
+    trajectories =
+      Enum.map(scores, fn score ->
+        %{score: score, success: score > 0.0}
+      end)
 
     if Enum.empty?(scores) do
       %{
@@ -261,9 +274,10 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
         improvement_potential: 0.0
       }
     else
-      total_trajectories = Enum.reduce(buckets, 0, fn bucket, acc ->
-        acc + length(bucket.trajectories)
-      end)
+      total_trajectories =
+        Enum.reduce(buckets, 0, fn bucket, acc ->
+          acc + length(bucket.trajectories)
+        end)
 
       bucket_scores = Enum.map(buckets, & &1.max_score)
       avg_bucket_score = Enum.sum(bucket_scores) / length(bucket_scores)
@@ -303,22 +317,32 @@ defmodule DSPEx.Teleprompter.SIMBA.PerformanceTest do
 
   defp mock_calculate_improvement(_original_program, _improved_program, examples, metric_fn) do
     # Simulate evaluation of both programs
-    original_scores = Enum.map(examples, fn _example ->
-      metric_fn.(%{}, %{})
-    end)
+    original_scores =
+      Enum.map(examples, fn _example ->
+        metric_fn.(%{}, %{})
+      end)
 
-    improved_scores = Enum.map(examples, fn _example ->
-      metric_fn.(%{}, %{})
-    end)
+    improved_scores =
+      Enum.map(examples, fn _example ->
+        metric_fn.(%{}, %{})
+      end)
 
-    original_avg = if Enum.empty?(original_scores), do: 0.0, else: Enum.sum(original_scores) / length(original_scores)
-    improved_avg = if Enum.empty?(improved_scores), do: 0.0, else: Enum.sum(improved_scores) / length(improved_scores)
+    original_avg =
+      if Enum.empty?(original_scores),
+        do: 0.0,
+        else: Enum.sum(original_scores) / length(original_scores)
+
+    improved_avg =
+      if Enum.empty?(improved_scores),
+        do: 0.0,
+        else: Enum.sum(improved_scores) / length(improved_scores)
 
     %{
       original_score: original_avg,
       improved_score: improved_avg,
       absolute_improvement: improved_avg - original_avg,
-      relative_improvement: if(original_avg > 0, do: (improved_avg - original_avg) / original_avg, else: 0.0),
+      relative_improvement:
+        if(original_avg > 0, do: (improved_avg - original_avg) / original_avg, else: 0.0),
       improved: improved_avg > original_avg
     }
   end

@@ -99,7 +99,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
     end
 
     test "handles nil program input" do
-      bucket = %{trajectories: [%{score: 0.8}]}
+      bucket = %{trajectories: [%{score: 0.8}], max_score: 0.8}
       program = nil
 
       # Strategy should handle nil gracefully or raise clear error
@@ -110,22 +110,22 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
 
   describe "strategy options handling" do
     test "accepts strategy-specific options" do
-      bucket = %{trajectories: [%{score: 0.8}]}
+      bucket = %{trajectories: [%{score: 0.8}], max_score: 0.8}
       program = %{predictors: []}
       opts = %{quality_threshold: 0.7, max_demos: 3}
 
       # Should accept and process options
       result = mock_strategy_apply(bucket, program, opts)
-      assert match?({:ok, _} | {:skip, _}, result)
+      assert match?({:ok, _}, result) or match?({:skip, _}, result)
     end
 
     test "handles empty options" do
-      bucket = %{trajectories: [%{score: 0.8}]}
+      bucket = %{trajectories: [%{score: 0.8}], max_score: 0.8}
       program = %{predictors: []}
       opts = %{}
 
       result = mock_strategy_apply(bucket, program, opts)
-      assert match?({:ok, _} | {:skip, _}, result)
+      assert match?({:ok, _}, result) or match?({:skip, _}, result)
     end
   end
 
@@ -139,6 +139,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
     unless is_list(bucket.trajectories) do
       raise ArgumentError, "trajectories must be a list"
     end
+
     bucket
   end
 

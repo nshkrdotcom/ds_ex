@@ -113,11 +113,13 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
     test "creates demo from successful trajectory" do
       inputs = %{question: "What is the capital of France?", context: "Geography"}
       outputs = %{answer: "Paris", confidence: "high"}
-      trajectory_data = create_test_trajectory_data(0.9,
-        inputs: inputs,
-        outputs: outputs,
-        success: true
-      )
+
+      trajectory_data =
+        create_test_trajectory_data(0.9,
+          inputs: inputs,
+          outputs: outputs,
+          success: true
+        )
 
       {:ok, demo_data} = convert_to_demo(trajectory_data)
 
@@ -155,11 +157,13 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
     test "creates demo with merged input/output data" do
       inputs = %{question: "Test question"}
       outputs = %{answer: "Test answer", reasoning: "Test reasoning"}
-      trajectory_data = create_test_trajectory_data(0.8,
-        inputs: inputs,
-        outputs: outputs,
-        success: true
-      )
+
+      trajectory_data =
+        create_test_trajectory_data(0.8,
+          inputs: inputs,
+          outputs: outputs,
+          success: true
+        )
 
       {:ok, demo_data} = convert_to_demo(trajectory_data)
 
@@ -173,15 +177,18 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
       # Output should override input for same key
       inputs = %{key: "input_value", question: "test"}
       outputs = %{key: "output_value", answer: "test"}
-      trajectory_data = create_test_trajectory_data(0.8,
-        inputs: inputs,
-        outputs: outputs,
-        success: true
-      )
+
+      trajectory_data =
+        create_test_trajectory_data(0.8,
+          inputs: inputs,
+          outputs: outputs,
+          success: true
+        )
 
       {:ok, demo_data} = convert_to_demo(trajectory_data)
 
-      assert demo_data[:key] == "output_value"  # Output takes precedence
+      # Output takes precedence
+      assert demo_data[:key] == "output_value"
       assert demo_data[:question] == "test"
       assert demo_data[:answer] == "test"
     end
