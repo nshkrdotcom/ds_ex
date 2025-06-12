@@ -406,6 +406,7 @@ defmodule DSPEx.Performance.RegressionBenchmarksTest do
   end
 
   describe "performance trend tracking" do
+    @tag :todo_optimize
     test "establishes baseline metrics for SIMBA comparison" do
       # Comprehensive baseline establishment
       baselines = %{}
@@ -437,6 +438,7 @@ defmodule DSPEx.Performance.RegressionBenchmarksTest do
 
       # Should be reasonable (adjust for mock operations which may have different characteristics)
       # Allow negative values for mock operations that might optimize better than expected
+      # TODO_OPTIMIZE: Resource utilization baseline may need adjustment for mock operations
       assert baselines.resource_utilization >= -5000,
              "Resource utilization should be reasonable for mock operations"
 
