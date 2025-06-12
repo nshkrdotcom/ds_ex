@@ -124,7 +124,7 @@ program = DSPEx.Predict.new(MySignature, :gemini)
 # Returns real AI-generated response from Gemini
 ```
 
-**BEACON Optimization with Live API:**
+**BEACON (Bayesian Exploration and Adaptive Compilation Of Narratives) Optimization with Live API:**
 ```elixir
 # Set live API mode first
 export GEMINI_API_KEY=your_key
