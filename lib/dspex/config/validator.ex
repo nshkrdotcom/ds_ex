@@ -2,9 +2,12 @@ defmodule DSPEx.Config.Validator do
   @moduledoc """
   Validation rules for DSPEx configuration.
 
-  Ensures configuration paths and values are valid before storing them.
+  Enhanced with Elixact schema-based validation for improved type safety,
+  detailed error reporting, and maintainable validation logic.
+
   This module provides validation for all supported DSPEx configuration
-  paths and their corresponding value types.
+  paths and their corresponding value types using declarative schemas
+  instead of manual validation functions.
 
   ## Supported Configuration Paths
 
@@ -12,7 +15,17 @@ defmodule DSPEx.Config.Validator do
   - Evaluation configuration: `[:dspex, :evaluation, :batch_size]`, etc.
   - Provider configuration: `[:dspex, :providers, :gemini, ...]`, etc.
   - And many more...
+
+  ## Enhanced Features
+
+  - Schema-based validation with Elixact integration
+  - Field-level error reporting with detailed messages
+  - JSON schema export for documentation
+  - Automatic constraint validation
+  - Improved maintainability through declarative schemas
   """
+
+  alias DSPEx.Config.ElixactSchemas
 
   # Valid configuration paths - comprehensive list based on ConfigManager analysis
   @valid_paths [
@@ -131,6 +144,9 @@ defmodule DSPEx.Config.Validator do
   @doc """
   Validate that a configuration value is appropriate for the given path.
 
+  Enhanced with schema-based validation for better error reporting and
+  automatic constraint validation.
+
   Returns `:ok` if the value is valid, `{:error, reason}` otherwise.
 
   ## Examples
@@ -142,251 +158,325 @@ defmodule DSPEx.Config.Validator do
       {:error, :invalid_timeout}
   """
   @spec validate_value(list(atom()), term()) :: :ok | {:error, term()}
-  def validate_value(path, value)
+  def validate_value(path, value) do
+    # Try schema-based validation first
+    case ElixactSchemas.validate_config_value(path, value) do
+      :ok -> :ok
+      {:error, {error_atom, _message}} when is_atom(error_atom) -> {:error, error_atom}
+      {:error, {:unknown_path, path}} -> {:error, {:unknown_path, path}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Enhanced validation with detailed error reporting.
+
+  Returns comprehensive validation information including field-level errors
+  and suggested corrections for improved developer experience.
+
+  ## Examples
+
+      iex> DSPEx.Config.Validator.validate_value_detailed([:dspex, :client, :timeout], "invalid")
+      {:error, %{
+        field: :timeout,
+        provided: "invalid",
+        expected: "positive integer",
+        message: "Expected integer, got string",
+        suggestion: "Use a positive integer value like 30000"
+      }}
+  """
+  @spec validate_value_detailed(list(atom()), term()) :: 
+    :ok | {:error, map()}
+  def validate_value_detailed(path, value) do
+    case ElixactSchemas.validate_config_value(path, value) do
+      :ok -> :ok
+      {:error, {error_atom, message}} when is_atom(error_atom) ->
+        {:error, %{
+          field: List.last(path),
+          provided: value,
+          error_code: error_atom,
+          message: message,
+          path: path,
+          suggestion: generate_suggestion(path, value, error_atom)
+        }}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Export JSON schema for configuration documentation.
+
+  ## Examples
+
+      iex> {:ok, schema} = DSPEx.Config.Validator.export_schema(:client)
+      iex> schema["type"]
+      "object"
+  """
+  @spec export_schema(atom()) :: {:ok, map()} | {:error, term()}
+  def export_schema(domain) do
+    ElixactSchemas.export_json_schema(domain)
+  end
+
+  @doc """
+  List all available configuration domains.
+  """
+  @spec list_domains() :: [atom()]
+  def list_domains do
+    ElixactSchemas.list_domains()
+  end
+
+  @doc """
+  Legacy validation function - kept for compatibility.
+  
+  This function provides the original manual validation logic as fallback
+  for any edge cases not covered by schema validation.
+  """
+  @spec validate_value_legacy(list(atom()), term()) :: :ok | {:error, term()}
+  def validate_value_legacy(path, value)
 
   # Timeout validations (must be positive integer)
-  def validate_value([:dspex, :client, :timeout], value) when is_integer(value) and value > 0,
+  def validate_value_legacy([:dspex, :client, :timeout], value) when is_integer(value) and value > 0,
     do: :ok
 
-  def validate_value([:dspex, :client, :timeout], _), do: {:error, :invalid_timeout}
+  def validate_value_legacy([:dspex, :client, :timeout], _), do: {:error, :invalid_timeout}
 
-  def validate_value([:dspex, :providers, _, :timeout], value)
+  def validate_value_legacy([:dspex, :providers, _, :timeout], value)
       when is_integer(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :providers, _, :timeout], _), do: {:error, :invalid_timeout}
+  def validate_value_legacy([:dspex, :providers, _, :timeout], _), do: {:error, :invalid_timeout}
 
-  def validate_value([:dspex, :teleprompters, :beacon, :default_timeout], value)
+  def validate_value_legacy([:dspex, :teleprompters, :beacon, :default_timeout], value)
       when is_integer(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :teleprompters, :beacon, :default_timeout], _),
+  def validate_value_legacy([:dspex, :teleprompters, :beacon, :default_timeout], _),
     do: {:error, :invalid_timeout}
 
   # Retry attempts (must be non-negative integer)
-  def validate_value([:dspex, :client, :retry_attempts], value)
+  def validate_value_legacy([:dspex, :client, :retry_attempts], value)
       when is_integer(value) and value >= 0,
       do: :ok
 
-  def validate_value([:dspex, :client, :retry_attempts], _), do: {:error, :invalid_retry_attempts}
+  def validate_value_legacy([:dspex, :client, :retry_attempts], _), do: {:error, :invalid_retry_attempts}
 
   # Backoff factor (must be positive number)
-  def validate_value([:dspex, :client, :backoff_factor], value)
+  def validate_value_legacy([:dspex, :client, :backoff_factor], value)
       when is_number(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :client, :backoff_factor], _), do: {:error, :invalid_backoff_factor}
+  def validate_value_legacy([:dspex, :client, :backoff_factor], _), do: {:error, :invalid_backoff_factor}
 
   # Batch size and parallel limits (must be positive integer)
-  def validate_value([:dspex, :evaluation, :batch_size], value)
+  def validate_value_legacy([:dspex, :evaluation, :batch_size], value)
       when is_integer(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :evaluation, :batch_size], _), do: {:error, :invalid_batch_size}
+  def validate_value_legacy([:dspex, :evaluation, :batch_size], _), do: {:error, :invalid_batch_size}
 
-  def validate_value([:dspex, :evaluation, :parallel_limit], value)
+  def validate_value_legacy([:dspex, :evaluation, :parallel_limit], value)
       when is_integer(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :evaluation, :parallel_limit], _),
+  def validate_value_legacy([:dspex, :evaluation, :parallel_limit], _),
     do: {:error, :invalid_parallel_limit}
 
-  def validate_value([:dspex, :teleprompters, :beacon, :max_concurrent_operations], value)
+  def validate_value_legacy([:dspex, :teleprompters, :beacon, :max_concurrent_operations], value)
       when is_integer(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :teleprompters, :beacon, :max_concurrent_operations], _),
+  def validate_value_legacy([:dspex, :teleprompters, :beacon, :max_concurrent_operations], _),
     do: {:error, :invalid_concurrent_operations}
 
   # Bootstrap examples (must be positive integer)
-  def validate_value([:dspex, :teleprompter, :bootstrap_examples], value)
+  def validate_value_legacy([:dspex, :teleprompter, :bootstrap_examples], value)
       when is_integer(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :teleprompter, :bootstrap_examples], _),
+  def validate_value_legacy([:dspex, :teleprompter, :bootstrap_examples], _),
     do: {:error, :invalid_bootstrap_examples}
 
   # Validation threshold (must be float between 0 and 1)
-  def validate_value([:dspex, :teleprompter, :validation_threshold], value)
+  def validate_value_legacy([:dspex, :teleprompter, :validation_threshold], value)
       when is_float(value) and value >= 0.0 and value <= 1.0,
       do: :ok
 
-  def validate_value([:dspex, :teleprompter, :validation_threshold], _),
+  def validate_value_legacy([:dspex, :teleprompter, :validation_threshold], _),
     do: {:error, :invalid_validation_threshold}
 
   # Temperature (must be float between 0 and 2)
-  def validate_value([:dspex, :prediction, :default_temperature], value)
+  def validate_value_legacy([:dspex, :prediction, :default_temperature], value)
       when is_float(value) and value >= 0.0 and value <= 2.0,
       do: :ok
 
-  def validate_value([:dspex, :prediction, :default_temperature], _),
+  def validate_value_legacy([:dspex, :prediction, :default_temperature], _),
     do: {:error, :invalid_temperature}
 
   # Max tokens (must be positive integer)
-  def validate_value([:dspex, :prediction, :default_max_tokens], value)
+  def validate_value_legacy([:dspex, :prediction, :default_max_tokens], value)
       when is_integer(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :prediction, :default_max_tokens], _),
+  def validate_value_legacy([:dspex, :prediction, :default_max_tokens], _),
     do: {:error, :invalid_max_tokens}
 
   # TTL values (must be positive integer)
-  def validate_value([:dspex, :prediction, :cache_ttl], value)
+  def validate_value_legacy([:dspex, :prediction, :cache_ttl], value)
       when is_integer(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :prediction, :cache_ttl], _), do: {:error, :invalid_cache_ttl}
+  def validate_value_legacy([:dspex, :prediction, :cache_ttl], _), do: {:error, :invalid_cache_ttl}
 
-  def validate_value([:dspex, :providers, _, :circuit_breaker, :recovery_time], value)
+  def validate_value_legacy([:dspex, :providers, _, :circuit_breaker, :recovery_time], value)
       when is_integer(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :providers, _, :circuit_breaker, :recovery_time], _),
+  def validate_value_legacy([:dspex, :providers, _, :circuit_breaker, :recovery_time], _),
     do: {:error, :invalid_recovery_time}
 
   # Logging level validation
-  def validate_value([:dspex, :logging, :level], value) when value in @valid_log_levels, do: :ok
-  def validate_value([:dspex, :logging, :level], _), do: {:error, :invalid_log_level}
+  def validate_value_legacy([:dspex, :logging, :level], value) when value in @valid_log_levels, do: :ok
+  def validate_value_legacy([:dspex, :logging, :level], _), do: {:error, :invalid_log_level}
 
   # Boolean validations
-  def validate_value([:dspex, :logging, :correlation_enabled], value) when is_boolean(value),
+  def validate_value_legacy([:dspex, :logging, :correlation_enabled], value) when is_boolean(value),
     do: :ok
 
-  def validate_value([:dspex, :logging, :correlation_enabled], _), do: {:error, :invalid_boolean}
+  def validate_value_legacy([:dspex, :logging, :correlation_enabled], _), do: {:error, :invalid_boolean}
 
-  def validate_value([:dspex, :prediction, :cache_enabled], value) when is_boolean(value), do: :ok
-  def validate_value([:dspex, :prediction, :cache_enabled], _), do: {:error, :invalid_boolean}
+  def validate_value_legacy([:dspex, :prediction, :cache_enabled], value) when is_boolean(value), do: :ok
+  def validate_value_legacy([:dspex, :prediction, :cache_enabled], _), do: {:error, :invalid_boolean}
 
-  def validate_value([:dspex, :telemetry, :enabled], value) when is_boolean(value), do: :ok
-  def validate_value([:dspex, :telemetry, :enabled], _), do: {:error, :invalid_boolean}
+  def validate_value_legacy([:dspex, :telemetry, :enabled], value) when is_boolean(value), do: :ok
+  def validate_value_legacy([:dspex, :telemetry, :enabled], _), do: {:error, :invalid_boolean}
 
-  def validate_value([:dspex, :telemetry, :detailed_logging], value) when is_boolean(value),
+  def validate_value_legacy([:dspex, :telemetry, :detailed_logging], value) when is_boolean(value),
     do: :ok
 
-  def validate_value([:dspex, :telemetry, :detailed_logging], _), do: {:error, :invalid_boolean}
+  def validate_value_legacy([:dspex, :telemetry, :detailed_logging], _), do: {:error, :invalid_boolean}
 
-  def validate_value([:dspex, :telemetry, :performance_tracking], value) when is_boolean(value),
+  def validate_value_legacy([:dspex, :telemetry, :performance_tracking], value) when is_boolean(value),
     do: :ok
 
-  def validate_value([:dspex, :telemetry, :performance_tracking], _),
+  def validate_value_legacy([:dspex, :telemetry, :performance_tracking], _),
     do: {:error, :invalid_boolean}
 
   # Provider validation
-  def validate_value([:dspex, :prediction, :default_provider], value)
+  def validate_value_legacy([:dspex, :prediction, :default_provider], value)
       when value in @valid_providers,
       do: :ok
 
-  def validate_value([:dspex, :prediction, :default_provider], _), do: {:error, :invalid_provider}
+  def validate_value_legacy([:dspex, :prediction, :default_provider], _), do: {:error, :invalid_provider}
 
-  def validate_value([:dspex, :teleprompters, :beacon, :default_instruction_model], value)
+  def validate_value_legacy([:dspex, :teleprompters, :beacon, :default_instruction_model], value)
       when value in @valid_providers,
       do: :ok
 
-  def validate_value([:dspex, :teleprompters, :beacon, :default_instruction_model], _),
+  def validate_value_legacy([:dspex, :teleprompters, :beacon, :default_instruction_model], _),
     do: {:error, :invalid_provider}
 
-  def validate_value([:dspex, :teleprompters, :beacon, :default_evaluation_model], value)
+  def validate_value_legacy([:dspex, :teleprompters, :beacon, :default_evaluation_model], value)
       when value in @valid_providers,
       do: :ok
 
-  def validate_value([:dspex, :teleprompters, :beacon, :default_evaluation_model], _),
+  def validate_value_legacy([:dspex, :teleprompters, :beacon, :default_evaluation_model], _),
     do: {:error, :invalid_provider}
 
   # String validations (API keys, URLs, models)
-  def validate_value([:dspex, :providers, _, :api_key], {:system, env_var})
+  def validate_value_legacy([:dspex, :providers, _, :api_key], {:system, env_var})
       when is_binary(env_var),
       do: :ok
 
-  def validate_value([:dspex, :providers, _, :api_key], value) when is_binary(value), do: :ok
-  def validate_value([:dspex, :providers, _, :api_key], _), do: {:error, :invalid_api_key}
+  def validate_value_legacy([:dspex, :providers, _, :api_key], value) when is_binary(value), do: :ok
+  def validate_value_legacy([:dspex, :providers, _, :api_key], _), do: {:error, :invalid_api_key}
 
-  def validate_value([:dspex, :providers, _, :base_url], value) when is_binary(value), do: :ok
-  def validate_value([:dspex, :providers, _, :base_url], _), do: {:error, :invalid_base_url}
+  def validate_value_legacy([:dspex, :providers, _, :base_url], value) when is_binary(value), do: :ok
+  def validate_value_legacy([:dspex, :providers, _, :base_url], _), do: {:error, :invalid_base_url}
 
-  def validate_value([:dspex, :providers, _, :default_model], value) when is_binary(value),
+  def validate_value_legacy([:dspex, :providers, _, :default_model], value) when is_binary(value),
     do: :ok
 
-  def validate_value([:dspex, :providers, _, :default_model], _), do: {:error, :invalid_model}
+  def validate_value_legacy([:dspex, :providers, _, :default_model], _), do: {:error, :invalid_model}
 
   # Rate limit validations (must be positive integers)
-  def validate_value([:dspex, :providers, _, :rate_limit, :requests_per_minute], value)
+  def validate_value_legacy([:dspex, :providers, _, :rate_limit, :requests_per_minute], value)
       when is_integer(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :providers, _, :rate_limit, :requests_per_minute], _),
+  def validate_value_legacy([:dspex, :providers, _, :rate_limit, :requests_per_minute], _),
     do: {:error, :invalid_rate_limit}
 
-  def validate_value([:dspex, :providers, _, :rate_limit, :tokens_per_minute], value)
+  def validate_value_legacy([:dspex, :providers, _, :rate_limit, :tokens_per_minute], value)
       when is_integer(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :providers, _, :rate_limit, :tokens_per_minute], _),
+  def validate_value_legacy([:dspex, :providers, _, :rate_limit, :tokens_per_minute], _),
     do: {:error, :invalid_rate_limit}
 
   # Circuit breaker validations
-  def validate_value([:dspex, :providers, _, :circuit_breaker, :failure_threshold], value)
+  def validate_value_legacy([:dspex, :providers, _, :circuit_breaker, :failure_threshold], value)
       when is_integer(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :providers, _, :circuit_breaker, :failure_threshold], _),
+  def validate_value_legacy([:dspex, :providers, _, :circuit_breaker, :failure_threshold], _),
     do: {:error, :invalid_failure_threshold}
 
   # BEACON optimization validations
-  def validate_value([:dspex, :teleprompters, :beacon, :optimization, :max_trials], value)
+  def validate_value_legacy([:dspex, :teleprompters, :beacon, :optimization, :max_trials], value)
       when is_integer(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :teleprompters, :beacon, :optimization, :max_trials], _),
+  def validate_value_legacy([:dspex, :teleprompters, :beacon, :optimization, :max_trials], _),
     do: {:error, :invalid_max_trials}
 
-  def validate_value(
+  def validate_value_legacy(
         [:dspex, :teleprompters, :beacon, :optimization, :convergence_patience],
         value
       )
       when is_integer(value) and value > 0,
       do: :ok
 
-  def validate_value([:dspex, :teleprompters, :beacon, :optimization, :convergence_patience], _),
+  def validate_value_legacy([:dspex, :teleprompters, :beacon, :optimization, :convergence_patience], _),
     do: {:error, :invalid_convergence_patience}
 
-  def validate_value(
+  def validate_value_legacy(
         [:dspex, :teleprompters, :beacon, :optimization, :improvement_threshold],
         value
       )
       when is_float(value) and value >= 0.0 and value <= 1.0,
       do: :ok
 
-  def validate_value([:dspex, :teleprompters, :beacon, :optimization, :improvement_threshold], _),
+  def validate_value_legacy([:dspex, :teleprompters, :beacon, :optimization, :improvement_threshold], _),
     do: {:error, :invalid_improvement_threshold}
 
   # Bayesian optimization validations
-  def validate_value(
+  def validate_value_legacy(
         [:dspex, :teleprompters, :beacon, :bayesian_optimization, :acquisition_function],
         value
       )
       when value in @valid_acquisition_functions,
       do: :ok
 
-  def validate_value(
+  def validate_value_legacy(
         [:dspex, :teleprompters, :beacon, :bayesian_optimization, :acquisition_function],
         _
       ),
       do: {:error, :invalid_acquisition_function}
 
-  def validate_value(
+  def validate_value_legacy(
         [:dspex, :teleprompters, :beacon, :bayesian_optimization, :surrogate_model],
         value
       )
       when value in @valid_surrogate_models,
       do: :ok
 
-  def validate_value(
+  def validate_value_legacy(
         [:dspex, :teleprompters, :beacon, :bayesian_optimization, :surrogate_model],
         _
       ),
       do: {:error, :invalid_surrogate_model}
 
-  def validate_value(
+  def validate_value_legacy(
         [
           :dspex,
           :teleprompters,
@@ -399,7 +489,7 @@ defmodule DSPEx.Config.Validator do
       when is_float(value) and value >= 0.0 and value <= 1.0,
       do: :ok
 
-  def validate_value(
+  def validate_value_legacy(
         [
           :dspex,
           :teleprompters,
@@ -412,7 +502,7 @@ defmodule DSPEx.Config.Validator do
       do: {:error, :invalid_tradeoff}
 
   # Default case - unknown path
-  def validate_value(path, _value) do
+  def validate_value_legacy(path, _value) do
     {:error, {:unknown_path, path}}
   end
 
@@ -426,6 +516,27 @@ defmodule DSPEx.Config.Validator do
     case path do
       [:dspex | _] -> true
       _ -> false
+    end
+  end
+
+  # Generate helpful suggestions for validation errors
+  @spec generate_suggestion(list(atom()), term(), atom()) :: String.t()
+  defp generate_suggestion(path, _value, error_code) do
+    case {List.last(path), error_code} do
+      {:timeout, _} -> "Use a positive integer value in milliseconds, e.g., 30000"
+      {:retry_attempts, _} -> "Use a non-negative integer, e.g., 3"
+      {:backoff_factor, _} -> "Use a positive number, e.g., 2.0"
+      {:batch_size, _} -> "Use a positive integer, e.g., 10"
+      {:parallel_limit, _} -> "Use a positive integer, e.g., 4"
+      {:temperature, _} -> "Use a float between 0.0 and 2.0, e.g., 0.7"
+      {:max_tokens, _} -> "Use a positive integer, e.g., 1000"
+      {:level, _} -> "Use a valid log level: :debug, :info, :warning, :error, :critical"
+      {:provider, _} -> "Use a valid provider: :gemini or :openai"
+      {:api_key, _} -> "Use a string API key or {:system, \"ENV_VAR\"} tuple"
+      {:enabled, _} -> "Use a boolean value: true or false"
+      {field, _} when field in [:correlation_enabled, :cache_enabled, :detailed_logging, :performance_tracking] -> 
+        "Use a boolean value: true or false"
+      _ -> "Check the value type and constraints for this configuration field"
     end
   end
 end
