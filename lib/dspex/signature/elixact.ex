@@ -289,6 +289,80 @@ defmodule DSPEx.Signature.Elixact do
 
   # Private implementation functions
 
+  # Gets enhanced field definitions from a signature module if available
+  @spec get_enhanced_field_definitions(signature_module()) ::
+          {:ok, [DSPEx.Signature.EnhancedParser.enhanced_field()]} | {:error, :no_enhanced_fields}
+  defp get_enhanced_field_definitions(signature) do
+    # Check if the signature module has enhanced field definitions stored
+    # This would be set by the enhanced DSPEx.Signature.__using__ macro
+    if function_exported?(signature, :__enhanced_fields__, 0) do
+      try do
+        enhanced_fields = signature.__enhanced_fields__()
+        {:ok, enhanced_fields}
+      rescue
+        _ -> {:error, :no_enhanced_fields}
+      end
+    else
+      {:error, :no_enhanced_fields}
+    end
+  end
+
+  # Converts enhanced field definition to our field_definition format
+  @spec convert_enhanced_to_field_definition(DSPEx.Signature.EnhancedParser.enhanced_field()) ::
+          field_definition()
+  defp convert_enhanced_to_field_definition(enhanced_field) do
+    # Map enhanced constraints to Elixact-compatible constraints
+    elixact_constraints = map_enhanced_constraints_to_elixact(enhanced_field.constraints)
+
+    %{
+      name: enhanced_field.name,
+      type: enhanced_field.type,
+      constraints: elixact_constraints,
+      required: enhanced_field.required,
+      default: enhanced_field.default
+    }
+  end
+
+  # Maps enhanced parser constraints to Elixact validator constraints
+  @spec map_enhanced_constraints_to_elixact(%{atom() => term()}) :: field_constraints()
+  defp map_enhanced_constraints_to_elixact(constraints) do
+    Enum.reduce(constraints, %{}, fn {constraint_name, value}, acc ->
+      case map_single_constraint_to_elixact(constraint_name, value) do
+        {:ok, elixact_constraint, elixact_value} ->
+          Map.put(acc, elixact_constraint, elixact_value)
+
+        {:skip} ->
+          # Some constraints might not map directly to Elixact
+          acc
+      end
+    end)
+  end
+
+  # Maps individual constraint types from enhanced parser to Elixact
+  @spec map_single_constraint_to_elixact(atom(), term()) ::
+          {:ok, atom(), term()} | {:skip}
+  defp map_single_constraint_to_elixact(constraint_name, value) do
+    case constraint_name do
+      # Direct mappings
+      :min_length -> {:ok, :min_length, value}
+      :max_length -> {:ok, :max_length, value}
+      :min_items -> {:ok, :min_items, value}
+      :max_items -> {:ok, :max_items, value}
+      :format -> {:ok, :format, value}
+      :choices -> {:ok, :choices, value}
+      # Numeric constraints (map to Elixact equivalents)
+      :gteq -> {:ok, :gteq, value}
+      :lteq -> {:ok, :lteq, value}
+      :gt -> {:ok, :gt, value}
+      :lt -> {:ok, :lt, value}
+      # These are handled by required/default fields, not constraints
+      :default -> {:skip}
+      :optional -> {:skip}
+      # Unknown constraints - preserve as-is for custom validation
+      _ -> {:ok, constraint_name, value}
+    end
+  end
+
   @spec signature_to_schema_for_field_type(signature_module(), atom()) ::
           {:ok, module()} | {:error, term()}
   defp signature_to_schema_for_field_type(signature, field_type) do
@@ -315,36 +389,44 @@ defmodule DSPEx.Signature.Elixact do
           {:ok, [field_definition()]} | {:error, term()}
   defp extract_field_definitions(signature) do
     try do
-      input_fields = signature.input_fields()
-      output_fields = signature.output_fields()
+      # Check if this signature has enhanced field definitions stored
+      case get_enhanced_field_definitions(signature) do
+        {:ok, enhanced_fields} ->
+          # Convert enhanced fields to our field_definition format
+          converted_fields =
+            Enum.map(enhanced_fields, &convert_enhanced_to_field_definition/1)
 
-      # For now, create basic field definitions
-      # Future enhancement: parse constraints from signature string or annotations
-      input_definitions =
-        Enum.map(input_fields, fn field ->
-          %{
-            name: field,
-            # Default type, could be enhanced
-            type: :string,
-            constraints: %{},
-            required: true,
-            default: nil
-          }
-        end)
+          {:ok, converted_fields}
 
-      output_definitions =
-        Enum.map(output_fields, fn field ->
-          %{
-            name: field,
-            # Default type, could be enhanced
-            type: :string,
-            constraints: %{},
-            required: true,
-            default: nil
-          }
-        end)
+        {:error, :no_enhanced_fields} ->
+          # Fall back to basic field definitions for compatibility
+          input_fields = signature.input_fields()
+          output_fields = signature.output_fields()
 
-      {:ok, input_definitions ++ output_definitions}
+          input_definitions =
+            Enum.map(input_fields, fn field ->
+              %{
+                name: field,
+                type: :string,
+                constraints: %{},
+                required: true,
+                default: nil
+              }
+            end)
+
+          output_definitions =
+            Enum.map(output_fields, fn field ->
+              %{
+                name: field,
+                type: :string,
+                constraints: %{},
+                required: true,
+                default: nil
+              }
+            end)
+
+          {:ok, input_definitions ++ output_definitions}
+      end
     rescue
       error -> {:error, {:field_extraction_failed, error}}
     end
@@ -356,36 +438,66 @@ defmodule DSPEx.Signature.Elixact do
     try do
       case field_type do
         :inputs ->
-          input_fields = signature.input_fields()
+          case get_enhanced_field_definitions(signature) do
+            {:ok, enhanced_fields} ->
+              # Filter to only input fields and convert
+              input_names = MapSet.new(signature.input_fields())
 
-          definitions =
-            Enum.map(input_fields, fn field ->
-              %{
-                name: field,
-                type: :string,
-                constraints: %{},
-                required: true,
-                default: nil
-              }
-            end)
+              filtered_fields =
+                enhanced_fields
+                |> Enum.filter(&MapSet.member?(input_names, &1.name))
+                |> Enum.map(&convert_enhanced_to_field_definition/1)
 
-          {:ok, definitions}
+              {:ok, filtered_fields}
+
+            {:error, :no_enhanced_fields} ->
+              # Fall back to basic definitions
+              input_fields = signature.input_fields()
+
+              definitions =
+                Enum.map(input_fields, fn field ->
+                  %{
+                    name: field,
+                    type: :string,
+                    constraints: %{},
+                    required: true,
+                    default: nil
+                  }
+                end)
+
+              {:ok, definitions}
+          end
 
         :outputs ->
-          output_fields = signature.output_fields()
+          case get_enhanced_field_definitions(signature) do
+            {:ok, enhanced_fields} ->
+              # Filter to only output fields and convert
+              output_names = MapSet.new(signature.output_fields())
 
-          definitions =
-            Enum.map(output_fields, fn field ->
-              %{
-                name: field,
-                type: :string,
-                constraints: %{},
-                required: true,
-                default: nil
-              }
-            end)
+              filtered_fields =
+                enhanced_fields
+                |> Enum.filter(&MapSet.member?(output_names, &1.name))
+                |> Enum.map(&convert_enhanced_to_field_definition/1)
 
-          {:ok, definitions}
+              {:ok, filtered_fields}
+
+            {:error, :no_enhanced_fields} ->
+              # Fall back to basic definitions
+              output_fields = signature.output_fields()
+
+              definitions =
+                Enum.map(output_fields, fn field ->
+                  %{
+                    name: field,
+                    type: :string,
+                    constraints: %{},
+                    required: true,
+                    default: nil
+                  }
+                end)
+
+              {:ok, definitions}
+          end
 
         :all ->
           extract_field_definitions(signature)
@@ -442,6 +554,9 @@ defmodule DSPEx.Signature.Elixact do
          required: required,
          default: default
        }) do
+    # Convert type to Elixact-compatible format
+    elixact_type = convert_type_to_elixact(type)
+
     # Build constraint applications
     constraint_calls = build_constraint_calls(constraints)
 
@@ -453,15 +568,87 @@ defmodule DSPEx.Signature.Elixact do
 
     if Enum.empty?(all_calls) do
       quote do
-        field(unquote(name), unquote(type))
+        field(unquote(name), unquote(elixact_type))
       end
     else
       quote do
-        field unquote(name), unquote(type) do
+        field unquote(name), unquote(elixact_type) do
           (unquote_splicing(all_calls))
         end
       end
     end
+  end
+
+  # Converts enhanced parser types to Elixact-compatible type specifications
+  @spec convert_type_to_elixact(atom() | tuple()) :: term()
+  defp convert_type_to_elixact(type) do
+    case type do
+      # Basic types - direct mapping
+      :string ->
+        :string
+
+      :integer ->
+        :integer
+
+      :float ->
+        :float
+
+      :boolean ->
+        :boolean
+
+      :any ->
+        :any
+
+      # Array types - convert to Elixact array format
+      {:array, inner_type} ->
+        converted_inner = convert_type_to_elixact(inner_type)
+        {:array, converted_inner}
+
+      # Object types (for future nested object support)
+      {:object, fields} when is_list(fields) ->
+        # Convert object fields to nested schema
+        {:object, Enum.map(fields, &convert_object_field_to_elixact/1)}
+
+      # Custom module types - preserve as-is
+      module_type when is_atom(module_type) ->
+        # Check if it's a module name (starts with uppercase)
+        type_str = Atom.to_string(module_type)
+
+        if String.match?(type_str, ~r/^[A-Z]/) do
+          # Custom module type - preserve
+          module_type
+        else
+          # Unknown type - default to string with warning
+          IO.warn("Unknown type #{inspect(module_type)}, defaulting to :string")
+          :string
+        end
+
+      # Fallback for other types
+      unknown_type ->
+        IO.warn("Unknown type format #{inspect(unknown_type)}, defaulting to :string")
+        :string
+    end
+  end
+
+  # Converts object field definitions to Elixact format
+  @spec convert_object_field_to_elixact(term()) :: term()
+  defp convert_object_field_to_elixact({field_name, field_type}) do
+    {field_name, convert_type_to_elixact(field_type)}
+  end
+
+  defp convert_object_field_to_elixact(field_definition) when is_map(field_definition) do
+    %{
+      name: field_definition.name,
+      type: convert_type_to_elixact(field_definition.type),
+      constraints: field_definition.constraints,
+      required: field_definition.required,
+      default: field_definition.default
+    }
+  end
+
+  defp convert_object_field_to_elixact(other) do
+    IO.warn("Unknown object field format #{inspect(other)}")
+    other
   end
 
   @spec build_constraint_calls(field_constraints()) :: [Macro.t()]

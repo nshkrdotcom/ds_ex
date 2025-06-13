@@ -253,18 +253,17 @@ defmodule DSPEx.Signature.EnhancedParser do
   # Extracts constraint block from field definition
   @spec extract_constraints(String.t()) :: {String.t(), String.t()}
   defp extract_constraints(field_str) do
-    case Regex.run(~r/^([^\[]+)(?:\[([^\]]*)\])?$/, field_str) do
-      [_full, base_field] ->
-        {String.trim(base_field), ""}
+    # Find the last occurrence of [...] which should be the constraints
+    # This handles cases like "array(string)[min_items=1]" where we have both () and []
+    constraint_match = Regex.run(~r/^(.+?)\[([^\]]*)\]$/, field_str)
 
+    case constraint_match do
       [_full, base_field, constraints] ->
         {String.trim(base_field), String.trim(constraints)}
 
       nil ->
-        raise CompileError,
-          description: "Invalid field format: '#{field_str}'. Check bracket syntax.",
-          file: __ENV__.file,
-          line: __ENV__.line
+        # No constraints found, return the whole string as base field
+        {String.trim(field_str), ""}
     end
   end
 

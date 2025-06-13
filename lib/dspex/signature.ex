@@ -289,134 +289,286 @@ defmodule DSPEx.Signature do
   """
   @spec __using__(binary()) :: Macro.t()
   defmacro __using__(signature_string) when is_binary(signature_string) do
-    # Parse at compile time for efficiency
-    {input_fields, output_fields} = DSPEx.Signature.Parser.parse(signature_string)
-    all_fields = input_fields ++ output_fields
+    # Check if this is an enhanced signature
+    is_enhanced = DSPEx.Signature.EnhancedParser.enhanced_signature?(signature_string)
 
-    quote do
-      @behaviour DSPEx.Signature
+    if is_enhanced do
+      # Parse with enhanced parser
+      {enhanced_input_fields, enhanced_output_fields} =
+        DSPEx.Signature.EnhancedParser.parse(signature_string)
 
-      # Create struct with all fields, defaulting to nil
-      defstruct unquote(all_fields |> Enum.map(&{&1, nil}))
+      # Convert to simple format for compatibility
+      {input_fields, output_fields} =
+        DSPEx.Signature.EnhancedParser.to_simple_signature(
+          {enhanced_input_fields, enhanced_output_fields}
+        )
 
-      # Define comprehensive type specification
-      @type t :: %__MODULE__{
-              unquote_splicing(
-                all_fields
-                |> Enum.map(fn field ->
-                  {field, quote(do: any())}
-                end)
-              )
-            }
+      all_fields = input_fields ++ output_fields
+      all_enhanced_fields = enhanced_input_fields ++ enhanced_output_fields
 
-      # Extract instructions from module doc at compile time
-      @instructions @moduledoc ||
-                      "Given the fields #{inspect(unquote(input_fields))}, produce the fields #{inspect(unquote(output_fields))}."
+      quote do
+        @behaviour DSPEx.Signature
 
-      # Store field lists as module attributes for efficiency
-      @input_fields unquote(input_fields)
-      @output_fields unquote(output_fields)
-      @all_fields unquote(all_fields)
+        # Create struct with all fields, defaulting to nil
+        defstruct unquote(all_fields |> Enum.map(&{&1, nil}))
 
-      # Implement behaviour callbacks with proper specs
-      @doc "Returns the instruction string extracted from @moduledoc or auto-generated"
-      @spec instructions() :: String.t()
-      @impl DSPEx.Signature
-      def instructions, do: @instructions
+        # Define comprehensive type specification
+        @type t :: %__MODULE__{
+                unquote_splicing(
+                  all_fields
+                  |> Enum.map(fn field ->
+                    {field, quote(do: any())}
+                  end)
+                )
+              }
 
-      @doc "Returns the list of input field names as atoms"
-      @spec input_fields() :: [atom()]
-      @impl DSPEx.Signature
-      def input_fields, do: @input_fields
+        # Extract instructions from module doc at compile time
+        @instructions @moduledoc ||
+                        "Given the fields #{inspect(unquote(input_fields))}, produce the fields #{inspect(unquote(output_fields))}."
 
-      @doc "Returns the list of output field names as atoms"
-      @spec output_fields() :: [atom()]
-      @impl DSPEx.Signature
-      def output_fields, do: @output_fields
+        # Store field lists as module attributes for efficiency
+        @input_fields unquote(input_fields)
+        @output_fields unquote(output_fields)
+        @all_fields unquote(all_fields)
 
-      @doc "Returns all fields (inputs + outputs) as a combined list"
-      @spec fields() :: [atom()]
-      @impl DSPEx.Signature
-      def fields, do: @all_fields
+        # Store enhanced field definitions for Elixact integration
+        @enhanced_fields unquote(Macro.escape(all_enhanced_fields))
 
-      @doc """
-      Creates a new signature struct instance.
+        # Provide access to enhanced field definitions
+        def __enhanced_fields__, do: @enhanced_fields
 
-      ## Parameters
-      - `fields` - A map of field names to values (optional, defaults to empty map)
+        # Implement behaviour callbacks with proper specs
+        @doc "Returns the instruction string extracted from @moduledoc or auto-generated"
+        @spec instructions() :: String.t()
+        @impl DSPEx.Signature
+        def instructions, do: @instructions
 
-      ## Returns
-      - A new struct instance with the given field values
+        @doc "Returns the list of input field names as atoms"
+        @spec input_fields() :: [atom()]
+        @impl DSPEx.Signature
+        def input_fields, do: @input_fields
 
-      ## Examples
+        @doc "Returns the list of output field names as atoms"
+        @spec output_fields() :: [atom()]
+        @impl DSPEx.Signature
+        def output_fields, do: @output_fields
 
-          iex> MySignature.new(%{question: "test"})
-          %MySignature{question: "test", answer: nil, ...}
-      """
-      @spec new(map()) :: t()
-      def new(fields \\ %{}) when is_map(fields) do
-        struct(__MODULE__, fields)
-      end
+        @doc "Returns all fields (inputs + outputs) as a combined list"
+        @spec fields() :: [atom()]
+        @impl DSPEx.Signature
+        def fields, do: @all_fields
 
-      @doc """
-      Validates that all required input fields are present and non-nil.
+        @doc """
+        Creates a new signature struct instance.
 
-      ## Parameters
-      - `inputs` - A map containing input field values
+        ## Parameters
+        - `fields` - A map of field names to values (optional, defaults to empty map)
 
-      ## Returns
-      - `:ok` if all required input fields are present
-      - `{:error, {:missing_inputs, [atom()]}}` if any required fields are missing
+        ## Returns
+        - A new struct instance with the given field values
 
-      ## Examples
+        ## Examples
 
-          iex> MySignature.validate_inputs(%{question: "test", context: "info"})
-          :ok
+            iex> MySignature.new(%{question: "test"})
+            %MySignature{question: "test", answer: nil, ...}
+        """
+        @spec new(map()) :: t()
+        def new(fields \\ %{}) when is_map(fields) do
+          struct(__MODULE__, fields)
+        end
 
-          iex> MySignature.validate_inputs(%{question: "test"})
-          {:error, {:missing_inputs, [:context]}}
-      """
-      @spec validate_inputs(map()) :: DSPEx.Signature.validation_result()
-      def validate_inputs(inputs) when is_map(inputs) do
-        required_inputs = MapSet.new(@input_fields)
-        provided_inputs = MapSet.new(Map.keys(inputs))
+        @doc """
+        Validates that all required input fields are present and non-nil.
 
-        missing = MapSet.difference(required_inputs, provided_inputs)
+        ## Parameters
+        - `inputs` - A map containing input field values
 
-        case MapSet.size(missing) do
-          0 -> :ok
-          _ -> {:error, {:missing_inputs, MapSet.to_list(missing)}}
+        ## Returns
+        - `:ok` if all required input fields are present
+        - `{:error, {:missing_inputs, [atom()]}}` if any required fields are missing
+
+        ## Examples
+
+            iex> MySignature.validate_inputs(%{question: "test", context: "info"})
+            :ok
+
+            iex> MySignature.validate_inputs(%{question: "test"})
+            {:error, {:missing_inputs, [:context]}}
+        """
+        @spec validate_inputs(map()) :: DSPEx.Signature.validation_result()
+        def validate_inputs(inputs) when is_map(inputs) do
+          required_inputs = MapSet.new(@input_fields)
+          provided_inputs = MapSet.new(Map.keys(inputs))
+
+          missing = MapSet.difference(required_inputs, provided_inputs)
+
+          case MapSet.size(missing) do
+            0 -> :ok
+            _ -> {:error, {:missing_inputs, MapSet.to_list(missing)}}
+          end
+        end
+
+        @doc """
+        Validates that all required output fields are present and non-nil.
+
+        ## Parameters
+        - `outputs` - A map containing output field values
+
+        ## Returns
+        - `:ok` if all required output fields are present
+        - `{:error, {:missing_outputs, [atom()]}}` if any required fields are missing
+
+        ## Examples
+
+            iex> MySignature.validate_outputs(%{answer: "result", confidence: 0.9})
+            :ok
+
+            iex> MySignature.validate_outputs(%{answer: "result"})
+            {:error, {:missing_outputs, [:confidence]}}
+        """
+        @spec validate_outputs(map()) :: DSPEx.Signature.validation_result()
+        def validate_outputs(outputs) when is_map(outputs) do
+          required_outputs = MapSet.new(@output_fields)
+          provided_outputs = MapSet.new(Map.keys(outputs))
+
+          missing = MapSet.difference(required_outputs, provided_outputs)
+
+          case MapSet.size(missing) do
+            0 -> :ok
+            _ -> {:error, {:missing_outputs, MapSet.to_list(missing)}}
+          end
         end
       end
+    else
+      # Parse with basic parser for backward compatibility
+      {input_fields, output_fields} = DSPEx.Signature.Parser.parse(signature_string)
+      all_fields = input_fields ++ output_fields
 
-      @doc """
-      Validates that all required output fields are present and non-nil.
+      quote do
+        @behaviour DSPEx.Signature
 
-      ## Parameters
-      - `outputs` - A map containing output field values
+        # Create struct with all fields, defaulting to nil
+        defstruct unquote(all_fields |> Enum.map(&{&1, nil}))
 
-      ## Returns
-      - `:ok` if all required output fields are present
-      - `{:error, {:missing_outputs, [atom()]}}` if any required fields are missing
+        # Define comprehensive type specification
+        @type t :: %__MODULE__{
+                unquote_splicing(
+                  all_fields
+                  |> Enum.map(fn field ->
+                    {field, quote(do: any())}
+                  end)
+                )
+              }
 
-      ## Examples
+        # Extract instructions from module doc at compile time
+        @instructions @moduledoc ||
+                        "Given the fields #{inspect(unquote(input_fields))}, produce the fields #{inspect(unquote(output_fields))}."
 
-          iex> MySignature.validate_outputs(%{answer: "result", confidence: 0.9})
-          :ok
+        # Store field lists as module attributes for efficiency
+        @input_fields unquote(input_fields)
+        @output_fields unquote(output_fields)
+        @all_fields unquote(all_fields)
 
-          iex> MySignature.validate_outputs(%{answer: "result"})
-          {:error, {:missing_outputs, [:confidence]}}
-      """
-      @spec validate_outputs(map()) :: DSPEx.Signature.validation_result()
-      def validate_outputs(outputs) when is_map(outputs) do
-        required_outputs = MapSet.new(@output_fields)
-        provided_outputs = MapSet.new(Map.keys(outputs))
+        # Implement behaviour callbacks with proper specs
+        @doc "Returns the instruction string extracted from @moduledoc or auto-generated"
+        @spec instructions() :: String.t()
+        @impl DSPEx.Signature
+        def instructions, do: @instructions
 
-        missing = MapSet.difference(required_outputs, provided_outputs)
+        @doc "Returns the list of input field names as atoms"
+        @spec input_fields() :: [atom()]
+        @impl DSPEx.Signature
+        def input_fields, do: @input_fields
 
-        case MapSet.size(missing) do
-          0 -> :ok
-          _ -> {:error, {:missing_outputs, MapSet.to_list(missing)}}
+        @doc "Returns the list of output field names as atoms"
+        @spec output_fields() :: [atom()]
+        @impl DSPEx.Signature
+        def output_fields, do: @output_fields
+
+        @doc "Returns all fields (inputs + outputs) as a combined list"
+        @spec fields() :: [atom()]
+        @impl DSPEx.Signature
+        def fields, do: @all_fields
+
+        @doc """
+        Creates a new signature struct instance.
+
+        ## Parameters
+        - `fields` - A map of field names to values (optional, defaults to empty map)
+
+        ## Returns
+        - A new struct instance with the given field values
+
+        ## Examples
+
+            iex> MySignature.new(%{question: "test"})
+            %MySignature{question: "test", answer: nil, ...}
+        """
+        @spec new(map()) :: t()
+        def new(fields \\ %{}) when is_map(fields) do
+          struct(__MODULE__, fields)
+        end
+
+        @doc """
+        Validates that all required input fields are present and non-nil.
+
+        ## Parameters
+        - `inputs` - A map containing input field values
+
+        ## Returns
+        - `:ok` if all required input fields are present
+        - `{:error, {:missing_inputs, [atom()]}}` if any required fields are missing
+
+        ## Examples
+
+            iex> MySignature.validate_inputs(%{question: "test", context: "info"})
+            :ok
+
+            iex> MySignature.validate_inputs(%{question: "test"})
+            {:error, {:missing_inputs, [:context]}}
+        """
+        @spec validate_inputs(map()) :: DSPEx.Signature.validation_result()
+        def validate_inputs(inputs) when is_map(inputs) do
+          required_inputs = MapSet.new(@input_fields)
+          provided_inputs = MapSet.new(Map.keys(inputs))
+
+          missing = MapSet.difference(required_inputs, provided_inputs)
+
+          case MapSet.size(missing) do
+            0 -> :ok
+            _ -> {:error, {:missing_inputs, MapSet.to_list(missing)}}
+          end
+        end
+
+        @doc """
+        Validates that all required output fields are present and non-nil.
+
+        ## Parameters
+        - `outputs` - A map containing output field values
+
+        ## Returns
+        - `:ok` if all required output fields are present
+        - `{:error, {:missing_outputs, [atom()]}}` if any required fields are missing
+
+        ## Examples
+
+            iex> MySignature.validate_outputs(%{answer: "result", confidence: 0.9})
+            :ok
+
+            iex> MySignature.validate_outputs(%{answer: "result"})
+            {:error, {:missing_outputs, [:confidence]}}
+        """
+        @spec validate_outputs(map()) :: DSPEx.Signature.validation_result()
+        def validate_outputs(outputs) when is_map(outputs) do
+          required_outputs = MapSet.new(@output_fields)
+          provided_outputs = MapSet.new(Map.keys(outputs))
+
+          missing = MapSet.difference(required_outputs, provided_outputs)
+
+          case MapSet.size(missing) do
+            0 -> :ok
+            _ -> {:error, {:missing_outputs, MapSet.to_list(missing)}}
+          end
         end
       end
     end
