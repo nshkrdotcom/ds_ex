@@ -221,10 +221,48 @@ defmodule DSPEx.Signature.EnhancedParser do
 
   defp parse_enhanced_field_list(str) do
     str
-    |> String.split(",")
+    |> split_fields_respecting_brackets()
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
     |> Enum.map(&parse_single_enhanced_field/1)
+  end
+
+  # Splits field list by commas but respects bracket boundaries
+  # So "a:string[min=1,max=5], b:integer" becomes ["a:string[min=1,max=5]", "b:integer"]
+  # Also handles regex patterns like "string[format=/^[A-Z]/]" correctly
+  @spec split_fields_respecting_brackets(String.t()) :: [String.t()]
+  defp split_fields_respecting_brackets(str) do
+    str
+    |> String.graphemes()
+    |> Enum.reduce({[], "", 0, false}, fn char, {fields, current, bracket_depth, in_regex} ->
+      case {char, in_regex} do
+        # Handle regex delimiters - don't count brackets inside regex patterns
+        {"/", false} when bracket_depth > 0 ->
+          {fields, current <> char, bracket_depth, true}
+
+        {"/", true} ->
+          {fields, current <> char, bracket_depth, false}
+
+        # Regular bracket handling when not in regex
+        {"[", false} ->
+          {fields, current <> char, bracket_depth + 1, in_regex}
+
+        {"]", false} ->
+          {fields, current <> char, bracket_depth - 1, in_regex}
+
+        # Comma splitting only when not in brackets
+        {",", false} when bracket_depth == 0 ->
+          {fields ++ [current], "", 0, false}
+
+        # Everything else just gets added
+        _ ->
+          {fields, current <> char, bracket_depth, in_regex}
+      end
+    end)
+    |> case do
+      {fields, "", 0, _} -> fields
+      {fields, current, _, _} -> fields ++ [current]
+    end
   end
 
   # Parses a single enhanced field definition
@@ -253,17 +291,76 @@ defmodule DSPEx.Signature.EnhancedParser do
   # Extracts constraint block from field definition
   @spec extract_constraints(String.t()) :: {String.t(), String.t()}
   defp extract_constraints(field_str) do
-    # Find the last occurrence of [...] which should be the constraints
-    # This handles cases like "array(string)[min_items=1]" where we have both () and []
-    constraint_match = Regex.run(~r/^(.+?)\[([^\]]*)\]$/, field_str)
+    # Find the last '[' that starts constraints, handle regex patterns correctly
+    constraint_start = find_last_constraint_bracket(field_str)
 
-    case constraint_match do
-      [_full, base_field, constraints] ->
-        {String.trim(base_field), String.trim(constraints)}
-
+    case constraint_start do
       nil ->
-        # No constraints found, return the whole string as base field
+        # No constraints found
         {String.trim(field_str), ""}
+
+      start_pos ->
+        # Find matching ']' from start_pos
+        case find_closing_bracket_pos(field_str, start_pos) do
+          nil ->
+            # Malformed constraint bracket
+            {String.trim(field_str), ""}
+
+          end_pos ->
+            base_field = String.slice(field_str, 0, start_pos)
+            constraints = String.slice(field_str, start_pos + 1, end_pos - start_pos - 1)
+            {String.trim(base_field), String.trim(constraints)}
+        end
+    end
+  end
+
+  # Find the position of the last '[' that starts a constraint block
+  @spec find_last_constraint_bracket(String.t()) :: integer() | nil
+  defp find_last_constraint_bracket(field_str) do
+    # Look for the last '[' that could be a constraint block
+    # We work backwards to find the rightmost one
+    String.reverse(field_str)
+    |> String.graphemes()
+    |> Enum.with_index()
+    |> Enum.find(fn {char, _} -> char == "[" end)
+    |> case do
+      nil -> nil
+      {_, rev_index} -> String.length(field_str) - rev_index - 1
+    end
+  end
+
+  # Find the matching ']' for a '[' at the given position
+  @spec find_closing_bracket_pos(String.t(), integer()) :: integer() | nil
+  defp find_closing_bracket_pos(field_str, start_pos) do
+    remaining = String.slice(field_str, (start_pos + 1)..-1//1)
+
+    # Simple bracket counting approach
+    remaining
+    |> String.graphemes()
+    |> Enum.with_index()
+    |> Enum.reduce_while({0, false}, fn {char, index}, {depth, in_regex} ->
+      case {char, in_regex} do
+        # Handle regex boundaries
+        {"/", _} ->
+          {:cont, {depth, not in_regex}}
+
+        # Only count brackets when not in regex
+        {"[", false} ->
+          {:cont, {depth + 1, in_regex}}
+
+        {"]", false} when depth == 0 ->
+          {:halt, {:found, start_pos + 1 + index}}
+
+        {"]", false} ->
+          {:cont, {depth - 1, in_regex}}
+
+        _ ->
+          {:cont, {depth, in_regex}}
+      end
+    end)
+    |> case do
+      {:found, pos} -> pos
+      _ -> nil
     end
   end
 
@@ -503,7 +600,7 @@ defmodule DSPEx.Signature.EnhancedParser do
 
       # String literal: 'pattern' or "pattern"
       String.starts_with?(value_str, "'") and String.ends_with?(value_str, "'") ->
-        pattern = String.slice(value_str, 1..-2//-1)
+        pattern = String.slice(value_str, 1..-2//1)
 
         try do
           Regex.compile!(pattern)
@@ -516,7 +613,7 @@ defmodule DSPEx.Signature.EnhancedParser do
         end
 
       String.starts_with?(value_str, "\"") and String.ends_with?(value_str, "\"") ->
-        pattern = String.slice(value_str, 1..-2//-1)
+        pattern = String.slice(value_str, 1..-2//1)
 
         try do
           Regex.compile!(pattern)
@@ -553,7 +650,7 @@ defmodule DSPEx.Signature.EnhancedParser do
     cond do
       # Array format: ['A','B','C'] or ["a","b","c"]
       String.starts_with?(value_str, "[") and String.ends_with?(value_str, "]") ->
-        array_content = String.slice(value_str, 1..-2//-1) |> String.trim()
+        array_content = String.slice(value_str, 1..-2//1) |> String.trim()
 
         if array_content == "" do
           []
@@ -577,10 +674,10 @@ defmodule DSPEx.Signature.EnhancedParser do
     cond do
       # Quoted string: 'value' or "value"
       String.starts_with?(item_str, "'") and String.ends_with?(item_str, "'") ->
-        String.slice(item_str, 1..-2//-1)
+        String.slice(item_str, 1..-2//1)
 
       String.starts_with?(item_str, "\"") and String.ends_with?(item_str, "\"") ->
-        String.slice(item_str, 1..-2//-1)
+        String.slice(item_str, 1..-2//1)
 
       # Number
       true ->
@@ -604,10 +701,10 @@ defmodule DSPEx.Signature.EnhancedParser do
     cond do
       # Quoted string
       String.starts_with?(value_str, "'") and String.ends_with?(value_str, "'") ->
-        String.slice(value_str, 1..-2//-1)
+        String.slice(value_str, 1..-2//1)
 
       String.starts_with?(value_str, "\"") and String.ends_with?(value_str, "\"") ->
-        String.slice(value_str, 1..-2//-1)
+        String.slice(value_str, 1..-2//1)
 
       # Boolean
       String.downcase(value_str) == "true" ->
