@@ -536,10 +536,6 @@ defmodule DSPEx.ClientManager do
   @spec generate_correlation_id() :: String.t()
   defp generate_correlation_id do
     Foundation.Utils.generate_correlation_id()
-  rescue
-    _ ->
-      # Fallback for when Foundation is not available
-      "test-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
   end
 
   # HTTP request handling functions (adapted from DSPEx.Client)

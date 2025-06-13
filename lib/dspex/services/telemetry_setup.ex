@@ -135,92 +135,22 @@ defmodule DSPEx.Services.TelemetrySetup do
   end
 
   @doc """
-  Handles DSPEx telemetry events with defensive programming for shutdown scenarios.
+  Handles DSPEx telemetry events.
+
+  Foundation has been proven stable and reliable, so we can trust it without
+  extensive defensive programming.
   """
   @spec handle_dspex_event(list(atom()), map(), map(), map()) :: :ok
   def handle_dspex_event(event, measurements, metadata, config) do
-    # Enhanced defensive programming: Protect against Foundation/ExUnit race conditions
-    # During test cleanup, ETS tables may be unavailable causing crashes
-
-    # Track telemetry handler calls for debugging
-    process_info = %{
-      pid: self(),
-      node: node(),
-      application_running:
-        Application.started_applications() |> Enum.any?(fn {app, _, _} -> app == :foundation end),
-      test_mode: Code.ensure_loaded?(ExUnit)
-    }
-
-    try do
-      # Only proceed if Foundation is still available
-      if Foundation.available?() do
-        do_handle_dspex_event(event, measurements, metadata, config)
-      else
-        # Foundation is shutting down - skip telemetry to prevent crashes
-        log_telemetry_skip(:foundation_unavailable, event, process_info)
-        :ok
-      end
-    rescue
-      ArgumentError ->
-        # ETS table may be gone during test cleanup - fail silently
-        log_telemetry_skip(:ets_unavailable, event, process_info)
-        :ok
-
-      SystemLimitError ->
-        # System under stress during test cleanup
-        log_telemetry_skip(:system_limit, event, process_info)
-        :ok
-
-      UndefinedFunctionError ->
-        # Foundation function may not be available
-        log_telemetry_skip(:undefined_function, event, process_info)
-        :ok
-
-      FunctionClauseError ->
-        # Foundation contract violation (like we saw with Events API)
-        log_telemetry_skip(:function_clause, event, process_info)
-        :ok
-    catch
-      :exit, {:noproc, _} ->
-        # Process may be dead during cleanup
-        log_telemetry_skip(:process_dead, event, process_info)
-        :ok
-
-      :exit, {:badarg, _} ->
-        # ETS table corruption during cleanup
-        log_telemetry_skip(:ets_corruption, event, process_info)
-        :ok
-
-      :exit, {:normal, _} ->
-        # Process shutting down normally
-        log_telemetry_skip(:process_shutdown, event, process_info)
-        :ok
-
-      kind, reason ->
-        # Catch any other unexpected errors
-        log_telemetry_skip({:unexpected_error, kind, reason}, event, process_info)
-        :ok
-    end
-  end
-
-  # Enhanced logging for telemetry issues
-  @spec log_telemetry_skip(term(), list(atom()), map()) :: :ok
-  defp log_telemetry_skip(reason, event, process_info) do
-    if Application.get_env(:dspex, :telemetry_debug, false) do
-      Logger.warning("""
-      DSPEx Telemetry Handler: Skipped event due to #{inspect(reason)}
-      Event: #{inspect(event)}
-      Process Info: #{inspect(process_info)}
-
-      This is expected during test cleanup or Foundation shutdown.
-      To disable this logging, set config :dspex, telemetry_debug: false
-      """)
+    # Simple Foundation availability check - no complex error handling needed
+    if Foundation.available?() do
+      do_handle_dspex_event(event, measurements, metadata, config)
     end
 
     :ok
   end
 
-  # Renamed original handlers to be called defensively
+  # Handle specific DSPEx telemetry events
   defp do_handle_dspex_event([:dspex, :predict, :stop], measurements, metadata, _config) do
     # Track prediction performance with Foundation telemetry (v0.1.2 has emit_histogram)
     Foundation.Telemetry.emit_histogram(

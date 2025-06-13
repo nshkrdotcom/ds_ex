@@ -22,6 +22,9 @@ defmodule Dspex.Application do
   @spec start(Application.start_type(), term()) :: {:ok, pid()} | {:error, term()}
   def start(_type, _args) do
     children = [
+      # DSPEx's independent configuration system
+      DSPEx.Config.Store,
+
       # DSPEx-specific services (Foundation starts automatically)
       {DSPEx.Services.ConfigManager, []},
       {DSPEx.Services.TelemetrySetup, []},
