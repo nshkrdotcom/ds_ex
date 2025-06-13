@@ -23,7 +23,13 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo do
       {:ok, trajectory} ->
         case create_demo_from_trajectory(trajectory, opts) do
           {:ok, demo} ->
-            drop_demos_and_add_new(source_program, demo, max_demos, predictor2name, name2predictor)
+            drop_demos_and_add_new(
+              source_program,
+              demo,
+              max_demos,
+              predictor2name,
+              name2predictor
+            )
 
           {:error, reason} ->
             {:skip, "Failed to create demo: #{reason}"}
@@ -46,7 +52,13 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo do
 
   # Private helper functions
 
-  defp drop_demos_and_add_new(source_program, new_demo, max_demos, _predictor2name, _name2predictor) do
+  defp drop_demos_and_add_new(
+         source_program,
+         new_demo,
+         max_demos,
+         _predictor2name,
+         _name2predictor
+       ) do
     program_with_dropped_demos = drop_random_demos(source_program, max_demos)
     add_demo_to_program(program_with_dropped_demos, new_demo, max_demos)
   end
@@ -58,7 +70,10 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo do
         max_demos_tmp = if max_demos > 0, do: max_demos, else: 3
 
         lambda = num_demos / max_demos_tmp
-        num_demos_to_drop = max(poisson_sample(lambda), if(num_demos >= max_demos_tmp, do: 1, else: 0))
+
+        num_demos_to_drop =
+          max(poisson_sample(lambda), if(num_demos >= max_demos_tmp, do: 1, else: 0))
+
         num_demos_to_drop = min(num_demos_to_drop, num_demos)
 
         if num_demos_to_drop > 0 do
@@ -110,7 +125,8 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo do
         if Trajectory.quality_score(trajectory) >= quality_threshold do
           {:ok, trajectory}
         else
-          {:error, "Best trajectory score #{Trajectory.quality_score(trajectory)} below threshold #{quality_threshold}"}
+          {:error,
+           "Best trajectory score #{Trajectory.quality_score(trajectory)} below threshold #{quality_threshold}"}
         end
     end
   end
@@ -118,33 +134,41 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo do
   defp create_demo_from_trajectory(trajectory, opts) do
     max_length = Map.get(opts, :demo_input_field_maxlen, 100_000)
 
-    truncated_inputs =
-      trajectory.inputs
-      |> Enum.map(fn {key, value} ->
-        truncated_value =
-          if is_binary(value) and String.length(value) > max_length do
-            String.slice(value, 0, max_length)
-          else
-            value
-          end
-        {key, truncated_value}
-      end)
-      |> Enum.into(%{})
+    try do
+      truncated_inputs =
+        trajectory.inputs
+        |> Enum.map(fn {key, value} ->
+          truncated_value =
+            if is_binary(value) and String.length(value) > max_length do
+              String.slice(value, 0, max_length)
+            else
+              value
+            end
 
-    combined_data = Map.merge(truncated_inputs, trajectory.outputs)
-    input_keys = Map.keys(trajectory.inputs)
+          {key, truncated_value}
+        end)
+        |> Enum.into(%{})
 
-    demo = Example.new(combined_data, input_keys)
+      combined_data = Map.merge(truncated_inputs, trajectory.outputs)
+      input_keys = Map.keys(trajectory.inputs)
 
-    demo_with_metadata = %{demo |
-      data: Map.put(demo.data, :__simba_demo_metadata, %{
-        original_score: trajectory.score,
-        created_at: DateTime.utc_now(),
-        strategy: :append_demo
-      })
-    }
+      demo = Example.new(combined_data, input_keys)
 
-    {:ok, demo_with_metadata}
+      demo_with_metadata = %{
+        demo
+        | data:
+            Map.put(demo.data, :__simba_demo_metadata, %{
+              original_score: trajectory.score,
+              created_at: DateTime.utc_now(),
+              strategy: :append_demo
+            })
+      }
+
+      {:ok, demo_with_metadata}
+    rescue
+      error ->
+        {:error, "Failed to create demo: #{inspect(error)}"}
+    end
   end
 
   defp add_demo_to_program(program, demo, max_demos) do
@@ -163,10 +187,12 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo do
 
       # Program needs to be wrapped with OptimizedProgram
       _ ->
-        optimized = OptimizedProgram.new(program, [demo], %{
-          strategy: :append_demo,
-          created_at: DateTime.utc_now()
-        })
+        optimized =
+          OptimizedProgram.new(program, [demo], %{
+            strategy: :append_demo,
+            created_at: DateTime.utc_now()
+          })
+
         {:ok, optimized}
     end
   end

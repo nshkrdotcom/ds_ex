@@ -22,8 +22,9 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   @behaviour DSPEx.Teleprompter
 
-  alias DSPEx.{Example, Program, OptimizedProgram}
-  alias DSPEx.Teleprompter.SIMBA.{Trajectory, Bucket}
+  # Aliases for full implementation (Phase 1 stub doesn't use these yet)
+  # alias DSPEx.{Example, Program, OptimizedProgram}
+  # alias DSPEx.Teleprompter.SIMBA.{Trajectory, Bucket}
 
   @enforce_keys []
   defstruct bsize: 32,
