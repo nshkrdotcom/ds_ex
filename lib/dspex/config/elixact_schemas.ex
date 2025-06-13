@@ -6,82 +6,87 @@ defmodule DSPEx.Config.ElixactSchemas do
   with enhanced error reporting and path-based validation mapping.
   """
 
-  # Configuration constants from validator
-  @valid_log_levels [
-    :emergency, :alert, :critical, :error, :warning, :warn, :notice, :info, :debug
-  ]
-  @valid_providers [:gemini, :openai]
-  @valid_acquisition_functions [:expected_improvement, :probability_of_improvement, :upper_confidence_bound]
-  @valid_surrogate_models [:gaussian_process, :random_forest, :extra_trees]
-
   @doc """
   Maps configuration paths to their corresponding validation function.
   """
-  @spec path_to_schema(list(atom())) :: {:ok, atom(), list(atom())} | {:error, :unknown_path}
+  @spec path_to_schema(list(atom())) :: {:ok, module(), list(atom())} | {:error, :unknown_path}
   def path_to_schema(path)
 
   # Client configuration mappings
-  def path_to_schema([:dspex, :client, field]) when field in [:timeout, :retry_attempts, :backoff_factor] do
-    {:ok, :client, [field]}
+  def path_to_schema([:dspex, :client, field])
+      when field in [:timeout, :retry_attempts, :backoff_factor] do
+    {:ok, ClientConfiguration, [field]}
   end
 
   # Evaluation configuration mappings  
   def path_to_schema([:dspex, :evaluation, field]) when field in [:batch_size, :parallel_limit] do
-    {:ok, :evaluation, [field]}
+    {:ok, EvaluationConfiguration, [field]}
   end
 
   # Teleprompter configuration mappings
-  def path_to_schema([:dspex, :teleprompter, field]) when field in [:bootstrap_examples, :validation_threshold] do
-    {:ok, :teleprompter, [field]}
+  def path_to_schema([:dspex, :teleprompter, field])
+      when field in [:bootstrap_examples, :validation_threshold] do
+    {:ok, TeleprompterConfiguration, [field]}
   end
 
   # Logging configuration mappings
   def path_to_schema([:dspex, :logging, field]) when field in [:level, :correlation_enabled] do
-    {:ok, :logging, [field]}
+    {:ok, LoggingConfiguration, [field]}
   end
 
   # Provider configuration mappings (with wildcard support)
-  def path_to_schema([:dspex, :providers, _provider, field]) 
+  def path_to_schema([:dspex, :providers, _provider, field])
       when field in [:api_key, :base_url, :default_model, :timeout] do
-    {:ok, :provider, [field]}
+    {:ok, ProviderConfiguration, [field]}
   end
 
   def path_to_schema([:dspex, :providers, _provider, :rate_limit, field])
       when field in [:requests_per_minute, :tokens_per_minute] do
-    {:ok, :provider, [:rate_limit, field]}
+    {:ok, ProviderConfiguration, [:rate_limit, field]}
   end
 
   def path_to_schema([:dspex, :providers, _provider, :circuit_breaker, field])
       when field in [:failure_threshold, :recovery_time] do
-    {:ok, :provider, [:circuit_breaker, field]}
+    {:ok, ProviderConfiguration, [:circuit_breaker, field]}
   end
 
   # Prediction configuration mappings
-  def path_to_schema([:dspex, :prediction, field]) 
-      when field in [:default_provider, :default_temperature, :default_max_tokens, :cache_enabled, :cache_ttl] do
-    {:ok, :prediction, [field]}
+  def path_to_schema([:dspex, :prediction, field])
+      when field in [
+             :default_provider,
+             :default_temperature,
+             :default_max_tokens,
+             :cache_enabled,
+             :cache_ttl
+           ] do
+    {:ok, PredictionConfiguration, [field]}
   end
 
   # BEACON teleprompter configuration mappings
   def path_to_schema([:dspex, :teleprompters, :beacon, field])
-      when field in [:default_instruction_model, :default_evaluation_model, :max_concurrent_operations, :default_timeout] do
-    {:ok, :beacon, [field]}
+      when field in [
+             :default_instruction_model,
+             :default_evaluation_model,
+             :max_concurrent_operations,
+             :default_timeout
+           ] do
+    {:ok, BEACONConfiguration, [field]}
   end
 
   def path_to_schema([:dspex, :teleprompters, :beacon, :optimization, field])
       when field in [:max_trials, :convergence_patience, :improvement_threshold] do
-    {:ok, :beacon, [:optimization, field]}
+    {:ok, BEACONConfiguration, [:optimization, field]}
   end
 
   def path_to_schema([:dspex, :teleprompters, :beacon, :bayesian_optimization, field])
       when field in [:acquisition_function, :surrogate_model, :exploration_exploitation_tradeoff] do
-    {:ok, :beacon, [:bayesian_optimization, field]}
+    {:ok, BEACONConfiguration, [:bayesian_optimization, field]}
   end
 
   # Telemetry configuration mappings
   def path_to_schema([:dspex, :telemetry, field])
       when field in [:enabled, :detailed_logging, :performance_tracking] do
-    {:ok, :telemetry, [field]}
+    {:ok, TelemetryConfiguration, [field]}
   end
 
   # Unknown path
@@ -93,9 +98,9 @@ defmodule DSPEx.Config.ElixactSchemas do
   @spec validate_config_value(list(atom()), term()) :: :ok | {:error, term()}
   def validate_config_value(path, value) do
     case path_to_schema(path) do
-      {:ok, domain, field_path} ->
-        validate_domain_field(domain, field_path, value)
-      
+      {:ok, schema_module, field_path} ->
+        validate_field_with_schema(schema_module, field_path, value)
+
       {:error, :unknown_path} ->
         {:error, {:unknown_path, path}}
     end
@@ -114,17 +119,18 @@ defmodule DSPEx.Config.ElixactSchemas do
   """
   @spec export_json_schema(atom()) :: {:ok, map()} | {:error, term()}
   def export_json_schema(domain) do
-    schema = case domain do
-      :client -> client_json_schema()
-      :provider -> provider_json_schema()
-      :prediction -> prediction_json_schema()
-      :evaluation -> evaluation_json_schema()
-      :teleprompter -> teleprompter_json_schema()
-      :beacon -> beacon_json_schema()
-      :logging -> logging_json_schema()
-      :telemetry -> telemetry_json_schema()
-      _ -> nil
-    end
+    schema =
+      case domain do
+        :client -> client_json_schema()
+        :provider -> provider_json_schema()
+        :prediction -> prediction_json_schema()
+        :evaluation -> evaluation_json_schema()
+        :teleprompter -> teleprompter_json_schema()
+        :beacon -> beacon_json_schema()
+        :logging -> logging_json_schema()
+        :telemetry -> telemetry_json_schema()
+        _ -> nil
+      end
 
     if schema do
       {:ok, schema}
@@ -135,123 +141,242 @@ defmodule DSPEx.Config.ElixactSchemas do
 
   ## Private validation functions
 
-  # Domain-specific validation
-  @spec validate_domain_field(atom(), list(atom()), term()) :: :ok | {:error, term()}
-  defp validate_domain_field(:client, [:timeout], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:client, [:timeout], _), do: {:error, {:invalid_timeout, "Must be a positive integer"}}
+  # Schema-based field validation with fallback to legacy validation
+  @spec validate_field_with_schema(module(), list(atom()), term()) :: :ok | {:error, term()}
+  defp validate_field_with_schema(schema_module, field_path, value) do
+    # Reject nil values explicitly (even for optional fields)
+    cond do
+      is_nil(value) ->
+        field_name = List.last(field_path)
+        error_atom = field_to_error_atom(field_name)
+        {:error, {error_atom, "Value cannot be nil"}}
 
-  defp validate_domain_field(:client, [:retry_attempts], value) when is_integer(value) and value >= 0, do: :ok
-  defp validate_domain_field(:client, [:retry_attempts], _), do: {:error, {:invalid_retry_attempts, "Must be a non-negative integer"}}
+      elixact_supported_field?(field_path) ->
+        try do
+          # Create a nested map structure for the field path
+          test_data = build_nested_map(field_path, value)
 
-  defp validate_domain_field(:client, [:backoff_factor], value) when is_number(value) and value > 0, do: :ok
-  defp validate_domain_field(:client, [:backoff_factor], _), do: {:error, {:invalid_backoff_factor, "Must be a positive number"}}
+          case schema_module.validate(test_data) do
+            {:ok, _validated} -> :ok
+            {:error, errors} -> {:error, format_elixact_error(errors)}
+          end
+        rescue
+          # Fall back to legacy validation if Elixact fails
+          _ -> validate_field_legacy(field_path, value)
+        end
 
-  # Provider validations
-  defp validate_domain_field(:provider, [:api_key], value) when is_binary(value), do: :ok
-  defp validate_domain_field(:provider, [:api_key], {:system, env_var}) when is_binary(env_var), do: :ok
-  defp validate_domain_field(:provider, [:api_key], _), do: {:error, {:invalid_api_key, "Must be a string or {:system, env_var} tuple"}}
+      true ->
+        # Use legacy validation for unsupported field types
+        validate_field_legacy(field_path, value)
+    end
+  end
 
-  defp validate_domain_field(:provider, [:base_url], value) when is_binary(value), do: :ok
-  defp validate_domain_field(:provider, [:base_url], _), do: {:error, {:invalid_base_url, "Must be a string"}}
+  # Build nested map structure from field path and value
+  @spec build_nested_map(list(atom()), term()) :: map()
+  defp build_nested_map([field], value), do: %{field => value}
+  defp build_nested_map([field | rest], value), do: %{field => build_nested_map(rest, value)}
 
-  defp validate_domain_field(:provider, [:default_model], value) when is_binary(value), do: :ok
-  defp validate_domain_field(:provider, [:default_model], _), do: {:error, {:invalid_model, "Must be a string"}}
+  # Format Elixact errors to match legacy error format
+  @spec format_elixact_error([%Elixact.Error{}] | %Elixact.Error{}) :: term()
+  defp format_elixact_error([error | _]), do: format_elixact_error(error)
 
-  defp validate_domain_field(:provider, [:timeout], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:provider, [:timeout], _), do: {:error, {:invalid_timeout, "Must be a positive integer"}}
+  defp format_elixact_error(%Elixact.Error{path: [field], message: message}) do
+    error_atom = field_to_error_atom(field)
+    {error_atom, message}
+  end
 
-  defp validate_domain_field(:provider, [:rate_limit, :requests_per_minute], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:provider, [:rate_limit, :requests_per_minute], _), do: {:error, {:invalid_rate_limit, "Must be a positive integer"}}
+  defp format_elixact_error(%Elixact.Error{message: message}) do
+    {:unknown_field, message}
+  end
 
-  defp validate_domain_field(:provider, [:rate_limit, :tokens_per_minute], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:provider, [:rate_limit, :tokens_per_minute], _), do: {:error, {:invalid_rate_limit, "Must be a positive integer"}}
+  defp format_elixact_error(_), do: {:unknown_field, "Unknown configuration field"}
 
-  defp validate_domain_field(:provider, [:circuit_breaker, :failure_threshold], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:provider, [:circuit_breaker, :failure_threshold], _), do: {:error, {:invalid_failure_threshold, "Must be a positive integer"}}
+  # Map field names to legacy error atoms
+  @spec field_to_error_atom(atom()) :: atom()
+  defp field_to_error_atom(:timeout), do: :invalid_timeout
+  defp field_to_error_atom(:retry_attempts), do: :invalid_retry_attempts
+  defp field_to_error_atom(:backoff_factor), do: :invalid_backoff_factor
+  defp field_to_error_atom(:api_key), do: :invalid_api_key
+  defp field_to_error_atom(:base_url), do: :invalid_base_url
+  defp field_to_error_atom(:default_model), do: :invalid_model
+  defp field_to_error_atom(:default_provider), do: :invalid_provider
+  defp field_to_error_atom(:default_temperature), do: :invalid_temperature
+  defp field_to_error_atom(:default_max_tokens), do: :invalid_max_tokens
+  defp field_to_error_atom(:cache_enabled), do: :invalid_boolean
+  defp field_to_error_atom(:cache_ttl), do: :invalid_cache_ttl
+  defp field_to_error_atom(:batch_size), do: :invalid_batch_size
+  defp field_to_error_atom(:parallel_limit), do: :invalid_parallel_limit
+  defp field_to_error_atom(:bootstrap_examples), do: :invalid_bootstrap_examples
+  defp field_to_error_atom(:validation_threshold), do: :invalid_validation_threshold
+  defp field_to_error_atom(:level), do: :invalid_log_level
+  defp field_to_error_atom(:correlation_enabled), do: :invalid_boolean
+  defp field_to_error_atom(:enabled), do: :invalid_boolean
+  defp field_to_error_atom(:detailed_logging), do: :invalid_boolean
+  defp field_to_error_atom(:performance_tracking), do: :invalid_boolean
+  defp field_to_error_atom(_), do: :unknown_field
 
-  defp validate_domain_field(:provider, [:circuit_breaker, :recovery_time], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:provider, [:circuit_breaker, :recovery_time], _), do: {:error, {:invalid_recovery_time, "Must be a positive integer"}}
+  # Determines if a field path can be validated with current Elixact capabilities
+  @spec elixact_supported_field?(list(atom())) :: boolean()
+  defp elixact_supported_field?(field_path) do
+    case field_path do
+      # Client fields - all supported (string, integer, float)
+      [:timeout] -> true
+      [:retry_attempts] -> true
+      [:backoff_factor] -> true
+      # Provider fields - partial support
+      # Union type not supported
+      [:api_key] -> false
+      [:base_url] -> true
+      [:default_model] -> true
+      # Nested maps - not supported
+      [:rate_limit, _] -> false
+      [:circuit_breaker, _] -> false
+      # Prediction fields - partial support
+      # Atom type not supported
+      [:default_provider] -> false
+      [:default_temperature] -> true
+      [:default_max_tokens] -> true
+      [:cache_enabled] -> true
+      [:cache_ttl] -> true
+      # Evaluation fields - supported
+      [:batch_size] -> true
+      [:parallel_limit] -> true
+      # Teleprompter fields - supported
+      [:bootstrap_examples] -> true
+      [:validation_threshold] -> true
+      # Logging fields - partial support
+      # Atom type not supported
+      [:level] -> false
+      [:correlation_enabled] -> true
+      # BEACON fields - not supported
+      # Atom type
+      [:default_instruction_model] -> false
+      # Atom type
+      [:default_evaluation_model] -> false
+      [:max_concurrent_operations] -> true
+      [:default_timeout] -> true
+      # Nested map
+      [:optimization, _] -> false
+      # Nested map
+      [:bayesian_optimization, _] -> false
+      # Telemetry fields - supported
+      [:enabled] -> true
+      [:detailed_logging] -> true
+      [:performance_tracking] -> true
+      # Default to unsupported
+      _ -> false
+    end
+  end
 
-  # Prediction validations
-  defp validate_domain_field(:prediction, [:default_provider], value) when value in @valid_providers, do: :ok
-  defp validate_domain_field(:prediction, [:default_provider], _), do: {:error, {:invalid_provider, "Must be :gemini or :openai"}}
+  # Legacy validation functions for unsupported Elixact cases
+  @spec validate_field_legacy(list(atom()), term()) :: :ok | {:error, term()}
+  defp validate_field_legacy(field_path, value) do
+    case field_path do
+      # Provider API key validation (union type)
+      [:api_key] ->
+        validate_api_key(value)
 
-  defp validate_domain_field(:prediction, [:default_temperature], value) when is_float(value) and value >= 0.0 and value <= 2.0, do: :ok
-  defp validate_domain_field(:prediction, [:default_temperature], _), do: {:error, {:invalid_temperature, "Must be a float between 0.0 and 2.0"}}
+      # Atom type validations
+      [:default_provider] ->
+        validate_provider_atom(value)
 
-  defp validate_domain_field(:prediction, [:default_max_tokens], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:prediction, [:default_max_tokens], _), do: {:error, {:invalid_max_tokens, "Must be a positive integer"}}
+      [:level] ->
+        validate_log_level(value)
 
-  defp validate_domain_field(:prediction, [:cache_enabled], value) when is_boolean(value), do: :ok
-  defp validate_domain_field(:prediction, [:cache_enabled], _), do: {:error, {:invalid_boolean, "Must be true or false"}}
+      [:default_instruction_model] ->
+        validate_provider_atom(value)
 
-  defp validate_domain_field(:prediction, [:cache_ttl], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:prediction, [:cache_ttl], _), do: {:error, {:invalid_cache_ttl, "Must be a positive integer"}}
+      [:default_evaluation_model] ->
+        validate_provider_atom(value)
 
-  # Evaluation validations
-  defp validate_domain_field(:evaluation, [:batch_size], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:evaluation, [:batch_size], _), do: {:error, {:invalid_batch_size, "Must be a positive integer"}}
+      # Nested map validations
+      [:rate_limit, :requests_per_minute] ->
+        validate_positive_integer(value, :invalid_rate_limit)
 
-  defp validate_domain_field(:evaluation, [:parallel_limit], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:evaluation, [:parallel_limit], _), do: {:error, {:invalid_parallel_limit, "Must be a positive integer"}}
+      [:rate_limit, :tokens_per_minute] ->
+        validate_positive_integer(value, :invalid_rate_limit)
 
-  # Teleprompter validations
-  defp validate_domain_field(:teleprompter, [:bootstrap_examples], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:teleprompter, [:bootstrap_examples], _), do: {:error, {:invalid_bootstrap_examples, "Must be a positive integer"}}
+      [:circuit_breaker, :failure_threshold] ->
+        validate_positive_integer(value, :invalid_failure_threshold)
 
-  defp validate_domain_field(:teleprompter, [:validation_threshold], value) when is_float(value) and value >= 0.0 and value <= 1.0, do: :ok
-  defp validate_domain_field(:teleprompter, [:validation_threshold], _), do: {:error, {:invalid_validation_threshold, "Must be a float between 0.0 and 1.0"}}
+      [:circuit_breaker, :recovery_time] ->
+        validate_positive_integer(value, :invalid_recovery_time)
 
-  # BEACON validations
-  defp validate_domain_field(:beacon, [:default_instruction_model], value) when value in @valid_providers, do: :ok
-  defp validate_domain_field(:beacon, [:default_instruction_model], _), do: {:error, {:invalid_provider, "Must be :gemini or :openai"}}
+      [:optimization, :max_trials] ->
+        validate_positive_integer(value, :invalid_max_trials)
 
-  defp validate_domain_field(:beacon, [:default_evaluation_model], value) when value in @valid_providers, do: :ok
-  defp validate_domain_field(:beacon, [:default_evaluation_model], _), do: {:error, {:invalid_provider, "Must be :gemini or :openai"}}
+      [:optimization, :convergence_patience] ->
+        validate_positive_integer(value, :invalid_convergence_patience)
 
-  defp validate_domain_field(:beacon, [:max_concurrent_operations], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:beacon, [:max_concurrent_operations], _), do: {:error, {:invalid_concurrent_operations, "Must be a positive integer"}}
+      [:optimization, :improvement_threshold] ->
+        validate_float_range(value, 0.0, 1.0, :invalid_improvement_threshold)
 
-  defp validate_domain_field(:beacon, [:default_timeout], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:beacon, [:default_timeout], _), do: {:error, {:invalid_timeout, "Must be a positive integer"}}
+      [:bayesian_optimization, :acquisition_function] ->
+        validate_acquisition_function(value)
 
-  defp validate_domain_field(:beacon, [:optimization, :max_trials], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:beacon, [:optimization, :max_trials], _), do: {:error, {:invalid_max_trials, "Must be a positive integer"}}
+      [:bayesian_optimization, :surrogate_model] ->
+        validate_surrogate_model(value)
 
-  defp validate_domain_field(:beacon, [:optimization, :convergence_patience], value) when is_integer(value) and value > 0, do: :ok
-  defp validate_domain_field(:beacon, [:optimization, :convergence_patience], _), do: {:error, {:invalid_convergence_patience, "Must be a positive integer"}}
+      [:bayesian_optimization, :exploration_exploitation_tradeoff] ->
+        validate_float_range(value, 0.0, 1.0, :invalid_tradeoff)
 
-  defp validate_domain_field(:beacon, [:optimization, :improvement_threshold], value) when is_float(value) and value >= 0.0 and value <= 1.0, do: :ok
-  defp validate_domain_field(:beacon, [:optimization, :improvement_threshold], _), do: {:error, {:invalid_improvement_threshold, "Must be a float between 0.0 and 1.0"}}
+      # Unknown field
+      _ ->
+        {:error, {:unknown_field, "Unknown configuration field"}}
+    end
+  end
 
-  defp validate_domain_field(:beacon, [:bayesian_optimization, :acquisition_function], value) when value in @valid_acquisition_functions, do: :ok
-  defp validate_domain_field(:beacon, [:bayesian_optimization, :acquisition_function], _), do: {:error, {:invalid_acquisition_function, "Must be a valid acquisition function"}}
+  # Legacy validation helper functions
+  defp validate_api_key(value) when is_binary(value), do: :ok
+  defp validate_api_key({:system, env_var}) when is_binary(env_var), do: :ok
 
-  defp validate_domain_field(:beacon, [:bayesian_optimization, :surrogate_model], value) when value in @valid_surrogate_models, do: :ok
-  defp validate_domain_field(:beacon, [:bayesian_optimization, :surrogate_model], _), do: {:error, {:invalid_surrogate_model, "Must be a valid surrogate model"}}
+  defp validate_api_key(_),
+    do: {:error, {:invalid_api_key, "Must be a string or {:system, env_var} tuple"}}
 
-  defp validate_domain_field(:beacon, [:bayesian_optimization, :exploration_exploitation_tradeoff], value) when is_float(value) and value >= 0.0 and value <= 1.0, do: :ok
-  defp validate_domain_field(:beacon, [:bayesian_optimization, :exploration_exploitation_tradeoff], _), do: {:error, {:invalid_tradeoff, "Must be a float between 0.0 and 1.0"}}
+  defp validate_provider_atom(value) when value in [:gemini, :openai], do: :ok
+  defp validate_provider_atom(_), do: {:error, {:invalid_provider, "Must be :gemini or :openai"}}
 
-  # Logging validations
-  defp validate_domain_field(:logging, [:level], value) when value in @valid_log_levels, do: :ok
-  defp validate_domain_field(:logging, [:level], _), do: {:error, {:invalid_log_level, "Must be a valid log level"}}
+  defp validate_log_level(value)
+       when value in [
+              :emergency,
+              :alert,
+              :critical,
+              :error,
+              :warning,
+              :warn,
+              :notice,
+              :info,
+              :debug
+            ],
+       do: :ok
 
-  defp validate_domain_field(:logging, [:correlation_enabled], value) when is_boolean(value), do: :ok
-  defp validate_domain_field(:logging, [:correlation_enabled], _), do: {:error, {:invalid_boolean, "Must be true or false"}}
+  defp validate_log_level(_), do: {:error, {:invalid_log_level, "Must be a valid log level"}}
 
-  # Telemetry validations
-  defp validate_domain_field(:telemetry, [:enabled], value) when is_boolean(value), do: :ok
-  defp validate_domain_field(:telemetry, [:enabled], _), do: {:error, {:invalid_boolean, "Must be true or false"}}
+  defp validate_positive_integer(value, _error_atom) when is_integer(value) and value > 0, do: :ok
 
-  defp validate_domain_field(:telemetry, [:detailed_logging], value) when is_boolean(value), do: :ok
-  defp validate_domain_field(:telemetry, [:detailed_logging], _), do: {:error, {:invalid_boolean, "Must be true or false"}}
+  defp validate_positive_integer(_, error_atom),
+    do: {:error, {error_atom, "Must be a positive integer"}}
 
-  defp validate_domain_field(:telemetry, [:performance_tracking], value) when is_boolean(value), do: :ok
-  defp validate_domain_field(:telemetry, [:performance_tracking], _), do: {:error, {:invalid_boolean, "Must be true or false"}}
+  defp validate_float_range(value, min, max, _error_atom)
+       when is_float(value) and value >= min and value <= max,
+       do: :ok
 
-  # Unknown field
-  defp validate_domain_field(_domain, _field_path, _value), do: {:error, {:unknown_field, "Unknown configuration field"}}
+  defp validate_float_range(_, _, _, error_atom),
+    do: {:error, {error_atom, "Must be a float between the specified range"}}
+
+  defp validate_acquisition_function(value)
+       when value in [:expected_improvement, :probability_of_improvement, :upper_confidence_bound],
+       do: :ok
+
+  defp validate_acquisition_function(_),
+    do: {:error, {:invalid_acquisition_function, "Must be a valid acquisition function"}}
+
+  defp validate_surrogate_model(value)
+       when value in [:gaussian_process, :random_forest, :extra_trees],
+       do: :ok
+
+  defp validate_surrogate_model(_),
+    do: {:error, {:invalid_surrogate_model, "Must be a valid surrogate model"}}
 
   ## JSON Schema definitions for documentation
 
@@ -287,7 +412,7 @@ defmodule DSPEx.Config.ElixactSchemas do
 
   defp prediction_json_schema do
     %{
-      "type" => "object", 
+      "type" => "object",
       "properties" => %{
         "default_provider" => %{"type" => "string", "enum" => ["gemini", "openai"]},
         "default_temperature" => %{"type" => "number", "minimum" => 0.0, "maximum" => 2.0},
@@ -333,7 +458,7 @@ defmodule DSPEx.Config.ElixactSchemas do
 
   defp logging_json_schema do
     %{
-      "type" => "object", 
+      "type" => "object",
       "properties" => %{
         "level" => %{"type" => "string", "enum" => ["debug", "info", "warning", "error"]},
         "correlation_enabled" => %{"type" => "boolean"}
