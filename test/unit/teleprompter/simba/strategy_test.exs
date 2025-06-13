@@ -5,154 +5,207 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
   """
   use ExUnit.Case, async: true
 
-  @moduletag :unit
+  @moduletag :group_1
 
-  # Test strategy behavior and interface without depending on actual implementation
+  alias DSPEx.Teleprompter.SIMBA.{Strategy, Bucket, Trajectory}
+  alias DSPEx.{Example, Program}
+
+  # Test strategy implementation for testing
+  defmodule TestStrategy do
+    @behaviour DSPEx.Teleprompter.SIMBA.Strategy
+
+    @impl true
+    def apply(bucket, source_program, _opts) do
+      case Bucket.best_trajectory(bucket) do
+        nil -> {:skip, "No trajectories found"}
+        trajectory when trajectory.score > 0.5 -> {:ok, source_program}
+        _ -> {:skip, "Score too low"}
+      end
+    end
+
+    @impl true
+    def applicable?(bucket, _opts) do
+      case Bucket.best_trajectory(bucket) do
+        nil -> false
+        trajectory -> trajectory.score > 0.3
+      end
+    end
+  end
+
+  # Strategy without optional callback
+  defmodule MinimalStrategy do
+    @behaviour DSPEx.Teleprompter.SIMBA.Strategy
+
+    @impl true
+    def apply(_bucket, source_program, _opts) do
+      {:ok, source_program}
+    end
+  end
+
+  # Non-strategy module for testing
+  defmodule NotAStrategy do
+  end
+
+  describe "implements_strategy?/1" do
+    test "returns true for proper strategy implementation" do
+      assert Strategy.implements_strategy?(TestStrategy)
+    end
+
+    test "returns true for minimal strategy implementation" do
+      assert Strategy.implements_strategy?(MinimalStrategy)
+    end
+
+    test "returns false for non-strategy module" do
+      refute Strategy.implements_strategy?(NotAStrategy)
+    end
+
+    test "returns false for non-existent module" do
+      refute Strategy.implements_strategy?(NonExistentModule)
+    end
+
+    test "returns false for invalid input" do
+      refute Strategy.implements_strategy?("not_a_module")
+      refute Strategy.implements_strategy?(123)
+      refute Strategy.implements_strategy?(nil)
+    end
+  end
 
   describe "strategy behavior contract" do
-    test "defines expected strategy interface" do
-      # Test that we expect these callbacks
-      required_callbacks = [:apply]
-      optional_callbacks = [:applicable?]
-
-      for callback <- required_callbacks do
-        assert is_atom(callback)
-      end
-
-      for callback <- optional_callbacks do
-        assert is_atom(callback)
-      end
+    test "apply/3 callback is required" do
+      # TestStrategy should have apply/3
+      assert function_exported?(TestStrategy, :apply, 3)
+      assert function_exported?(MinimalStrategy, :apply, 3)
     end
 
-    test "apply callback should return proper format" do
-      # Test expected return formats
-      success_result = {:ok, %{enhanced: true}}
-      skip_result = {:skip, "reason for skipping"}
+    test "applicable?/2 callback is optional" do
+      # TestStrategy implements it
+      assert function_exported?(TestStrategy, :applicable?, 2)
 
-      assert match?({:ok, _}, success_result)
-      assert match?({:skip, reason} when is_binary(reason), skip_result)
+      # MinimalStrategy doesn't implement it
+      refute function_exported?(MinimalStrategy, :applicable?, 2)
     end
 
-    test "applicable callback should return boolean" do
-      # Test expected return format
-      applicable_result = true
-      not_applicable_result = false
+    test "apply/3 returns proper format" do
+      bucket = create_test_bucket([0.8])
+      program = create_test_program()
 
-      assert is_boolean(applicable_result)
-      assert is_boolean(not_applicable_result)
-    end
-  end
-
-  describe "strategy validation logic" do
-    test "validates module implements strategy interface" do
-      # Mock strategy module structure
-      strategy_module_info = %{
-        functions: [apply: 3],
-        optional_functions: [applicable?: 2]
-      }
-
-      assert strategy_module_info.functions == [apply: 3]
-      assert :applicable? in Keyword.keys(strategy_module_info.optional_functions)
+      # Should return {:ok, program} or {:skip, reason}
+      result = TestStrategy.apply(bucket, program, %{})
+      assert {:ok, ^program} = result
     end
 
-    test "handles strategy application scenarios" do
-      # High quality bucket scenario
-      high_quality_bucket = %{
-        trajectories: [%{score: 0.9}, %{score: 0.8}],
-        max_score: 0.9,
-        improvement_potential: true
-      }
+    test "apply/3 can skip with reason" do
+      # Low score
+      bucket = create_test_bucket([0.2])
+      program = create_test_program()
 
-      # Low quality bucket scenario
-      low_quality_bucket = %{
-        trajectories: [%{score: 0.2}, %{score: 0.1}],
-        max_score: 0.2,
-        improvement_potential: false
-      }
-
-      # Strategy should apply to high quality
-      assert should_apply_strategy?(high_quality_bucket)
-
-      # Strategy should skip low quality
-      refute should_apply_strategy?(low_quality_bucket)
+      result = TestStrategy.apply(bucket, program, %{})
+      assert {:skip, reason} = result
+      assert is_binary(reason)
     end
 
-    test "handles empty bucket scenario" do
-      empty_bucket = %{
-        trajectories: [],
-        max_score: 0.0,
-        improvement_potential: false
-      }
-
-      refute should_apply_strategy?(empty_bucket)
+    test "applicable?/2 returns boolean" do
+      bucket = create_test_bucket([0.8])
+      result = TestStrategy.applicable?(bucket, %{})
+      assert is_boolean(result)
     end
   end
 
-  describe "strategy error handling patterns" do
-    test "handles malformed input gracefully" do
-      malformed_bucket = %{trajectories: nil}
+  describe "strategy application patterns" do
+    test "strategy can analyze bucket quality" do
+      high_quality_bucket = create_test_bucket([0.9, 0.8, 0.7])
+      low_quality_bucket = create_test_bucket([0.2, 0.1])
 
-      # Should detect malformed input
-      assert_raise(ArgumentError, fn ->
-        validate_bucket_structure!(malformed_bucket)
+      assert TestStrategy.applicable?(high_quality_bucket, %{})
+      refute TestStrategy.applicable?(low_quality_bucket, %{})
+    end
+
+    test "strategy can handle empty bucket" do
+      empty_bucket = create_test_bucket([])
+      program = create_test_program()
+
+      result = TestStrategy.apply(empty_bucket, program, %{})
+      assert {:skip, _reason} = result
+
+      refute TestStrategy.applicable?(empty_bucket, %{})
+    end
+
+    test "strategy receives options parameter" do
+      bucket = create_test_bucket([0.8])
+      program = create_test_program()
+      opts = %{custom_option: "test_value"}
+
+      # Should not crash with custom options
+      result = TestStrategy.apply(bucket, program, opts)
+      assert {:ok, ^program} = result
+    end
+  end
+
+  describe "behavior validation" do
+    test "validates behavior implementation at compile time" do
+      # This test ensures our test strategies actually implement the behavior
+      behaviors = TestStrategy.__info__(:attributes)[:behaviour] || []
+      assert DSPEx.Teleprompter.SIMBA.Strategy in behaviors
+
+      behaviors = MinimalStrategy.__info__(:attributes)[:behaviour] || []
+      assert DSPEx.Teleprompter.SIMBA.Strategy in behaviors
+    end
+
+    test "behavior defines required callbacks" do
+      # Check that the behavior module defines the expected callbacks
+      callbacks = Strategy.behaviour_info(:callbacks)
+
+      # Required callback
+      assert {:apply, 3} in callbacks
+
+      # Optional callback
+      optional_callbacks = Strategy.behaviour_info(:optional_callbacks)
+      assert {:applicable?, 2} in optional_callbacks
+    end
+  end
+
+  describe "strategy error handling" do
+    test "strategy can handle malformed bucket" do
+      # Create a bucket-like structure that might cause issues
+      fake_bucket = %{trajectories: nil}
+      program = create_test_program()
+
+      # Strategy should handle gracefully or raise clear error
+      assert_raise(FunctionClauseError, fn ->
+        TestStrategy.apply(fake_bucket, program, %{})
       end)
     end
 
-    test "handles nil program input" do
-      bucket = %{trajectories: [%{score: 0.8}], max_score: 0.8}
-      program = nil
+    test "strategy can handle nil program" do
+      bucket = create_test_bucket([0.8])
 
-      # Strategy should handle nil gracefully or raise clear error
-      result = mock_strategy_apply(bucket, program, %{})
-      assert match?({:error, _}, result) or match?({:skip, _}, result)
+      # Strategy should handle gracefully
+      result = TestStrategy.apply(bucket, nil, %{})
+      assert {:ok, nil} = result
     end
   end
 
-  describe "strategy options handling" do
-    test "accepts strategy-specific options" do
-      bucket = %{trajectories: [%{score: 0.8}], max_score: 0.8}
-      program = %{predictors: []}
-      opts = %{quality_threshold: 0.7, max_demos: 3}
+  # Helper functions
 
-      # Should accept and process options
-      result = mock_strategy_apply(bucket, program, opts)
-      assert match?({:ok, _}, result) or match?({:skip, _}, result)
-    end
-
-    test "handles empty options" do
-      bucket = %{trajectories: [%{score: 0.8}], max_score: 0.8}
-      program = %{predictors: []}
-      opts = %{}
-
-      result = mock_strategy_apply(bucket, program, opts)
-      assert match?({:ok, _}, result) or match?({:skip, _}, result)
-    end
+  defp create_test_bucket(scores) do
+    trajectories = Enum.map(scores, &create_test_trajectory/1)
+    Bucket.new(trajectories)
   end
 
-  # Helper functions for testing strategy logic
+  defp create_test_trajectory(score) do
+    program = create_test_program()
+    example = Example.new(%{question: "test", answer: "test"})
+    inputs = %{question: "test"}
+    outputs = %{answer: "test"}
 
-  defp should_apply_strategy?(bucket) do
-    bucket.improvement_potential and bucket.max_score > 0.3
+    Trajectory.new(program, example, inputs, outputs, score)
   end
 
-  defp validate_bucket_structure!(bucket) do
-    unless is_list(bucket.trajectories) do
-      raise ArgumentError, "trajectories must be a list"
-    end
-
-    bucket
-  end
-
-  defp mock_strategy_apply(bucket, program, opts) do
-    cond do
-      is_nil(program) ->
-        {:error, "nil program"}
-
-      bucket.max_score > Map.get(opts, :quality_threshold, 0.5) ->
-        {:ok, program}
-
-      true ->
-        {:skip, "quality threshold not met"}
-    end
+  defp create_test_program do
+    # Simple mock program structure for testing
+    %{
+      signature: %{inputs: [:question], outputs: [:answer]},
+      predictors: []
+    }
   end
 end

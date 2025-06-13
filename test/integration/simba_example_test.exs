@@ -59,22 +59,28 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
       end
 
       # Fixed SIMBA configuration - use atom for strategy
-      teleprompter = SIMBA.new(
-        bsize: 3,
-        num_candidates: 4,
-        max_steps: 3,
-        max_demos: 3,
-        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo],  # Fixed: use full module name
-        temperature_for_sampling: 0.3,
-        temperature_for_candidates: 0.3
-      )
+      teleprompter =
+        SIMBA.new(
+          bsize: 3,
+          num_candidates: 4,
+          max_steps: 3,
+          max_demos: 3,
+          # Fixed: use full module name
+          strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo],
+          temperature_for_sampling: 0.3,
+          temperature_for_candidates: 0.3
+        )
 
       start_time = System.monotonic_time()
 
-      assert {:ok, optimized_program} = teleprompter.compile(student, teacher, trainset, metric_fn)
+      assert {:ok, optimized_program} =
+               SIMBA.compile(teleprompter, student, teacher, trainset, metric_fn, [])
 
       duration = System.monotonic_time() - start_time
-      IO.puts("\nSIMBA optimization completed in #{System.convert_time_unit(duration, :native, :millisecond)}ms")
+
+      IO.puts(
+        "\nSIMBA optimization completed in #{System.convert_time_unit(duration, :native, :millisecond)}ms"
+      )
 
       assert_optimization_results(student, optimized_program, trainset, metric_fn)
       test_optimized_program_performance(optimized_program)
@@ -100,14 +106,15 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
         if expected_normalized == actual_normalized, do: 1.0, else: 0.0
       end
 
-      teleprompter = SIMBA.new(
-        bsize: 2,
-        num_candidates: 3,
-        max_steps: 1,
-        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo]
-      )
+      teleprompter =
+        SIMBA.new(
+          bsize: 2,
+          num_candidates: 3,
+          max_steps: 1,
+          strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo]
+        )
 
-      {:ok, _optimized} = teleprompter.compile(student, teacher, trainset, metric_fn)
+      {:ok, _optimized} = SIMBA.compile(teleprompter, student, teacher, trainset, metric_fn, [])
 
       cleanup_qa_mock_responses()
     end
@@ -124,15 +131,16 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
       trainset = create_mixed_trainset()
       metric_fn = &simple_exact_match/2
 
-      teleprompter = SIMBA.new(
-        max_steps: 2,
-        bsize: 2,
-        num_candidates: 2,
-        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo]
-      )
+      teleprompter =
+        SIMBA.new(
+          max_steps: 2,
+          bsize: 2,
+          num_candidates: 2,
+          strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo]
+        )
 
       Enum.each(programs_to_test, fn program ->
-        {:ok, optimized} = teleprompter.compile(program, program, trainset, metric_fn)
+        {:ok, optimized} = SIMBA.compile(teleprompter, program, program, trainset, metric_fn, [])
         assert is_struct(optimized)
 
         test_input = %{question: "What is the capital of France?"}
@@ -158,28 +166,34 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
         :ok
       end
 
-      teleprompter = SIMBA.new(
-        max_steps: 3,
-        bsize: 4,
-        num_candidates: 3,
-        progress_callback: progress_callback,
-        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo]
-      )
+      teleprompter =
+        SIMBA.new(
+          max_steps: 3,
+          bsize: 4,
+          num_candidates: 3,
+          progress_callback: progress_callback,
+          strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo]
+        )
 
-      {:ok, optimized} = teleprompter.compile(student, teacher, trainset, &simple_exact_match/2)
+      {:ok, optimized} =
+        SIMBA.compile(teleprompter, student, teacher, trainset, &simple_exact_match/2, [])
 
-      improvement_metrics = Performance.calculate_improvement(
-        student,
-        optimized,
-        trainset,
-        &simple_exact_match/2
-      )
+      improvement_metrics =
+        Performance.calculate_improvement(
+          student,
+          optimized,
+          trainset,
+          &simple_exact_match/2
+        )
 
       IO.puts("\nPerformance Analysis:")
       IO.puts("Original Score: #{improvement_metrics.original_score}")
       IO.puts("Optimized Score: #{improvement_metrics.improved_score}")
       IO.puts("Absolute Improvement: #{improvement_metrics.absolute_improvement}")
-      IO.puts("Relative Improvement: #{Float.round(improvement_metrics.relative_improvement * 100, 1)}%")
+
+      IO.puts(
+        "Relative Improvement: #{Float.round(improvement_metrics.relative_improvement * 100, 1)}%"
+      )
 
       assert is_float(improvement_metrics.original_score)
       assert is_float(improvement_metrics.improved_score)
@@ -191,20 +205,36 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
     test "demonstrates bucket analysis and strategy selection" do
       trajectories = [
         %Trajectory{
-          program: nil, example: nil, inputs: %{question: "Q1"}, outputs: %{answer: "A1"},
-          score: 0.9, success: true
+          program: nil,
+          example: nil,
+          inputs: %{question: "Q1"},
+          outputs: %{answer: "A1"},
+          score: 0.9,
+          success: true
         },
         %Trajectory{
-          program: nil, example: nil, inputs: %{question: "Q2"}, outputs: %{answer: "A2"},
-          score: 0.8, success: true
+          program: nil,
+          example: nil,
+          inputs: %{question: "Q2"},
+          outputs: %{answer: "A2"},
+          score: 0.8,
+          success: true
         },
         %Trajectory{
-          program: nil, example: nil, inputs: %{question: "Q3"}, outputs: %{answer: "A3"},
-          score: 0.2, success: true
+          program: nil,
+          example: nil,
+          inputs: %{question: "Q3"},
+          outputs: %{answer: "A3"},
+          score: 0.2,
+          success: true
         },
         %Trajectory{
-          program: nil, example: nil, inputs: %{question: "Q4"}, outputs: %{answer: "A4"},
-          score: 0.1, success: false
+          program: nil,
+          example: nil,
+          inputs: %{question: "Q4"},
+          outputs: %{answer: "A4"},
+          score: 0.1,
+          success: false
         }
       ]
 
@@ -245,17 +275,19 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
       teacher = Predict.new(QASignature, :test_fidelity)
       trainset = create_fidelity_trainset()
 
-      teleprompter = SIMBA.new(
-        bsize: 32,
-        num_candidates: 6,
-        max_steps: 8,
-        max_demos: 4,
-        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo],
-        temperature_for_sampling: 0.2,
-        temperature_for_candidates: 0.2
-      )
+      teleprompter =
+        SIMBA.new(
+          bsize: 32,
+          num_candidates: 6,
+          max_steps: 8,
+          max_demos: 4,
+          strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo],
+          temperature_for_sampling: 0.2,
+          temperature_for_candidates: 0.2
+        )
 
-      {:ok, optimized} = teleprompter.compile(student, teacher, trainset, &simple_exact_match/2)
+      {:ok, optimized} =
+        SIMBA.compile(teleprompter, student, teacher, trainset, &simple_exact_match/2, [])
 
       assert_algorithmic_fidelity(optimized, trainset)
 
@@ -272,15 +304,17 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
       results =
         1..3
         |> Enum.map(fn run ->
-          teleprompter = SIMBA.new(
-            max_steps: 2,
-            bsize: 3,
-            num_candidates: 3,
-            correlation_id: "run_#{run}",
-            strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo]
-          )
+          teleprompter =
+            SIMBA.new(
+              max_steps: 2,
+              bsize: 3,
+              num_candidates: 3,
+              correlation_id: "run_#{run}",
+              strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo]
+            )
 
-          {:ok, optimized} = teleprompter.compile(student, teacher, trainset, &simple_exact_match/2)
+          {:ok, optimized} =
+            SIMBA.compile(teleprompter, student, teacher, trainset, &simple_exact_match/2, [])
 
           performance = evaluate_program_performance(optimized, trainset, &simple_exact_match/2)
           {run, optimized, performance}
@@ -308,50 +342,115 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
       "Area of rectangle = length × width = 8 × 5 = 40 square units.\n40",
       "Cost per book = total cost ÷ number of books = $15 ÷ 3 = $5.\n$5",
       # Additional responses for strategy generation
-      "16", "20", "40", "$5",
-      "16", "20", "40", "$5"
+      "16",
+      "20",
+      "40",
+      "$5",
+      "16",
+      "20",
+      "40",
+      "$5"
     ])
   end
 
   defp setup_qa_mock_responses do
     DSPEx.MockClientManager.set_mock_responses(:test_qa, [
-      "Paris", "Blue", "4", "William Shakespeare",
-      "Paris", "Blue", "4", "William Shakespeare",
-      "Paris", "Blue", "4", "William Shakespeare"
+      "Paris",
+      "Blue",
+      "4",
+      "William Shakespeare",
+      "Paris",
+      "Blue",
+      "4",
+      "William Shakespeare",
+      "Paris",
+      "Blue",
+      "4",
+      "William Shakespeare"
     ])
   end
 
   defp setup_mixed_mock_responses do
     DSPEx.MockClientManager.set_mock_responses(:test_mixed, [
-      "Paris", "London", "Berlin", "Madrid", "Rome",
-      "Paris", "London", "Berlin", "Madrid", "Rome",
-      "Paris", "London", "Berlin", "Madrid", "Rome"
+      "Paris",
+      "London",
+      "Berlin",
+      "Madrid",
+      "Rome",
+      "Paris",
+      "London",
+      "Berlin",
+      "Madrid",
+      "Rome",
+      "Paris",
+      "London",
+      "Berlin",
+      "Madrid",
+      "Rome"
     ])
   end
 
   defp setup_performance_mock_responses do
     DSPEx.MockClientManager.set_mock_responses(:test_perf, [
-      "Correct1", "Correct2", "Correct3", "Correct4",
-      "Wrong1", "Wrong2", "Correct3", "Correct4",  # Some variation
-      "Correct1", "Correct2", "Correct3", "Correct4"
+      "Correct1",
+      "Correct2",
+      "Correct3",
+      "Correct4",
+      # Some variation
+      "Wrong1",
+      "Wrong2",
+      "Correct3",
+      "Correct4",
+      "Correct1",
+      "Correct2",
+      "Correct3",
+      "Correct4"
     ])
   end
 
   defp setup_fidelity_mock_responses do
     DSPEx.MockClientManager.set_mock_responses(:test_fidelity, [
-      "Answer1", "Answer2", "Answer3", "Answer4", "Answer5",
-      "Answer1", "Answer2", "Answer3", "Answer4", "Answer5",
-      "Answer1", "Answer2", "Answer3", "Answer4", "Answer5",
-      "Answer1", "Answer2", "Answer3", "Answer4", "Answer5"
+      "Answer1",
+      "Answer2",
+      "Answer3",
+      "Answer4",
+      "Answer5",
+      "Answer1",
+      "Answer2",
+      "Answer3",
+      "Answer4",
+      "Answer5",
+      "Answer1",
+      "Answer2",
+      "Answer3",
+      "Answer4",
+      "Answer5",
+      "Answer1",
+      "Answer2",
+      "Answer3",
+      "Answer4",
+      "Answer5"
     ])
   end
 
   defp setup_stochastic_mock_responses do
     # Provide varied responses to create stochastic behavior
     responses = [
-      "Good1", "Good2", "Bad1", "Good3", "Bad2",
-      "Bad1", "Good1", "Good2", "Bad2", "Good3",
-      "Good3", "Bad1", "Good1", "Good2", "Bad2"
+      "Good1",
+      "Good2",
+      "Bad1",
+      "Good3",
+      "Bad2",
+      "Bad1",
+      "Good1",
+      "Good2",
+      "Bad2",
+      "Good3",
+      "Good3",
+      "Bad1",
+      "Good1",
+      "Good2",
+      "Bad2"
     ]
 
     DSPEx.MockClientManager.set_mock_responses(:test_stochastic, responses)
@@ -360,35 +459,52 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
   defp cleanup_math_mock_responses, do: DSPEx.MockClientManager.clear_mock_responses(:test_math)
   defp cleanup_qa_mock_responses, do: DSPEx.MockClientManager.clear_mock_responses(:test_qa)
   defp cleanup_mixed_mock_responses, do: DSPEx.MockClientManager.clear_mock_responses(:test_mixed)
-  defp cleanup_performance_mock_responses, do: DSPEx.MockClientManager.clear_mock_responses(:test_perf)
-  defp cleanup_fidelity_mock_responses, do: DSPEx.MockClientManager.clear_mock_responses(:test_fidelity)
-  defp cleanup_stochastic_mock_responses, do: DSPEx.MockClientManager.clear_mock_responses(:test_stochastic)
+
+  defp cleanup_performance_mock_responses,
+    do: DSPEx.MockClientManager.clear_mock_responses(:test_perf)
+
+  defp cleanup_fidelity_mock_responses,
+    do: DSPEx.MockClientManager.clear_mock_responses(:test_fidelity)
+
+  defp cleanup_stochastic_mock_responses,
+    do: DSPEx.MockClientManager.clear_mock_responses(:test_stochastic)
 
   defp create_math_trainset do
     [
-      Example.new(%{
-        problem: "Sarah has 15 apples. She sells 7 apples and then gets 8 more apples. How many apples does she have now?",
-        reasoning: "Let me solve this step by step. 15 - 7 = 8 apples remaining. Then 8 + 8 = 16 apples total.",
-        answer: "16"
-      }, [:problem]),
-
-      Example.new(%{
-        problem: "What is 25% of 80?",
-        reasoning: "To find 25% of 80: 25% = 0.25, so 0.25 × 80 = 20.",
-        answer: "20"
-      }, [:problem]),
-
-      Example.new(%{
-        problem: "A rectangle has a length of 8 units and width of 5 units. What is its area?",
-        reasoning: "Area of rectangle = length × width = 8 × 5 = 40 square units.",
-        answer: "40"
-      }, [:problem]),
-
-      Example.new(%{
-        problem: "If 3 books cost $15, how much does each book cost?",
-        reasoning: "Cost per book = total cost ÷ number of books = $15 ÷ 3 = $5.",
-        answer: "$5"
-      }, [:problem])
+      Example.new(
+        %{
+          problem:
+            "Sarah has 15 apples. She sells 7 apples and then gets 8 more apples. How many apples does she have now?",
+          reasoning:
+            "Let me solve this step by step. 15 - 7 = 8 apples remaining. Then 8 + 8 = 16 apples total.",
+          answer: "16"
+        },
+        [:problem]
+      ),
+      Example.new(
+        %{
+          problem: "What is 25% of 80?",
+          reasoning: "To find 25% of 80: 25% = 0.25, so 0.25 × 80 = 20.",
+          answer: "20"
+        },
+        [:problem]
+      ),
+      Example.new(
+        %{
+          problem: "A rectangle has a length of 8 units and width of 5 units. What is its area?",
+          reasoning: "Area of rectangle = length × width = 8 × 5 = 40 square units.",
+          answer: "40"
+        },
+        [:problem]
+      ),
+      Example.new(
+        %{
+          problem: "If 3 books cost $15, how much does each book cost?",
+          reasoning: "Cost per book = total cost ÷ number of books = $15 ÷ 3 = $5.",
+          answer: "$5"
+        },
+        [:problem]
+      )
     ]
   end
 
@@ -538,7 +654,8 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
               _ -> 0.0
             end
 
-          {:error, _} -> 0.0
+          {:error, _} ->
+            0.0
         end
       end)
 
@@ -549,10 +666,13 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
 
   defp calculate_variance(values) do
     mean = Enum.sum(values) / length(values)
-    variance_sum = Enum.reduce(values, 0.0, fn value, acc ->
-      diff = value - mean
-      acc + (diff * diff)
-    end)
+
+    variance_sum =
+      Enum.reduce(values, 0.0, fn value, acc ->
+        diff = value - mean
+        acc + diff * diff
+      end)
+
     variance_sum / length(values)
   end
 end

@@ -62,7 +62,7 @@ defmodule SIMBA.UnitTestSuiteTest do
     bucket_data = %{trajectories: [%{score: 0.8}], max_score: 0.8}
 
     result = mock_strategy_apply(bucket_data, %{predictors: []}, %{})
-    assert match?({:ok, _} | {:skip, _}, result)
+    assert match?({:ok, _}, result) or match?({:skip, _}, result)
   end
 
   # Helper functions (copied from our test files)
