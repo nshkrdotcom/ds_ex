@@ -1,4 +1,6 @@
 defmodule DSPEx.Teleprompter.SIMBA.Strategy do
+  alias DSPEx.Teleprompter.SIMBA.Bucket
+
   @moduledoc """
   Behavior for SIMBA optimization strategies.
 
