@@ -50,6 +50,7 @@ defmodule Dspex.MixProject do
 
       # Structured outputs
       {:instructor_lite, "~> 0.3.0"},
+      {:elixact, git: "https://github.com/nshkrdotcom/elixact.git", branch: "main"},
 
       # Testing & Development
       {:propcheck, "~> 1.4", only: [:test, :dev]},
