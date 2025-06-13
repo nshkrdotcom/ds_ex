@@ -36,7 +36,7 @@ defmodule Dspex.MixProject do
   defp deps do
     [
       # Infrastructure & Observability
-      {:foundation, "~> 0.1.3"},
+      {:foundation, "~> 0.1.5"},
 
       # Core - JSON serialization (jason already included in foundation)
       # {:jason, "~> 1.4"}, # Removed - provided by Foundation
