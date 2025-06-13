@@ -63,5 +63,3 @@ Thumbs.db
 # Additional temporary and log files
 *.tmp
 *.log
-
-/dspy/
