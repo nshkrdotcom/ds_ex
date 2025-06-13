@@ -22,10 +22,8 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
     test "defines strategy behavior contract" do
       # Strategy should implement behavior contract
       behavior_functions = %{
-        # (bucket, source_program, opts)
-        apply: 3,
-        # (bucket, opts)
-        applicable?: 2
+        apply: 3,      # (bucket, source_program, opts)
+        applicable?: 2  # (bucket, opts)
       }
 
       for {func, arity} <- behavior_functions do
@@ -111,8 +109,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
 
     test "handles trajectory to demo conversion failure" do
       # Create a bucket that will fail demo conversion
-      # Zero score trajectory
-      bucket_data = create_test_bucket_data([0.0])
+      bucket_data = create_test_bucket_data([0.0])  # Zero score trajectory
       program = create_test_program_data()
 
       {:skip, reason} = mock_append_demo_apply(bucket_data, program, %{quality_threshold: 0.0})
@@ -156,11 +153,9 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
 
     test "respects max_demos limit" do
       # Create program with many demos
-      existing_demos =
-        for i <- 1..5 do
-          %{question: "q#{i}", answer: "a#{i}"}
-        end
-
+      existing_demos = for i <- 1..5 do
+        %{question: "q#{i}", answer: "a#{i}"}
+      end
       program = create_test_program_data(demos: existing_demos)
 
       bucket_data = create_test_bucket_data([0.9])
@@ -176,11 +171,9 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
   describe "demo dropping behavior" do
     test "drops demos when approaching limit" do
       # This tests the Poisson sampling behavior for demo dropping
-      existing_demos =
-        for i <- 1..4 do
-          %{question: "q#{i}", answer: "a#{i}"}
-        end
-
+      existing_demos = for i <- 1..4 do
+        %{question: "q#{i}", answer: "a#{i}"}
+      end
       program = create_test_program_data(demos: existing_demos)
 
       bucket_data = create_test_bucket_data([0.9])
@@ -193,8 +186,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
     end
 
     test "handles programs without demos field" do
-      # No demos field
-      program = %{predictors: []}
+      program = %{predictors: []}  # No demos field
 
       bucket_data = create_test_bucket_data([0.9])
 
@@ -210,7 +202,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
 
       # Should handle gracefully or raise clear error
       result = mock_append_demo_apply(bucket_data, nil)
-      assert match?({:error, _}, result) or match?({:skip, _}, result)
+      assert match?({:error, _} | {:skip, _}, result)
     end
 
     test "handles malformed bucket" do
@@ -218,7 +210,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
       fake_bucket = %{trajectories: nil}
 
       result = mock_append_demo_apply(fake_bucket, program)
-      assert match?({:error, _}, result) or match?({:skip, _}, result)
+      assert match?({:error, _} | {:skip, _}, result)
     end
 
     test "handles very high quality threshold" do
@@ -234,15 +226,14 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
   # Helper functions for testing AppendDemo logic without actual implementation
 
   defp create_test_bucket_data(scores) do
-    trajectories =
-      Enum.map(scores, fn score ->
-        %{
-          score: score,
-          success: score > 0.0,
-          inputs: %{question: "test"},
-          outputs: %{answer: "test"}
-        }
-      end)
+    trajectories = Enum.map(scores, fn score ->
+      %{
+        score: score,
+        success: score > 0.0,
+        inputs: %{question: "test"},
+        outputs: %{answer: "test"}
+      }
+    end)
 
     if Enum.empty?(trajectories) do
       %{
@@ -251,7 +242,6 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
       }
     else
       max_score = Enum.max(scores)
-
       %{
         trajectories: Enum.sort_by(trajectories, & &1.score, :desc),
         max_score: max_score
@@ -300,23 +290,12 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
         {:skip, "no high quality trajectories found"}
 
       true ->
-        # Try to convert best trajectory to demo
-        best_trajectory = get_best_trajectory(bucket_data)
-
-        case mock_create_demo_from_trajectory(best_trajectory) do
-          {:ok, _demo} ->
-            enhanced_program =
-              Map.merge(program, %{
-                enhanced: true,
-                max_demos_applied: max_demos <= 3,
-                demos_dropped: length(Map.get(program, :demos, [])) >= max_demos
-              })
-
-            {:ok, enhanced_program}
-
-          {:error, reason} ->
-            {:skip, "demo conversion failed: #{reason}"}
-        end
+        enhanced_program = Map.merge(program, %{
+          enhanced: true,
+          max_demos_applied: max_demos <= 3,
+          demos_dropped: length(Map.get(program, :demos, [])) >= max_demos
+        })
+        {:ok, enhanced_program}
     end
   end
 

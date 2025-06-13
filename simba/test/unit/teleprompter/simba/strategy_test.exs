@@ -8,22 +8,18 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
   @moduletag :group_1
 
   alias DSPEx.Teleprompter.SIMBA.{Strategy, Bucket, Trajectory}
-  alias DSPEx.Example
+  alias DSPEx.{Example, Program}
 
   # Test strategy implementation for testing
   defmodule TestStrategy do
     @behaviour DSPEx.Teleprompter.SIMBA.Strategy
 
     @impl true
-    def apply(bucket, source_program, _opts) do
-      try do
-        case Bucket.best_trajectory(bucket) do
-          nil -> {:skip, "No trajectories found"}
-          trajectory when trajectory.score > 0.5 -> {:ok, source_program}
-          _ -> {:skip, "Score too low"}
-        end
-      rescue
-        _error -> raise RuntimeError, "Strategy cannot handle malformed bucket"
+    def apply(bucket, source_program, opts) do
+      case Bucket.best_trajectory(bucket) do
+        nil -> {:skip, "No trajectories found"}
+        trajectory when trajectory.score > 0.5 -> {:ok, source_program}
+        _ -> {:skip, "Score too low"}
       end
     end
 
@@ -99,8 +95,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
     end
 
     test "apply/3 can skip with reason" do
-      # Low score
-      bucket = create_test_bucket([0.2])
+      bucket = create_test_bucket([0.2])  # Low score
       program = create_test_program()
 
       result = TestStrategy.apply(bucket, program, %{})
@@ -175,7 +170,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
       program = create_test_program()
 
       # Strategy should handle gracefully or raise clear error
-      assert_raise(RuntimeError, fn ->
+      assert_raise(exception when exception in [FunctionClauseError, MatchError, KeyError], fn ->
         TestStrategy.apply(fake_bucket, program, %{})
       end)
     end
@@ -206,8 +201,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
   end
 
   defp create_test_program do
-    # Use a simple map to represent a program for testing
-    %{
+    %Program{
       signature: %{inputs: [:question], outputs: [:answer]},
       predictors: []
     }

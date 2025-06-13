@@ -23,7 +23,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   @behaviour DSPEx.Teleprompter
 
-  alias DSPEx.{Example, Program}
+  alias DSPEx.{Example, Program, OptimizedProgram}
   alias DSPEx.Teleprompter.SIMBA.{Trajectory, Bucket}
 
   @enforce_keys []
@@ -72,14 +72,16 @@ defmodule DSPEx.Teleprompter.SIMBA do
     struct(__MODULE__, opts)
   end
 
+  @impl DSPEx.Teleprompter
+  def compile(student, teacher, trainset, metric_fn, opts \\ [])
+
   def compile(%__MODULE__{} = teleprompter, student, teacher, trainset, metric_fn, opts) do
     config_opts = struct_to_keyword(teleprompter)
     merged_opts = Keyword.merge(config_opts, opts)
     do_compile(student, teacher, trainset, metric_fn, merged_opts)
   end
 
-  @impl DSPEx.Teleprompter
-  def compile(student, teacher, trainset, metric_fn, opts \\ []) when is_list(opts) do
+  def compile(student, teacher, trainset, metric_fn, opts) when is_list(opts) do
     do_compile(student, teacher, trainset, metric_fn, opts)
   end
 
@@ -102,15 +104,14 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
     result =
       with :ok <- validate_inputs(student, teacher, trainset, metric_fn),
-           {:ok, optimized_student} <-
-             run_simba_optimization(
-               student,
-               teacher,
-               trainset,
-               metric_fn,
-               config,
-               correlation_id
-             ) do
+           {:ok, optimized_student} <- run_simba_optimization(
+             student,
+             teacher,
+             trainset,
+             metric_fn,
+             config,
+             correlation_id
+           ) do
         {:ok, optimized_student}
       else
         {:error, reason} -> {:error, reason}
@@ -128,7 +129,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     result
   end
 
-  defp run_simba_optimization(student, _teacher, trainset, metric_fn, config, correlation_id) do
+  defp run_simba_optimization(student, teacher, trainset, metric_fn, config, correlation_id) do
     try do
       # Initialize properly
       programs = [student]
@@ -137,11 +138,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
       winning_programs = [student]
 
       # Initialize RNG with better seed
-      :rand.seed(
-        :exsplus,
-        {System.unique_integer(), System.system_time(), self() |> :erlang.phash2()}
-      )
-
+      :rand.seed(:exsplus, {System.unique_integer(), System.system_time(), self() |> :erlang.phash2()})
       data_indices = 0..(length(trainset) - 1) |> Enum.to_list() |> Enum.shuffle()
 
       # Build predictor mappings
@@ -149,10 +146,10 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
       # Main optimization loop
       final_state =
-        Enum.reduce(
-          0..(config.max_steps - 1),
+        Enum.reduce(0..(config.max_steps - 1),
           {programs, program_scores, winning_programs, next_program_idx},
           fn step, {current_programs, current_scores, current_winning, prog_idx} ->
+
             emit_telemetry(
               [:dspex, :teleprompter, :simba, :iteration, :start],
               %{step: step},
@@ -165,62 +162,49 @@ defmodule DSPEx.Teleprompter.SIMBA do
             batch = Enum.map(batch_indices, &Enum.at(trainset, &1))
 
             # STEP 2: Prepare models with temperature variations
-            models =
-              prepare_models_for_resampling(List.first(current_programs), config.num_candidates)
-
-            top_programs =
-              select_top_programs(current_programs, current_scores, config.num_candidates)
+            models = prepare_models_for_resampling(List.first(current_programs), config.num_candidates)
+            top_programs = select_top_programs(current_programs, current_scores, config.num_candidates)
 
             # STEP 3: Sample trajectories
-            trajectories =
-              sample_trajectories(
-                batch,
-                top_programs,
-                current_programs,
-                models,
-                metric_fn,
-                config,
-                correlation_id
-              )
+            trajectories = sample_trajectories(
+              batch,
+              top_programs,
+              current_programs,
+              models,
+              metric_fn,
+              config,
+              correlation_id
+            )
 
             # STEP 4: Create performance buckets
             buckets = create_performance_buckets(trajectories, config, correlation_id)
 
             # STEP 5: Apply strategies to create candidates
-            {new_candidates, updated_prog_idx} =
-              apply_strategies_to_buckets(
-                buckets,
-                current_programs,
-                config,
-                prog_idx,
-                predictor2name,
-                name2predictor,
-                correlation_id
-              )
+            {new_candidates, updated_prog_idx} = apply_strategies_to_buckets(
+              buckets,
+              current_programs,
+              config,
+              prog_idx,
+              predictor2name,
+              name2predictor,
+              correlation_id
+            )
 
             # STEP 6: Evaluate candidates and update state
             candidate_scores = evaluate_candidates_batch(new_candidates, batch, metric_fn)
 
             # STEP 7: Select winning programs
-            updated_winning =
-              case select_best_from_candidates(new_candidates, candidate_scores) do
-                nil ->
-                  # No valid candidates, keep current winning programs
-                  current_winning
-
-                best_candidate_program ->
-                  [best_candidate_program | current_winning]
-              end
+            best_candidate_program = select_best_from_candidates(new_candidates, candidate_scores)
+            updated_winning = [best_candidate_program | current_winning]
 
             # STEP 8: Update program pool
-            {updated_programs, updated_scores} =
-              update_program_pool(
-                current_programs,
-                current_scores,
-                new_candidates,
-                candidate_scores,
-                updated_prog_idx
-              )
+            {updated_programs, updated_scores} = update_program_pool(
+              current_programs,
+              current_scores,
+              new_candidates,
+              candidate_scores,
+              updated_prog_idx
+            )
 
             emit_telemetry(
               [:dspex, :teleprompter, :simba, :iteration, :stop],
@@ -229,8 +213,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
             )
 
             {updated_programs, updated_scores, updated_winning, updated_prog_idx}
-          end
-        )
+          end)
 
       {_final_programs, _final_scores, final_winning, _final_idx} = final_state
 
@@ -245,7 +228,6 @@ defmodule DSPEx.Teleprompter.SIMBA do
           %{error_type: error.__struct__},
           %{correlation_id: correlation_id, error: inspect(error)}
         )
-
         {:error, {:optimization_failed, error}}
     catch
       :exit, reason ->
@@ -254,25 +236,17 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   # Sample trajectories for the current mini-batch
-  defp sample_trajectories(
-         batch,
-         top_programs,
-         all_programs,
-         models,
-         metric_fn,
-         config,
-         correlation_id
-       ) do
+  defp sample_trajectories(batch, top_programs, all_programs, models, metric_fn, config, correlation_id) do
     exec_pairs =
       for {example, example_idx} <- Enum.with_index(batch),
           {model_config, model_idx} <- Enum.with_index(models) do
+
         # Use softmax sampling like DSPy
-        chosen_prog_idx =
-          softmax_sample(
-            top_programs,
-            all_programs,
-            config.temperature_for_sampling
-          )
+        chosen_prog_idx = softmax_sample(
+          top_programs,
+          all_programs,
+          config.temperature_for_sampling
+        )
 
         candidate_system = Enum.at(all_programs, chosen_prog_idx)
 
@@ -312,6 +286,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
   # Execute a program and capture the trajectory
   defp execute_with_trajectory(program, example, model_config, metric_fn, exec_id) do
     start_time = System.monotonic_time()
+
     inputs = Example.inputs(example)
     execution_opts = model_config_to_opts(model_config)
 
@@ -357,10 +332,10 @@ defmodule DSPEx.Teleprompter.SIMBA do
       %Trajectory{
         program: program,
         example: example,
-        inputs: Example.inputs(example),
+        inputs: inputs,
         outputs: %{},
         score: 0.0,
-        duration: 0,
+        duration: System.monotonic_time() - start_time,
         model_config: model_config,
         success: false,
         error: error,
@@ -424,19 +399,10 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   # Apply strategies to buckets to generate new candidate programs
-  defp apply_strategies_to_buckets(
-         buckets,
-         programs,
-         config,
-         next_program_idx,
-         predictor2name,
-         name2predictor,
-         correlation_id
-       ) do
-    viable_buckets =
-      Enum.filter(buckets, fn bucket ->
-        bucket.metadata[:max_to_min_gap] > 0.01 and bucket.metadata[:max_score] > 0.1
-      end)
+  defp apply_strategies_to_buckets(buckets, programs, config, next_program_idx, predictor2name, name2predictor, correlation_id) do
+    viable_buckets = Enum.filter(buckets, fn bucket ->
+      bucket.metadata[:max_to_min_gap] > 0.01 and bucket.metadata[:max_score] > 0.1
+    end)
 
     top_buckets = Enum.take(viable_buckets, config.num_candidates)
 
@@ -449,20 +415,11 @@ defmodule DSPEx.Teleprompter.SIMBA do
     {candidates, updated_idx} =
       Enum.reduce(top_buckets, {[], next_program_idx}, fn bucket, {acc_candidates, current_idx} ->
         program_scores = Enum.map(programs, fn _p -> 0.5 end)
-
-        source_program_idx =
-          softmax_sample_simple(program_scores, config.temperature_for_candidates)
-
+        source_program_idx = softmax_sample_simple(program_scores, config.temperature_for_candidates)
         source_program = Enum.at(programs, source_program_idx)
 
-        case apply_first_applicable_strategy(
-               bucket,
-               source_program,
-               config.strategies,
-               predictor2name,
-               name2predictor,
-               config
-             ) do
+        case apply_first_applicable_strategy(bucket, source_program, config.strategies,
+                                           predictor2name, name2predictor, config) do
           {:ok, new_program} ->
             {[new_program | acc_candidates], current_idx + 1}
 
@@ -499,8 +456,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
                   _ -> 0.0
                 end
 
-              {:error, _} ->
-                0.0
+              {:error, _} -> 0.0
             end
           end)
 
@@ -517,17 +473,11 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   # Select best candidate from evaluation results
   defp select_best_from_candidates(candidates, candidate_scores) do
-    cond do
-      Enum.empty?(candidate_scores) and not Enum.empty?(candidates) ->
-        List.first(candidates)
-
-      not Enum.empty?(candidate_scores) ->
-        {best_idx, _best_score} = Enum.max_by(candidate_scores, fn {_idx, score} -> score end)
-        Enum.at(candidates, best_idx) || List.first(candidates)
-
-      true ->
-        # Return nil if we have no candidates, caller should handle this
-        nil
+    if Enum.empty?(candidate_scores) do
+      List.first(candidates) || %{}
+    else
+      {best_idx, _best_score} = Enum.max_by(candidate_scores, fn {_idx, score} -> score end)
+      Enum.at(candidates, best_idx) || List.first(candidates) || %{}
     end
   end
 
@@ -546,58 +496,46 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   # Select final best program from winning programs
   defp select_final_best_program(winning_programs, trainset, metric_fn) do
-    # Filter out invalid programs
-    valid_programs =
-      Enum.filter(winning_programs, fn program ->
-        is_struct(program) and Map.has_key?(program, :__struct__)
-      end)
+    program_scores =
+      winning_programs
+      |> Enum.with_index()
+      |> Task.async_stream(
+        fn {program, _idx} ->
+          sample_size = min(50, length(trainset))
+          sample = Enum.take_random(trainset, sample_size)
 
-    if Enum.empty?(valid_programs) do
-      # Fall back to first winning program if no valid ones
+          scores =
+            sample
+            |> Enum.map(fn example ->
+              inputs = Example.inputs(example)
+
+              case Program.forward(program, inputs) do
+                {:ok, outputs} ->
+                  try do
+                    metric_fn.(example, outputs)
+                  rescue
+                    _ -> 0.0
+                  end
+
+                {:error, _} -> 0.0
+              end
+            end)
+
+          avg_score = if Enum.empty?(scores), do: 0.0, else: Enum.sum(scores) / length(scores)
+          {program, avg_score}
+        end,
+        max_concurrency: 5,
+        timeout: 60_000
+      )
+      |> Stream.filter(&match?({:ok, _}, &1))
+      |> Stream.map(fn {:ok, result} -> result end)
+      |> Enum.to_list()
+
+    if Enum.empty?(program_scores) do
       List.first(winning_programs)
     else
-      program_scores =
-        valid_programs
-        |> Enum.with_index()
-        |> Task.async_stream(
-          fn {program, _idx} ->
-            sample_size = min(50, length(trainset))
-            sample = Enum.take_random(trainset, sample_size)
-
-            scores =
-              sample
-              |> Enum.map(fn example ->
-                inputs = Example.inputs(example)
-
-                case Program.forward(program, inputs) do
-                  {:ok, outputs} ->
-                    try do
-                      metric_fn.(example, outputs)
-                    rescue
-                      _ -> 0.0
-                    end
-
-                  {:error, _} ->
-                    0.0
-                end
-              end)
-
-            avg_score = if Enum.empty?(scores), do: 0.0, else: Enum.sum(scores) / length(scores)
-            {program, avg_score}
-          end,
-          max_concurrency: 5,
-          timeout: 60_000
-        )
-        |> Stream.filter(&match?({:ok, _}, &1))
-        |> Stream.map(fn {:ok, result} -> result end)
-        |> Enum.to_list()
-
-      if Enum.empty?(program_scores) do
-        List.first(valid_programs)
-      else
-        {best_program, _best_score} = Enum.max_by(program_scores, fn {_prog, score} -> score end)
-        best_program
-      end
+      {best_program, _best_score} = Enum.max_by(program_scores, fn {_prog, score} -> score end)
+      best_program
     end
   end
 
@@ -648,14 +586,13 @@ defmodule DSPEx.Teleprompter.SIMBA do
     end)
   end
 
-  defp prepare_models_for_resampling(_base_program, num_candidates) do
+  defp prepare_models_for_resampling(base_program, num_candidates) do
     base_temp = 0.7
 
-    temperatures =
-      [base_temp] ++
-        Enum.map(1..(num_candidates - 1), fn i ->
-          0.5 + i * (0.5 / num_candidates)
-        end)
+    temperatures = [base_temp] ++
+      Enum.map(1..(num_candidates - 1), fn i ->
+        0.5 + i * (0.5 / num_candidates)
+      end)
 
     temperatures
     |> Enum.uniq()
@@ -712,9 +649,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
         0
       end
     else
-      {_max_score, max_idx} =
-        scores |> Enum.with_index() |> Enum.max_by(fn {score, _} -> score end)
-
+      {_max_score, max_idx} = scores |> Enum.with_index() |> Enum.max_by(fn {score, _} -> score end)
       max_idx
     end
   end
@@ -726,7 +661,6 @@ defmodule DSPEx.Teleprompter.SIMBA do
     |> Enum.with_index()
     |> Enum.reduce_while(0.0, fn {prob, idx}, acc ->
       new_acc = acc + prob
-
       if random_val <= new_acc do
         {:halt, idx}
       else
@@ -742,14 +676,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     {predictor2name, name2predictor}
   end
 
-  defp apply_first_applicable_strategy(
-         bucket,
-         source_program,
-         strategies,
-         predictor2name,
-         name2predictor,
-         config
-       ) do
+  defp apply_first_applicable_strategy(bucket, source_program, strategies, predictor2name, name2predictor, config) do
     opts = %{
       max_demos: config.max_demos,
       demo_input_field_maxlen: config.demo_input_field_maxlen,

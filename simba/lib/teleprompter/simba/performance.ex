@@ -4,7 +4,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Performance do
   Performance tracking and analysis utilities for SIMBA optimization.
   """
 
-  alias DSPEx.Teleprompter.SIMBA.Bucket
+  alias DSPEx.Teleprompter.SIMBA.{Trajectory, Bucket}
 
   @doc """
   Calculate performance statistics for a list of buckets.
@@ -20,10 +20,9 @@ defmodule DSPEx.Teleprompter.SIMBA.Performance do
         improvement_potential: 0.0
       }
     else
-      total_trajectories =
-        Enum.reduce(buckets, 0, fn bucket, acc ->
-          acc + length(bucket.trajectories)
-        end)
+      total_trajectories = Enum.reduce(buckets, 0, fn bucket, acc ->
+        acc + length(bucket.trajectories)
+      end)
 
       bucket_scores = Enum.map(buckets, & &1.max_score)
       avg_bucket_score = Enum.sum(bucket_scores) / length(bucket_scores)
@@ -72,22 +71,14 @@ defmodule DSPEx.Teleprompter.SIMBA.Performance do
     original_scores = evaluate_program(original_program, test_examples, metric_fn)
     improved_scores = evaluate_program(improved_program, test_examples, metric_fn)
 
-    original_avg =
-      if Enum.empty?(original_scores),
-        do: 0.0,
-        else: Enum.sum(original_scores) / length(original_scores)
-
-    improved_avg =
-      if Enum.empty?(improved_scores),
-        do: 0.0,
-        else: Enum.sum(improved_scores) / length(improved_scores)
+    original_avg = if Enum.empty?(original_scores), do: 0.0, else: Enum.sum(original_scores) / length(original_scores)
+    improved_avg = if Enum.empty?(improved_scores), do: 0.0, else: Enum.sum(improved_scores) / length(improved_scores)
 
     %{
       original_score: original_avg,
       improved_score: improved_avg,
       absolute_improvement: improved_avg - original_avg,
-      relative_improvement:
-        if(original_avg > 0, do: (improved_avg - original_avg) / original_avg, else: 0.0),
+      relative_improvement: if(original_avg > 0, do: (improved_avg - original_avg) / original_avg, else: 0.0),
       improved: improved_avg > original_avg
     }
   end
@@ -105,8 +96,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Performance do
             _ -> 0.0
           end
 
-        {:error, _} ->
-          0.0
+        {:error, _} -> 0.0
       end
     end)
   end

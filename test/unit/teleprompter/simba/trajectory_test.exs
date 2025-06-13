@@ -128,9 +128,10 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
       assert demo_data[:answer] == "Paris"
       assert demo_data[:confidence] == "high"
 
-      # Input keys should be preserved (order doesn't matter)
-      expected_input_keys = [:question, :context]
-      assert Enum.sort(demo_data[:input_keys]) == Enum.sort(expected_input_keys)
+      # Input keys should be preserved (sorted)
+      # alphabetical order
+      expected_input_keys = [:context, :question]
+      assert demo_data[:input_keys] == expected_input_keys
     end
 
     test "fails for unsuccessful trajectory" do
@@ -275,7 +276,7 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
 
       true ->
         combined_data = Map.merge(trajectory_data.inputs, trajectory_data.outputs)
-        input_keys = Map.keys(trajectory_data.inputs)
+        input_keys = trajectory_data.inputs |> Map.keys() |> Enum.sort()
 
         demo_data = Map.put(combined_data, :input_keys, input_keys)
         {:ok, demo_data}

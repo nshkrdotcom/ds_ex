@@ -20,8 +20,8 @@ defmodule DSPEx.Teleprompter.SIMBATest do
       assert simba.max_demos == 4
       assert simba.demo_input_field_maxlen == 100_000
       assert simba.num_threads == nil
-      # Phase 1: Empty strategies list
-      assert simba.strategies == []
+      # Full implementation: Default AppendDemo strategy
+      assert simba.strategies == [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo]
       assert simba.temperature_for_sampling == 0.2
       assert simba.temperature_for_candidates == 0.2
       assert simba.progress_callback == nil
@@ -85,10 +85,12 @@ defmodule DSPEx.Teleprompter.SIMBATest do
     end
 
     test "compile/5 with basic validation - Phase 1 stub" do
-      # Phase 1: Basic validation test with stub implementation
-      student = %{some: "program"}
-      teacher = %{some: "teacher"}
-      trainset = [%{example: "data"}]
+      # Full implementation: Basic validation test with stub implementation
+      # Use proper structs for student/teacher programs
+      defmodule TestSignature, do: use(DSPEx.Signature, "question -> answer")
+      student = DSPEx.Predict.new(TestSignature, :gpt3_5)
+      teacher = DSPEx.Predict.new(TestSignature, :gpt4)
+      trainset = [DSPEx.Example.new(%{question: "test", answer: "test"})]
       metric_fn = fn _ex, _out -> 0.8 end
 
       # Should return error for invalid inputs
@@ -101,8 +103,8 @@ defmodule DSPEx.Teleprompter.SIMBATest do
       assert {:error, :invalid_metric_function} =
                SIMBA.compile(student, teacher, trainset, "not_a_function", [])
 
-      # Should return student unchanged for valid inputs (Phase 1 stub)
-      assert {:ok, ^student} = SIMBA.compile(student, teacher, trainset, metric_fn, [])
+      # Should succeed with valid inputs (full implementation optimizes)
+      assert {:ok, _optimized_program} = SIMBA.compile(student, teacher, trainset, metric_fn, [])
     end
   end
 end

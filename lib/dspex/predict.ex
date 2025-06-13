@@ -295,7 +295,13 @@ defmodule DSPEx.Predict do
       outputs = DSPEx.Example.outputs(demo)
 
       input_text = Enum.map_join(inputs, ", ", fn {k, v} -> "#{k}: #{v}" end)
-      output_text = Enum.map_join(outputs, ", ", fn {k, v} -> "#{k}: #{v}" end)
+      # Filter out metadata fields that shouldn't be stringified
+      filtered_outputs =
+        Enum.reject(outputs, fn {k, _v} ->
+          String.starts_with?(to_string(k), "__") or String.ends_with?(to_string(k), "_metadata")
+        end)
+
+      output_text = Enum.map_join(filtered_outputs, ", ", fn {k, v} -> "#{k}: #{v}" end)
 
       "Example #{index}:\nInput: #{input_text}\nOutput: #{output_text}"
     end)

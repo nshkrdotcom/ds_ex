@@ -32,7 +32,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy do
 
   """
 
-  alias DSPEx.Teleprompter.SIMBA.Bucket
+  alias DSPEx.Teleprompter.SIMBA.{Bucket, Trajectory}
 
   @doc """
   Apply the strategy to a bucket to create a new program variant.
@@ -63,7 +63,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy do
 
   """
   @callback apply(Bucket.t(), struct(), map()) ::
-              {:ok, struct()} | {:skip, String.t()}
+    {:ok, struct()} | {:skip, String.t()}
 
   @doc """
   Check if strategy is applicable to the given bucket.
@@ -125,7 +125,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy do
 
   """
   @spec apply_first_applicable([module()], Bucket.t(), struct(), map()) ::
-          {:ok, struct()} | {:skip, String.t()}
+    {:ok, struct()} | {:skip, String.t()}
   def apply_first_applicable(strategies, bucket, source_program, opts \\ %{}) do
     strategies
     |> Enum.reduce_while({:skip, "No strategies provided"}, fn strategy_module, _acc ->
@@ -169,8 +169,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy do
   @spec get_strategy_info(module()) :: {:ok, map()} | {:error, term()}
   def get_strategy_info(strategy_module) when is_atom(strategy_module) do
     if implements_strategy?(strategy_module) do
-      strategy_name =
-        strategy_module
+      strategy_name = strategy_module
         |> Module.split()
         |> List.last()
         |> Macro.underscore()

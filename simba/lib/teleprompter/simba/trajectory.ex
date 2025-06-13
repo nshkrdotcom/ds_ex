@@ -10,26 +10,16 @@ defmodule DSPEx.Teleprompter.SIMBA.Trajectory do
 
   @enforce_keys [:program, :example, :inputs, :outputs, :score]
   defstruct [
-    # The program that was executed
-    :program,
-    # The example that was processed
-    :example,
-    # Input values
-    :inputs,
-    # Output values
-    :outputs,
-    # Performance score from metric function
-    :score,
-    # Execution time in native units
-    :duration,
-    # Model configuration used
-    :model_config,
-    # Whether execution succeeded
-    :success,
-    # Error details if execution failed
-    :error,
-    # Additional metadata
-    :metadata
+    :program,        # The program that was executed
+    :example,        # The example that was processed
+    :inputs,         # Input values
+    :outputs,        # Output values
+    :score,          # Performance score from metric function
+    :duration,       # Execution time in native units
+    :model_config,   # Model configuration used
+    :success,        # Whether execution succeeded
+    :error,          # Error details if execution failed
+    :metadata        # Additional metadata
   ]
 
   @type t :: %__MODULE__{
@@ -84,7 +74,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Trajectory do
   @spec to_demo(t()) :: {:ok, DSPEx.Example.t()} | {:error, term()}
   def to_demo(%__MODULE__{inputs: inputs, outputs: outputs, success: true}) do
     combined_data = Map.merge(inputs, outputs)
-    input_keys = inputs |> Map.keys() |> Enum.sort()
+    input_keys = Map.keys(inputs)
 
     demo = DSPEx.Example.new(combined_data, input_keys)
     {:ok, demo}
