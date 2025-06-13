@@ -10,16 +10,26 @@ defmodule DSPEx.Teleprompter.SIMBA.Trajectory do
 
   @enforce_keys [:program, :example, :inputs, :outputs, :score]
   defstruct [
-    :program,        # The program that was executed
-    :example,        # The example that was processed
-    :inputs,         # Input values
-    :outputs,        # Output values
-    :score,          # Performance score from metric function
-    :duration,       # Execution time in native units
-    :model_config,   # Model configuration used
-    :success,        # Whether execution succeeded
-    :error,          # Error details if execution failed
-    :metadata        # Additional metadata
+    # The program that was executed
+    :program,
+    # The example that was processed
+    :example,
+    # Input values
+    :inputs,
+    # Output values
+    :outputs,
+    # Performance score from metric function
+    :score,
+    # Execution time in native units
+    :duration,
+    # Model configuration used
+    :model_config,
+    # Whether execution succeeded
+    :success,
+    # Error details if execution failed
+    :error,
+    # Additional metadata
+    :metadata
   ]
 
   @type t :: %__MODULE__{

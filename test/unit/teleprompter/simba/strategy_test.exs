@@ -8,7 +8,7 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
   @moduletag :group_1
 
   alias DSPEx.Teleprompter.SIMBA.{Strategy, Bucket, Trajectory}
-  alias DSPEx.{Example, Program}
+  alias DSPEx.Example
 
   # Test strategy implementation for testing
   defmodule TestStrategy do

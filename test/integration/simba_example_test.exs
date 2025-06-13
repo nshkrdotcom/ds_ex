@@ -25,9 +25,9 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
     use DSPEx.Signature, "question -> answer"
   end
 
-  @tag :integration
-  @tag timeout: 60_000
   describe "SIMBA Math QA Optimization" do
+    @tag :integration
+    @tag timeout: 60_000
     test "optimizes math word problem solving" do
       setup_math_mock_responses()
 
@@ -152,8 +152,8 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
     end
   end
 
-  @tag :integration
   describe "SIMBA Performance Analysis" do
+    @tag :integration
     test "tracks and reports optimization metrics" do
       setup_performance_mock_responses()
 
@@ -162,7 +162,7 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
       trainset = create_performance_trainset()
 
       progress_callback = fn progress ->
-        IO.puts("Step #{progress[:step] || 'unknown'}: #{inspect(progress)}")
+        IO.puts("Step #{progress[:step] || "unknown"}: #{inspect(progress)}")
         :ok
       end
 
@@ -266,8 +266,8 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
     end
   end
 
-  @tag :integration
   describe "SIMBA Algorithm Fidelity" do
+    @tag :integration
     test "matches DSPy SIMBA algorithmic behavior" do
       setup_fidelity_mock_responses()
 
@@ -600,8 +600,8 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
       case DSPEx.Program.forward(optimized_program, %{problem: test_case.problem}) do
         {:ok, result} ->
           IO.puts("Problem: #{test_case.problem}")
-          IO.puts("Answer: #{result[:answer] || 'No answer'}")
-          IO.puts("Reasoning: #{result[:reasoning] || 'No reasoning'}")
+          IO.puts("Answer: #{result[:answer] || "No answer"}")
+          IO.puts("Reasoning: #{result[:reasoning] || "No reasoning"}")
 
         {:error, reason} ->
           IO.puts("Error testing optimized program: #{inspect(reason)}")

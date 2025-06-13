@@ -12,13 +12,20 @@ defmodule DSPEx.Teleprompter.SIMBA.Bucket do
 
   @enforce_keys [:trajectories]
   defstruct [
-    :trajectories,     # List of trajectories in this bucket
-    :max_score,        # Highest score in bucket
-    :min_score,        # Lowest score in bucket
-    :avg_score,        # Average score in bucket
-    :max_to_min_gap,   # Difference between max and min scores
-    :max_to_avg_gap,   # Difference between max and average scores
-    :metadata          # Additional bucket metadata
+    # List of trajectories in this bucket
+    :trajectories,
+    # Highest score in bucket
+    :max_score,
+    # Lowest score in bucket
+    :min_score,
+    # Average score in bucket
+    :avg_score,
+    # Difference between max and min scores
+    :max_to_min_gap,
+    # Difference between max and average scores
+    :max_to_avg_gap,
+    # Additional bucket metadata
+    :metadata
   ]
 
   @type t :: %__MODULE__{
@@ -57,7 +64,10 @@ defmodule DSPEx.Teleprompter.SIMBA.Bucket do
   Check if bucket shows improvement potential for strategy application.
   """
   @spec has_improvement_potential?(t(), float()) :: boolean()
-  def has_improvement_potential?(%__MODULE__{max_to_min_gap: gap, max_score: max_score}, threshold \\ 0.1) do
+  def has_improvement_potential?(
+        %__MODULE__{max_to_min_gap: gap, max_score: max_score},
+        threshold \\ 0.1
+      ) do
     gap > threshold and max_score > 0.1
   end
 
@@ -97,10 +107,13 @@ defmodule DSPEx.Teleprompter.SIMBA.Bucket do
       0.0
     else
       scores = Enum.map(trajectories, &Trajectory.quality_score/1)
-      variance_sum = Enum.reduce(scores, 0.0, fn score, acc ->
-        diff = score - avg_score
-        acc + (diff * diff)
-      end)
+
+      variance_sum =
+        Enum.reduce(scores, 0.0, fn score, acc ->
+          diff = score - avg_score
+          acc + diff * diff
+        end)
+
       variance_sum / length(scores)
     end
   end
