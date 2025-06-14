@@ -177,6 +177,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
                 batch,
                 top_programs,
                 current_programs,
+                current_scores,
                 models,
                 metric_fn,
                 config,
@@ -258,6 +259,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
          batch,
          top_programs,
          all_programs,
+         program_scores,
          models,
          metric_fn,
          config,
@@ -270,7 +272,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
         chosen_prog_idx =
           softmax_sample(
             top_programs,
-            all_programs,
+            program_scores,
             config.temperature_for_sampling
           )
 
@@ -668,36 +670,11 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   defp select_top_programs(programs, program_scores, num_candidates) do
-    program_avg_scores =
-      programs
-      |> Enum.with_index()
-      |> Enum.map(fn {_program, idx} ->
-        scores = Map.get(program_scores, idx, [])
-        avg_score = if Enum.empty?(scores), do: 0.5, else: Enum.sum(scores) / length(scores)
-        {idx, avg_score}
-      end)
-      |> Enum.sort_by(fn {_idx, score} -> -score end)
-
-    top_indices =
-      program_avg_scores
-      |> Enum.take(num_candidates)
-      |> Enum.map(fn {idx, _score} -> idx end)
-
-    if 0 in top_indices do
-      top_indices
-    else
-      [0 | Enum.take(top_indices, num_candidates - 1)]
-    end
+    select_top_programs_with_baseline(programs, program_scores, num_candidates)
   end
 
-  defp softmax_sample(program_indices, _all_programs, temperature) do
-    if is_list(program_indices) and length(program_indices) > 0 do
-      scores = Enum.map(program_indices, fn _idx -> 0.5 end)
-      weighted_index = softmax_sample_simple(scores, temperature)
-      Enum.at(program_indices, weighted_index, List.first(program_indices))
-    else
-      0
-    end
+  defp softmax_sample(program_indices, program_scores, temperature) do
+    improved_softmax_sample(program_indices, program_scores, temperature)
   end
 
   defp softmax_sample_simple(scores, temperature) do
@@ -769,5 +746,91 @@ defmodule DSPEx.Teleprompter.SIMBA do
         {:cont, {:skip, "Strategy not applicable"}}
       end
     end)
+  end
+
+  # Test helper functions for TDD
+  if Mix.env() == :test do
+    def test_softmax_sample(program_indices, program_scores, temperature) do
+      improved_softmax_sample(program_indices, program_scores, temperature)
+    end
+
+    def test_select_top_programs_with_baseline(programs, program_scores, k) do
+      select_top_programs_with_baseline(programs, program_scores, k)
+    end
+  end
+
+  # Fixed softmax sampling that uses actual program scores
+  defp improved_softmax_sample(program_indices, program_scores, temperature) do
+    if is_list(program_indices) and length(program_indices) > 0 do
+      scores =
+        Enum.map(program_indices, fn idx ->
+          calculate_average_score(program_scores, idx)
+        end)
+
+      if temperature > 0 do
+        apply_softmax_selection(scores, temperature)
+      else
+        select_best_program_index(scores, program_indices)
+      end
+    else
+      0
+    end
+  end
+
+  defp calculate_average_score(program_scores, program_idx) do
+    scores = Map.get(program_scores, program_idx, [])
+
+    if Enum.empty?(scores) do
+      # Baseline preference
+      if program_idx == 0, do: 0.1, else: 0.0
+    else
+      Enum.sum(scores) / length(scores)
+    end
+  end
+
+  defp apply_softmax_selection(scores, temperature) do
+    exp_scores = Enum.map(scores, fn score -> :math.exp(score / temperature) end)
+    sum_exp = Enum.sum(exp_scores)
+
+    if sum_exp > 0 do
+      probabilities = Enum.map(exp_scores, fn exp_score -> exp_score / sum_exp end)
+      weighted_random_choice(probabilities)
+    else
+      0
+    end
+  end
+
+  defp select_best_program_index(scores, program_indices) do
+    {_max_score, max_idx} =
+      scores
+      |> Enum.with_index()
+      |> Enum.max_by(fn {score, _} -> score end)
+
+    Enum.at(program_indices, max_idx, List.first(program_indices))
+  end
+
+  # Fixed program pool management that includes baseline
+  defp select_top_programs_with_baseline(programs, program_scores, k) do
+    program_avg_scores =
+      programs
+      |> Enum.with_index()
+      |> Enum.map(fn {_program, idx} ->
+        scores = Map.get(program_scores, idx, [])
+        avg_score = if Enum.empty?(scores), do: 0.0, else: Enum.sum(scores) / length(scores)
+        {idx, avg_score}
+      end)
+      |> Enum.sort_by(fn {_idx, score} -> -score end)
+
+    top_indices =
+      program_avg_scores
+      |> Enum.take(k)
+      |> Enum.map(fn {idx, _score} -> idx end)
+
+    # Always include baseline (index 0) if not already included
+    if 0 in top_indices do
+      top_indices
+    else
+      [0 | Enum.take(top_indices, k - 1)]
+    end
   end
 end
