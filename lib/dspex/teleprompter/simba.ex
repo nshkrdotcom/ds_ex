@@ -833,4 +833,319 @@ defmodule DSPEx.Teleprompter.SIMBA do
       [0 | Enum.take(top_indices, k - 1)]
     end
   end
+
+  # Fixed trajectory sampling implementation
+  def sample_trajectories_fixed(
+        batch,
+        top_program_indices,
+        all_programs,
+        program_scores,
+        models,
+        metric_fn,
+        config,
+        correlation_id
+      ) do
+    emit_telemetry(
+      [:dspex, :teleprompter, :simba, :trajectory, :start],
+      %{trajectory_count: length(batch) * length(models)},
+      %{correlation_id: correlation_id}
+    )
+
+    # Create execution pairs: for each example, for each model config, pick a program
+    exec_pairs =
+      for {example, example_idx} <- Enum.with_index(batch),
+          {model_config, model_idx} <- Enum.with_index(models) do
+        # ✅ FIXED: Use proper program selection with real scores
+        chosen_prog_idx =
+          softmax_sample(top_program_indices, program_scores, config.temperature_for_sampling)
+
+        candidate_program = Enum.at(all_programs, chosen_prog_idx)
+
+        exec_id = example_idx * length(models) + model_idx
+        {candidate_program, model_config, example, exec_id}
+      end
+
+    # Execute all trajectory pairs in parallel
+    trajectories =
+      exec_pairs
+      |> Task.async_stream(
+        fn {program, model_config, example, exec_id} ->
+          execute_with_trajectory_fixed(program, example, model_config, metric_fn, exec_id)
+        end,
+        max_concurrency: config.num_threads || 20,
+        timeout: 30_000,
+        on_timeout: :kill_task
+      )
+      |> Stream.filter(&match?({:ok, _}, &1))
+      |> Stream.map(fn {:ok, trajectory} -> trajectory end)
+      |> Enum.to_list()
+
+    emit_telemetry(
+      [:dspex, :teleprompter, :simba, :trajectory, :sampled],
+      %{trajectory_count: length(trajectories)},
+      %{correlation_id: correlation_id}
+    )
+
+    trajectories
+  end
+
+  def execute_with_trajectory_fixed(program, example, model_config, metric_fn, exec_id) do
+    start_time = System.monotonic_time()
+    inputs = Example.inputs(example)
+
+    # Convert model config to execution options
+    execution_opts = [
+      temperature: Map.get(model_config, :temperature, 0.7),
+      timeout: 30_000
+    ]
+
+    case Program.forward(program, inputs, execution_opts) do
+      {:ok, outputs} ->
+        score =
+          try do
+            metric_fn.(example, outputs)
+          rescue
+            _ -> 0.0
+          catch
+            _ -> 0.0
+          end
+
+        %Trajectory{
+          program: program,
+          example: example,
+          inputs: inputs,
+          outputs: outputs,
+          score: score,
+          duration: System.monotonic_time() - start_time,
+          model_config: model_config,
+          success: true,
+          metadata: %{exec_id: exec_id, program_type: Program.program_type(program)}
+        }
+
+      {:error, reason} ->
+        %Trajectory{
+          program: program,
+          example: example,
+          inputs: inputs,
+          outputs: %{},
+          score: 0.0,
+          duration: System.monotonic_time() - start_time,
+          model_config: model_config,
+          success: false,
+          error: reason,
+          metadata: %{exec_id: exec_id, program_type: Program.program_type(program)}
+        }
+    end
+  rescue
+    error ->
+      %Trajectory{
+        program: program,
+        example: example,
+        inputs: Example.inputs(example),
+        outputs: %{},
+        score: 0.0,
+        duration: 0,
+        model_config: model_config,
+        success: false,
+        error: error,
+        metadata: %{exec_id: exec_id, error_type: :execution_exception}
+      }
+  end
+
+  # Fixed strategy application implementation
+  def apply_strategies_fixed(
+        buckets,
+        programs,
+        program_scores,
+        config,
+        next_program_idx,
+        predictor2name,
+        name2predictor,
+        correlation_id
+      ) do
+    # Filter buckets with improvement potential
+    viable_buckets =
+      Enum.filter(buckets, fn bucket ->
+        bucket.metadata[:max_to_min_gap] > 0.01 and bucket.metadata[:max_score] > 0.1
+      end)
+
+    # Sort and take top buckets for strategy application
+    top_buckets =
+      viable_buckets
+      |> Enum.sort_by(fn bucket ->
+        {-bucket.metadata[:max_to_min_gap], -bucket.metadata[:max_score]}
+      end)
+      |> Enum.take(config.num_candidates)
+
+    emit_telemetry(
+      [:dspex, :teleprompter, :simba, :strategy, :start],
+      %{viable_buckets: length(viable_buckets), selected_buckets: length(top_buckets)},
+      %{correlation_id: correlation_id}
+    )
+
+    # Apply strategies to each viable bucket
+    {candidates, updated_idx} =
+      Enum.reduce(top_buckets, {[], next_program_idx}, fn bucket, {acc_candidates, current_idx} ->
+        # ✅ FIXED: Select source program using real scores and softmax
+        program_indices = 0..(length(programs) - 1) |> Enum.to_list()
+
+        source_program_idx =
+          softmax_sample(program_indices, program_scores, config.temperature_for_candidates)
+
+        source_program = Enum.at(programs, source_program_idx)
+
+        # Apply the first applicable strategy
+        case apply_first_applicable_strategy_fixed(
+               bucket,
+               source_program,
+               config.strategies,
+               predictor2name,
+               name2predictor,
+               config
+             ) do
+          {:ok, new_program} ->
+            {[new_program | acc_candidates], current_idx + 1}
+
+          {:skip, _reason} ->
+            {acc_candidates, current_idx}
+        end
+      end)
+
+    emit_telemetry(
+      [:dspex, :teleprompter, :simba, :strategy, :applied],
+      %{candidates_created: length(candidates)},
+      %{correlation_id: correlation_id}
+    )
+
+    {Enum.reverse(candidates), updated_idx}
+  end
+
+  def apply_first_applicable_strategy_fixed(
+        bucket,
+        source_program,
+        strategies,
+        predictor2name,
+        name2predictor,
+        config
+      ) do
+    # Try each strategy until one is applicable
+    Enum.reduce_while(strategies, {:skip, "No applicable strategies"}, fn strategy, _acc ->
+      if strategy.applicable?(bucket, %{config: config}) do
+        case strategy.apply(bucket, source_program, %{
+               predictor2name: predictor2name,
+               name2predictor: name2predictor,
+               config: config
+             }) do
+          {:ok, new_program} -> {:halt, {:ok, new_program}}
+          {:skip, reason} -> {:cont, {:skip, reason}}
+          {:error, reason} -> {:cont, {:skip, "Strategy error: #{reason}"}}
+        end
+      else
+        {:cont, {:skip, "Strategy #{strategy} not applicable"}}
+      end
+    end)
+  end
+
+  # Enhanced program pool updates with pruning and winning program tracking
+  def update_program_pool_fixed(
+        programs,
+        program_scores,
+        new_candidates,
+        candidate_scores,
+        _next_idx
+      ) do
+    # Add new candidates to program list
+    updated_programs = programs ++ new_candidates
+
+    # Update scores with new candidate results
+    updated_scores =
+      Enum.reduce(candidate_scores, program_scores, fn {candidate_idx, score}, acc ->
+        program_idx = length(programs) + candidate_idx
+        Map.update(acc, program_idx, [score], &[score | &1])
+      end)
+
+    # Prune program pool if it gets too large (keep top performers + baseline)
+    # Configurable threshold
+    if length(updated_programs) > 50 do
+      # Keep top 30
+      prune_program_pool(updated_programs, updated_scores, 30)
+    else
+      {updated_programs, updated_scores}
+    end
+  end
+
+  def prune_program_pool(programs, program_scores, keep_count) do
+    # Calculate average scores for all programs
+    program_performance =
+      programs
+      |> Enum.with_index()
+      |> Enum.map(fn {program, idx} ->
+        avg_score = calculate_average_score(program_scores, idx)
+        {program, idx, avg_score}
+      end)
+      |> Enum.sort_by(fn {_program, _idx, score} -> -score end)
+
+    # Always keep baseline (index 0) and top performers
+    baseline_entry = Enum.find(program_performance, fn {_program, idx, _score} -> idx == 0 end)
+
+    top_performers =
+      program_performance
+      |> Enum.reject(fn {_program, idx, _score} -> idx == 0 end)
+      |> Enum.take(keep_count - 1)
+
+    kept_entries = [baseline_entry | top_performers] |> Enum.reject(&is_nil/1)
+
+    # Rebuild programs and scores with new indices
+    new_programs = Enum.map(kept_entries, fn {program, _old_idx, _score} -> program end)
+
+    new_scores =
+      kept_entries
+      |> Enum.with_index()
+      |> Enum.reduce(%{}, fn {{_program, old_idx, _score}, new_idx}, acc ->
+        old_scores = Map.get(program_scores, old_idx, [])
+        Map.put(acc, new_idx, old_scores)
+      end)
+
+    {new_programs, new_scores}
+  end
+
+  def update_winning_programs(
+        current_winning,
+        new_candidates,
+        candidate_scores,
+        _all_programs,
+        _program_scores
+      ) do
+    # Find best candidate from this iteration
+    best_candidate =
+      case candidate_scores do
+        [] ->
+          nil
+
+        scores ->
+          {best_idx, best_score} = Enum.max_by(scores, fn {_idx, score} -> score end)
+          # Configurable threshold
+          if best_score > 0.5 do
+            Enum.at(new_candidates, best_idx)
+          else
+            nil
+          end
+      end
+
+    # Add to winning programs if it's a good candidate
+    case best_candidate do
+      nil ->
+        current_winning
+
+      candidate ->
+        # Limit winning programs list size
+        updated_list = [candidate | current_winning]
+        # Configurable
+        if length(updated_list) > 20 do
+          Enum.take(updated_list, 20)
+        else
+          updated_list
+        end
+    end
+  end
 end
