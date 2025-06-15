@@ -192,6 +192,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
               apply_strategies_to_buckets(
                 buckets,
                 current_programs,
+                current_scores,
                 config,
                 prog_idx,
                 predictor2name,
@@ -429,6 +430,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
   defp apply_strategies_to_buckets(
          buckets,
          programs,
+         program_scores,
          config,
          next_program_idx,
          predictor2name,
@@ -450,10 +452,15 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
     {candidates, updated_idx} =
       Enum.reduce(top_buckets, {[], next_program_idx}, fn bucket, {acc_candidates, current_idx} ->
-        program_scores = Enum.map(programs, fn _p -> 0.5 end)
+        # Use real program scores instead of fixed 0.5 values
+        program_indices = Enum.with_index(programs) |> Enum.map(fn {_prog, idx} -> idx end)
 
         source_program_idx =
-          softmax_sample_simple(program_scores, config.temperature_for_candidates)
+          improved_softmax_sample(
+            program_indices,
+            program_scores,
+            config.temperature_for_candidates
+          )
 
         source_program = Enum.at(programs, source_program_idx)
 
@@ -677,25 +684,6 @@ defmodule DSPEx.Teleprompter.SIMBA do
     improved_softmax_sample(program_indices, program_scores, temperature)
   end
 
-  defp softmax_sample_simple(scores, temperature) do
-    if temperature > 0 do
-      exp_scores = Enum.map(scores, fn score -> :math.exp(score / temperature) end)
-      sum_exp = Enum.sum(exp_scores)
-
-      if sum_exp > 0 do
-        probabilities = Enum.map(exp_scores, fn exp_score -> exp_score / sum_exp end)
-        weighted_random_choice(probabilities)
-      else
-        0
-      end
-    else
-      {_max_score, max_idx} =
-        scores |> Enum.with_index() |> Enum.max_by(fn {score, _} -> score end)
-
-      max_idx
-    end
-  end
-
   defp weighted_random_choice(probabilities) do
     random_val = :rand.uniform()
 
@@ -756,6 +744,10 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
     def test_select_top_programs_with_baseline(programs, program_scores, k) do
       select_top_programs_with_baseline(programs, program_scores, k)
+    end
+
+    def test_evaluate_candidates_batch(candidates, batch, metric_fn) do
+      evaluate_candidates_batch(candidates, batch, metric_fn)
     end
   end
 
