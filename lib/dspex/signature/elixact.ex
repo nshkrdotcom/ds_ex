@@ -599,6 +599,9 @@ defmodule DSPEx.Signature.Elixact do
       :any ->
         :any
 
+      :map ->
+        :map
+
       # Array types - convert to Elixact array format
       {:array, inner_type} ->
         converted_inner = convert_type_to_elixact(inner_type)

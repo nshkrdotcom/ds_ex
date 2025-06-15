@@ -435,11 +435,14 @@ defmodule DSPEx.Signature.EnhancedParser do
       "any" ->
         :any
 
+      "map" ->
+        :map
+
       other ->
         unless Regex.match?(~r/^[A-Z][a-zA-Z0-9_]*$/, other) do
           raise CompileError,
             description:
-              "Invalid type '#{other}'. Must be a built-in type (string, integer, float, boolean, any) or a valid module name.",
+              "Invalid type '#{other}'. Must be a built-in type (string, integer, float, boolean, any, map) or a valid module name.",
             file: __ENV__.file,
             line: __ENV__.line
         end
