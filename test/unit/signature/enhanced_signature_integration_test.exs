@@ -161,6 +161,7 @@ defmodule DSPEx.EnhancedSignatureIntegrationTest do
       assert time_microseconds < 100_000
     end
 
+    @tag :slow
     test "memory usage for large signatures" do
       # Create a signature with many fields and constraints
       defmodule TestLargeSignature do

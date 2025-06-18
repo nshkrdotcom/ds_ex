@@ -1,11 +1,11 @@
 defmodule DSPEx.Teleprompter.SIMBA.Signatures.OfferFeedback do
   @moduledoc """
   Signature for LLM-generated instruction refinement based on trajectory analysis.
-  
-  This signature is used by the AppendRule strategy to analyze successful vs 
+
+  This signature is used by the AppendRule strategy to analyze successful vs
   unsuccessful program execution trajectories and generate improved instructions
   that help the program perform better on similar tasks.
-  
+
   Based on DSPy's OfferFeedback signature from simba_utils.py.
   """
 
@@ -22,7 +22,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Signatures.OfferFeedback do
           required: true
         },
         modules_defn: %{
-          type: :string,  
+          type: :string,
           description: "Module definitions",
           required: true
         },
@@ -34,7 +34,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Signatures.OfferFeedback do
         },
         worse_program_trajectory: %{
           type: :string,
-          description: "Failed execution trace", 
+          description: "Failed execution trace",
           required: true,
           min_length: 50
         }
@@ -61,46 +61,44 @@ defmodule DSPEx.Teleprompter.SIMBA.Signatures.OfferFeedback do
   end
   def validate_module_advice(_), do: false
 
-  @doc """
-  Validates input fields according to signature requirements with custom validation rules.
-  This overrides the basic validation provided by DSPEx.Signature.
-  """
+  # Custom validation for input fields with trajectory length requirements
   def validate_inputs(inputs) when is_map(inputs) do
     # First do basic field presence validation
     case basic_field_validation(inputs) do
-      :ok ->
+      {:ok, validated_inputs} ->
         # Then apply our custom validation rules
-        validate_trajectory_lengths(inputs)
-        
+        validate_trajectory_lengths(validated_inputs)
+
       error ->
         error
     end
   end
-  def validate_inputs(_), do: {:error, "inputs must be a map"}
-  
+
   # Basic field presence validation (same logic as DSPEx.Signature generates)
   defp basic_field_validation(inputs) do
-    required_fields = [:program_code, :modules_defn, :better_program_trajectory, :worse_program_trajectory]
-    missing_fields = required_fields -- Map.keys(inputs)
-    
-    case length(missing_fields) do
-      0 -> :ok
-      _ -> {:error, {:missing_inputs, missing_fields}}
+    required_inputs = MapSet.new([:program_code, :modules_defn, :better_program_trajectory, :worse_program_trajectory])
+    provided_inputs = MapSet.new(Map.keys(inputs))
+
+    missing = MapSet.difference(required_inputs, provided_inputs)
+
+    case MapSet.size(missing) do
+      0 -> {:ok, inputs}
+      _ -> {:error, {:missing_inputs, MapSet.to_list(missing)}}
     end
   end
-  
+
   # Custom validation for trajectory field lengths
   defp validate_trajectory_lengths(inputs) do
     better_trajectory = inputs[:better_program_trajectory]
     worse_trajectory = inputs[:worse_program_trajectory]
-    
+
     cond do
       String.length(better_trajectory) < 50 ->
         {:error, "better_program_trajectory must be at least 50 characters"}
-      
+
       String.length(worse_trajectory) < 50 ->
         {:error, "worse_program_trajectory must be at least 50 characters"}
-      
+
       true ->
         {:ok, inputs}
     end

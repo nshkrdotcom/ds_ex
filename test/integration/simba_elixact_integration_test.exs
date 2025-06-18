@@ -11,26 +11,26 @@ defmodule DSPEx.Integration.SimbaElixactTest do
       # This test will fail until both Elixact integration and AppendRule are complete
       signature = ComplexElixactSignatures.DataAnalysis
       program = Predict.new(signature, :gpt4)
-      
+
       # Rich training data with validated Elixact types
       training_data = create_validated_training_examples()
-      
+
       # Metric function that validates Elixact schema compliance
       metric_fn = &validated_answer_exact_match/2
-      
+
       # Use both demo and rule strategies with Elixact signatures
       simba = SIMBA.new(
         strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo, DSPEx.Teleprompter.SIMBA.Strategy.AppendRule],
         num_candidates: 6,
         max_steps: 4
       )
-      
+
       result = SIMBA.compile(simba, program, program, training_data, metric_fn, [])
-      
+
       # Expected to fail currently due to missing AppendRule strategy
       assert {:error, reason} = result
       assert String.contains?(reason, ["strategy", "append_rule"]) |> Enum.any?()
-      
+
       # TODO: Once implemented, should verify:
       # assert {:ok, optimized} = result
       # assert optimized.performance.average_score > program.performance.average_score
@@ -42,7 +42,7 @@ defmodule DSPEx.Integration.SimbaElixactTest do
     test "handles schema validation errors during rule-based optimization" do
       signature = ComplexElixactSignatures.StructuredOutput
       program = Predict.new(signature, :gpt3_5)
-      
+
       # Training data that might produce LLM outputs not matching schema
       training_data = [
         %{
@@ -56,20 +56,20 @@ defmodule DSPEx.Integration.SimbaElixactTest do
           }
         }
       ]
-      
-      metric_fn = fn example, prediction ->
+
+      metric_fn = fn _example, prediction ->
         # Strict schema validation in metric
         if validate_structured_output(prediction.result), do: 1.0, else: 0.0
       end
-      
+
       simba = SIMBA.new(
         strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendRule],
         num_candidates: 3,
         max_steps: 2
       )
-      
+
       result = SIMBA.compile(simba, program, program, training_data, metric_fn, [])
-      
+
       # Currently expected to fail due to missing strategy
       assert {:error, reason} = result
       assert String.contains?(reason, ["append_rule"]) |> Enum.any?()
@@ -78,7 +78,7 @@ defmodule DSPEx.Integration.SimbaElixactTest do
     test "validates demo generation with complex field types" do
       signature = ComplexElixactSignatures.NestedSchema
       program = Predict.new(signature, :gpt4)
-      
+
       # Complex nested data structures
       training_data = [
         %{
@@ -103,20 +103,20 @@ defmodule DSPEx.Integration.SimbaElixactTest do
           }
         }
       ]
-      
-      metric_fn = fn example, prediction ->
+
+      metric_fn = fn _example, prediction ->
         # Validate complex nested structure
         if validate_nested_response(prediction.response), do: 1.0, else: 0.0
       end
-      
+
       simba = SIMBA.new(
         strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo, DSPEx.Teleprompter.SIMBA.Strategy.AppendRule],
         num_candidates: 4,
         max_steps: 2
       )
-      
+
       result = SIMBA.compile(simba, program, program, training_data, metric_fn, [])
-      
+
       # Expected failure due to missing AppendRule
       assert {:error, reason} = result
       assert String.contains?(reason, ["strategy"]) |> Enum.any?()
@@ -125,22 +125,22 @@ defmodule DSPEx.Integration.SimbaElixactTest do
     test "preserves type safety throughout optimization pipeline" do
       signature = ComplexElixactSignatures.TypeSafeOperation
       program = Predict.new(signature, :gpt4)
-      
+
       training_data = create_type_safe_examples()
-      
+
       # Metric with strict type checking
       metric_fn = fn example, prediction ->
         if type_safe_validation(example, prediction), do: 1.0, else: 0.0
       end
-      
+
       simba = SIMBA.new(
         strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendRule],
         num_candidates: 3,
         max_steps: 2
       )
-      
+
       result = SIMBA.compile(simba, program, program, training_data, metric_fn, [])
-      
+
       # Currently fails due to missing strategy, but defines type safety contract
       assert {:error, _reason} = result
     end
@@ -148,10 +148,10 @@ defmodule DSPEx.Integration.SimbaElixactTest do
     test "integrates OfferFeedback signature with Elixact validation" do
       # Test direct usage of OfferFeedback signature with Elixact
       signature = DSPEx.Teleprompter.SIMBA.Signatures.OfferFeedback
-      
+
       # This should fail because OfferFeedback signature doesn't exist yet
-      result = Predict.new(signature, :gpt4)
-      
+      _result = Predict.new(signature, :gpt4)
+
       # Expected compilation failure
       assert_raise CompileError, fn ->
         Code.eval_quoted(quote do: Predict.new(unquote(signature), :gpt4))
@@ -162,28 +162,28 @@ defmodule DSPEx.Integration.SimbaElixactTest do
       # Once both are implemented, this tests their integration
       signature = ComplexElixactSignatures.InstructionTarget
       program = Predict.new(signature, :gpt4)
-      
+
       training_data = [
         %{
           inputs: %{prompt: "Generate detailed analysis"},
           outputs: %{analysis: "Comprehensive analysis with specific recommendations"}
         }
       ]
-      
-      metric_fn = fn example, prediction ->
+
+            metric_fn = fn _example, prediction ->
         # Metric that would benefit from instruction improvements
-        if String.length(prediction.analysis) > 50 && 
+        if String.length(prediction.analysis) > 50 &&
            String.contains?(prediction.analysis, "analysis"), do: 1.0, else: 0.0
       end
-      
+
       simba = SIMBA.new(
         strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendRule],
         num_candidates: 3,
         max_steps: 1
       )
-      
+
       result = SIMBA.compile(simba, program, program, training_data, metric_fn, [])
-      
+
       # Fails now, but once implemented should generate improved instructions
       assert {:error, _reason} = result
     end
@@ -216,10 +216,7 @@ defmodule DSPEx.Integration.SimbaElixactTest do
        validate_analysis_schema(prediction.analysis), do: 1.0, else: 0.0
   end
 
-  defp validate_elixact_schema_compliance(_program) do
-    # Placeholder for Elixact schema validation
-    true
-  end
+
 
   defp validate_structured_output(result) when is_map(result) do
     Map.has_key?(result, :category) &&
