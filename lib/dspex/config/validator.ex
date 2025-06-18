@@ -553,52 +553,60 @@ defmodule DSPEx.Config.Validator do
 
   # Generate helpful suggestions for validation errors
   @spec generate_suggestion(list(atom()), term(), atom()) :: String.t()
-  defp generate_suggestion(path, _value, error_code) do
-    case {List.last(path), error_code} do
-      {:timeout, _} ->
-        "Use a positive integer value in milliseconds, e.g., 30000"
+  defp generate_suggestion(path, _value, _error_code) do
+    field = List.last(path)
 
-      {:retry_attempts, _} ->
-        "Use a non-negative integer, e.g., 3"
+    cond do
+      field in [:timeout] ->
+        suggest_timeout()
 
-      {:backoff_factor, _} ->
-        "Use a positive number, e.g., 2.0"
+      field in [:retry_attempts] ->
+        suggest_retry_attempts()
 
-      {:batch_size, _} ->
-        "Use a positive integer, e.g., 10"
+      field in [:backoff_factor] ->
+        suggest_backoff_factor()
 
-      {:parallel_limit, _} ->
-        "Use a positive integer, e.g., 4"
+      field in [:batch_size, :parallel_limit] ->
+        suggest_positive_integer()
 
-      {:default_temperature, _} ->
-        "Use a float between 0.0 and 2.0, e.g., 0.7"
+      field in [:default_temperature] ->
+        suggest_temperature()
 
-      {:default_max_tokens, _} ->
-        "Use a positive integer, e.g., 1000"
+      field in [:default_max_tokens] ->
+        suggest_max_tokens()
 
-      {:level, _} ->
-        "Use a valid log level: :debug, :info, :warning, :error, :critical"
+      field in [:level] ->
+        suggest_log_level()
 
-      {:default_provider, _} ->
-        "Use a valid provider: :gemini or :openai"
+      field in [:default_provider] ->
+        suggest_provider()
 
-      {:api_key, _} ->
-        "Use a string API key or {:system, \"ENV_VAR\"} tuple"
+      field in [:api_key] ->
+        suggest_api_key()
 
-      {:enabled, _} ->
-        "Use a boolean value: true or false"
+      field in [
+        :enabled,
+        :correlation_enabled,
+        :cache_enabled,
+        :detailed_logging,
+        :performance_tracking
+      ] ->
+        suggest_boolean()
 
-      {field, _}
-      when field in [
-             :correlation_enabled,
-             :cache_enabled,
-             :detailed_logging,
-             :performance_tracking
-           ] ->
-        "Use a boolean value: true or false"
-
-      _ ->
-        "Check the value type and constraints for this configuration field"
+      true ->
+        suggest_generic()
     end
   end
+
+  defp suggest_timeout, do: "Use a positive integer value in milliseconds, e.g., 30000"
+  defp suggest_retry_attempts, do: "Use a non-negative integer, e.g., 3"
+  defp suggest_backoff_factor, do: "Use a positive number, e.g., 2.0"
+  defp suggest_positive_integer, do: "Use a positive integer, e.g., 10"
+  defp suggest_temperature, do: "Use a float between 0.0 and 2.0, e.g., 0.7"
+  defp suggest_max_tokens, do: "Use a positive integer, e.g., 1000"
+  defp suggest_log_level, do: "Use a valid log level: :debug, :info, :warning, :error, :critical"
+  defp suggest_provider, do: "Use a valid provider: :gemini or :openai"
+  defp suggest_api_key, do: "Use a string API key or {:system, \"ENV_VAR\"} tuple"
+  defp suggest_boolean, do: "Use a boolean value: true or false"
+  defp suggest_generic, do: "Check the value type and constraints for this configuration field"
 end

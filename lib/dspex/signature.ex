@@ -75,6 +75,9 @@ defmodule DSPEx.Signature do
       # Can now use extended signature with reasoning field
       result = extended.new(%{question: "What is 2+2?", reasoning: "Basic math", answer: "4"})
   """
+  # Module aliases for nested modules
+  alias DSPEx.Signature.{Parser, EnhancedParser}
+
   @spec extend(module(), map()) :: {:ok, module()} | {:error, term()}
   def extend(base_signature, additional_fields)
       when is_atom(base_signature) and is_map(additional_fields) do
@@ -304,13 +307,11 @@ defmodule DSPEx.Signature do
   defp generate_enhanced_signature(signature_string) do
     # Parse with enhanced parser
     {enhanced_input_fields, enhanced_output_fields} =
-      DSPEx.Signature.EnhancedParser.parse(signature_string)
+      EnhancedParser.parse(signature_string)
 
     # Convert to simple format for compatibility
     {input_fields, output_fields} =
-      DSPEx.Signature.EnhancedParser.to_simple_signature(
-        {enhanced_input_fields, enhanced_output_fields}
-      )
+      EnhancedParser.to_simple_signature({enhanced_input_fields, enhanced_output_fields})
 
     all_fields = input_fields ++ output_fields
     all_enhanced_fields = enhanced_input_fields ++ enhanced_output_fields
@@ -322,7 +323,7 @@ defmodule DSPEx.Signature do
   @spec generate_basic_signature(binary()) :: Macro.t()
   defp generate_basic_signature(signature_string) do
     # Parse with basic parser for backward compatibility
-    {input_fields, output_fields} = DSPEx.Signature.Parser.parse(signature_string)
+    {input_fields, output_fields} = Parser.parse(signature_string)
     all_fields = input_fields ++ output_fields
 
     generate_signature_struct(input_fields, output_fields, all_fields, nil)
@@ -713,48 +714,67 @@ defmodule DSPEx.Signature do
       outputs = module.output_fields()
       all_fields = module.fields()
 
-      # Validate return types
-      cond do
-        not (is_list(inputs) and Enum.all?(inputs, &is_atom/1)) ->
-          {:error, "input_fields/0 must return a list of atoms"}
-
-        not (is_list(outputs) and Enum.all?(outputs, &is_atom/1)) ->
-          {:error, "output_fields/0 must return a list of atoms"}
-
-        not (is_list(all_fields) and Enum.all?(all_fields, &is_atom/1)) ->
-          {:error, "fields/0 must return a list of atoms"}
-
-        true ->
-          # Validate consistency
-          expected_all_fields = inputs ++ outputs
-
-          cond do
-            MapSet.new(all_fields) != MapSet.new(expected_all_fields) ->
-              {:error,
-               "fields/0 return value is inconsistent with input_fields/0 + output_fields/0"}
-
-            length(inputs) != length(Enum.uniq(inputs)) ->
-              {:error, "Duplicate fields in input_fields/0"}
-
-            length(outputs) != length(Enum.uniq(outputs)) ->
-              {:error, "Duplicate fields in output_fields/0"}
-
-            true ->
-              # Check for overlap between inputs and outputs
-              input_set = MapSet.new(inputs)
-              output_set = MapSet.new(outputs)
-              overlap = MapSet.intersection(input_set, output_set)
-
-              if MapSet.size(overlap) == 0 do
-                :ok
-              else
-                {:error,
-                 "Fields cannot be both input and output: #{inspect(MapSet.to_list(overlap))}"}
-              end
-          end
+      with :ok <- validate_field_types(inputs, outputs, all_fields),
+           :ok <- validate_field_consistency(inputs, outputs, all_fields),
+           :ok <- validate_field_uniqueness(inputs, outputs),
+           :ok <- validate_field_overlap(inputs, outputs) do
+        :ok
+      else
+        error -> error
       end
     rescue
       error -> {:error, "Field list validation failed: #{inspect(error)}"}
+    end
+  end
+
+  defp validate_field_types(inputs, outputs, all_fields) do
+    cond do
+      not (is_list(inputs) and Enum.all?(inputs, &is_atom/1)) ->
+        {:error, "input_fields/0 must return a list of atoms"}
+
+      not (is_list(outputs) and Enum.all?(outputs, &is_atom/1)) ->
+        {:error, "output_fields/0 must return a list of atoms"}
+
+      not (is_list(all_fields) and Enum.all?(all_fields, &is_atom/1)) ->
+        {:error, "fields/0 must return a list of atoms"}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp validate_field_consistency(inputs, outputs, all_fields) do
+    expected_all_fields = inputs ++ outputs
+
+    if MapSet.new(all_fields) != MapSet.new(expected_all_fields) do
+      {:error, "fields/0 return value is inconsistent with input_fields/0 + output_fields/0"}
+    else
+      :ok
+    end
+  end
+
+  defp validate_field_uniqueness(inputs, outputs) do
+    cond do
+      length(inputs) != length(Enum.uniq(inputs)) ->
+        {:error, "Duplicate fields in input_fields/0"}
+
+      length(outputs) != length(Enum.uniq(outputs)) ->
+        {:error, "Duplicate fields in output_fields/0"}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp validate_field_overlap(inputs, outputs) do
+    input_set = MapSet.new(inputs)
+    output_set = MapSet.new(outputs)
+    overlap = MapSet.intersection(input_set, output_set)
+
+    if MapSet.size(overlap) == 0 do
+      :ok
+    else
+      {:error, "Fields cannot be both input and output: #{inspect(MapSet.to_list(overlap))}"}
     end
   end
 

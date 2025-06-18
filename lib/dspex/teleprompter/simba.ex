@@ -315,76 +315,117 @@ defmodule DSPEx.Teleprompter.SIMBA do
   # Execute a program and capture the trajectory
   defp execute_with_trajectory(program, example, model_config, metric_fn, exec_id) do
     start_time = System.monotonic_time()
-
-    # Handle both Example structs and raw maps
-    inputs =
-      case example do
-        %DSPEx.Example{} -> Example.inputs(example)
-        %{inputs: inputs} -> inputs
-        _ -> %{}
-      end
-
+    inputs = extract_inputs_from_example(example)
     execution_opts = model_config_to_opts(model_config)
 
-    case Program.forward(program, inputs, execution_opts) do
-      {:ok, outputs} ->
-        score =
-          try do
-            metric_fn.(example, outputs)
-          rescue
-            _ -> 0.0
-          catch
-            _ -> 0.0
-          end
+    try do
+      case Program.forward(program, inputs, execution_opts) do
+        {:ok, outputs} ->
+          score = calculate_score_safely(metric_fn, example, outputs)
 
-        %Trajectory{
-          program: program,
-          example: example,
-          inputs: inputs,
-          outputs: outputs,
-          score: score,
-          duration: System.monotonic_time() - start_time,
-          model_config: model_config,
-          success: true,
-          metadata: %{exec_id: exec_id}
-        }
+          build_simple_successful_trajectory(
+            program,
+            example,
+            inputs,
+            outputs,
+            score,
+            start_time,
+            model_config,
+            exec_id
+          )
 
-      {:error, reason} ->
-        %Trajectory{
-          program: program,
-          example: example,
-          inputs: inputs,
-          outputs: %{},
-          score: 0.0,
-          duration: System.monotonic_time() - start_time,
-          model_config: model_config,
-          success: false,
-          error: reason,
-          metadata: %{exec_id: exec_id}
-        }
+        {:error, reason} ->
+          build_simple_error_trajectory(
+            program,
+            example,
+            inputs,
+            reason,
+            start_time,
+            model_config,
+            exec_id
+          )
+      end
+    rescue
+      error ->
+        build_simple_exception_trajectory(
+          program,
+          example,
+          inputs,
+          error,
+          start_time,
+          model_config,
+          exec_id
+        )
     end
-  rescue
-    error ->
-      # Handle both Example structs and raw maps
-      safe_inputs =
-        case example do
-          %DSPEx.Example{} -> Example.inputs(example)
-          %{inputs: inputs} -> inputs
-          _ -> %{}
-        end
+  end
 
-      %Trajectory{
-        program: program,
-        example: example,
-        inputs: safe_inputs,
-        outputs: %{},
-        score: 0.0,
-        duration: 0,
-        model_config: model_config,
-        success: false,
-        error: error,
-        metadata: %{exec_id: exec_id}
-      }
+  defp build_simple_successful_trajectory(
+         program,
+         example,
+         inputs,
+         outputs,
+         score,
+         start_time,
+         model_config,
+         exec_id
+       ) do
+    %Trajectory{
+      program: program,
+      example: example,
+      inputs: inputs,
+      outputs: outputs,
+      score: score,
+      duration: System.monotonic_time() - start_time,
+      model_config: model_config,
+      success: true,
+      metadata: %{exec_id: exec_id}
+    }
+  end
+
+  defp build_simple_error_trajectory(
+         program,
+         example,
+         inputs,
+         reason,
+         start_time,
+         model_config,
+         exec_id
+       ) do
+    %Trajectory{
+      program: program,
+      example: example,
+      inputs: inputs,
+      outputs: %{},
+      score: 0.0,
+      duration: System.monotonic_time() - start_time,
+      model_config: model_config,
+      success: false,
+      error: reason,
+      metadata: %{exec_id: exec_id}
+    }
+  end
+
+  defp build_simple_exception_trajectory(
+         program,
+         example,
+         inputs,
+         error,
+         start_time,
+         model_config,
+         exec_id
+       ) do
+    %Trajectory{
+      program: program,
+      example: example,
+      inputs: inputs,
+      outputs: %{},
+      score: 0.0,
+      duration: System.monotonic_time() - start_time,
+      model_config: model_config,
+      success: false,
+      error: inspect(error),
+      metadata: %{exec_id: exec_id}
+    }
   end
 
   # Create performance buckets from trajectories
@@ -829,77 +870,134 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   def execute_with_trajectory_fixed(program, example, model_config, metric_fn, exec_id) do
     start_time = System.monotonic_time()
+    inputs = extract_inputs_from_example(example)
+    execution_opts = build_execution_opts(model_config)
 
-    # Handle both Example structs and raw maps
-    inputs =
-      case example do
-        %DSPEx.Example{} -> Example.inputs(example)
-        %{inputs: inputs} -> inputs
-        _ -> %{}
+    try do
+      case Program.forward(program, inputs, execution_opts) do
+        {:ok, outputs} ->
+          score = calculate_score_safely(metric_fn, example, outputs)
+
+          build_successful_trajectory(
+            program,
+            example,
+            inputs,
+            outputs,
+            score,
+            start_time,
+            model_config,
+            exec_id
+          )
+
+        {:error, reason} ->
+          build_error_trajectory(
+            program,
+            example,
+            inputs,
+            reason,
+            start_time,
+            model_config,
+            exec_id
+          )
       end
+    rescue
+      error ->
+        build_exception_trajectory(
+          program,
+          example,
+          inputs,
+          error,
+          start_time,
+          model_config,
+          exec_id
+        )
+    end
+  end
 
-    # Convert model config to execution options
-    execution_opts = [
+  defp extract_inputs_from_example(example) do
+    case example do
+      %DSPEx.Example{} -> Example.inputs(example)
+      %{inputs: inputs} -> inputs
+      _ -> %{}
+    end
+  end
+
+  defp build_execution_opts(model_config) do
+    [
       temperature: Map.get(model_config, :temperature, 0.7),
       timeout: 30_000
     ]
+  end
 
-    case Program.forward(program, inputs, execution_opts) do
-      {:ok, outputs} ->
-        score =
-          try do
-            metric_fn.(example, outputs)
-          rescue
-            _ -> 0.0
-          catch
-            _ -> 0.0
-          end
-
-        %Trajectory{
-          program: program,
-          example: example,
-          inputs: inputs,
-          outputs: outputs,
-          score: score,
-          duration: System.monotonic_time() - start_time,
-          model_config: model_config,
-          success: true,
-          metadata: %{exec_id: exec_id, program_type: Program.program_type(program)}
-        }
-
-      {:error, reason} ->
-        %Trajectory{
-          program: program,
-          example: example,
-          inputs: inputs,
-          outputs: %{},
-          score: 0.0,
-          duration: System.monotonic_time() - start_time,
-          model_config: model_config,
-          success: false,
-          error: reason,
-          metadata: %{exec_id: exec_id, program_type: Program.program_type(program)}
-        }
+  defp calculate_score_safely(metric_fn, example, outputs) do
+    try do
+      metric_fn.(example, outputs)
+    rescue
+      _ -> 0.0
+    catch
+      _ -> 0.0
     end
-  rescue
-    error ->
-      %Trajectory{
-        program: program,
-        example: example,
-        inputs:
-          case example do
-            %DSPEx.Example{} -> Example.inputs(example)
-            %{inputs: inputs} -> inputs
-            _ -> %{}
-          end,
-        outputs: %{},
-        score: 0.0,
-        duration: 0,
-        model_config: model_config,
-        success: false,
-        error: error,
-        metadata: %{exec_id: exec_id, error_type: :execution_exception}
-      }
+  end
+
+  defp build_successful_trajectory(
+         program,
+         example,
+         inputs,
+         outputs,
+         score,
+         start_time,
+         model_config,
+         exec_id
+       ) do
+    %Trajectory{
+      program: program,
+      example: example,
+      inputs: inputs,
+      outputs: outputs,
+      score: score,
+      duration: System.monotonic_time() - start_time,
+      model_config: model_config,
+      success: true,
+      metadata: %{exec_id: exec_id, program_type: Program.program_type(program)}
+    }
+  end
+
+  defp build_error_trajectory(program, example, inputs, reason, start_time, model_config, exec_id) do
+    %Trajectory{
+      program: program,
+      example: example,
+      inputs: inputs,
+      outputs: %{},
+      score: 0.0,
+      duration: System.monotonic_time() - start_time,
+      model_config: model_config,
+      success: false,
+      error: reason,
+      metadata: %{exec_id: exec_id, program_type: Program.program_type(program)}
+    }
+  end
+
+  defp build_exception_trajectory(
+         program,
+         example,
+         inputs,
+         error,
+         start_time,
+         model_config,
+         exec_id
+       ) do
+    %Trajectory{
+      program: program,
+      example: example,
+      inputs: inputs,
+      outputs: %{},
+      score: 0.0,
+      duration: System.monotonic_time() - start_time,
+      model_config: model_config,
+      success: false,
+      error: inspect(error),
+      metadata: %{exec_id: exec_id, program_type: Program.program_type(program)}
+    }
   end
 
   # Select final best program from winning programs

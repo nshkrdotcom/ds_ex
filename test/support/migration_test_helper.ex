@@ -43,16 +43,7 @@ defmodule DSPEx.Test.MigrationTestHelper do
     tasks =
       1..concurrency
       |> Enum.map(fn _i ->
-        Task.async(fn ->
-          # Simulate optimization work with the program and examples
-          # Simulate variable work time
-          Process.sleep(Enum.random(10..50))
-
-          case Program.forward(program, examples |> hd() |> Map.get(:inputs, %{})) do
-            {:ok, result} -> {:ok, result}
-            {:error, reason} -> {:error, reason}
-          end
-        end)
+        Task.async(fn -> run_single_optimization_task(program, examples) end)
       end)
 
     results = Task.await_many(tasks, 10_000)
@@ -67,6 +58,17 @@ defmodule DSPEx.Test.MigrationTestHelper do
 
       {successes, errors} ->
         {:error, %{successes: length(successes), errors: errors}}
+    end
+  end
+
+  defp run_single_optimization_task(program, examples) do
+    # Simulate optimization work with the program and examples
+    # Simulate variable work time
+    Process.sleep(Enum.random(10..50))
+
+    case Program.forward(program, examples |> hd() |> Map.get(:inputs, %{})) do
+      {:ok, result} -> {:ok, result}
+      {:error, reason} -> {:error, reason}
     end
   end
 
