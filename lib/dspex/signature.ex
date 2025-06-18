@@ -206,65 +206,84 @@ defmodule DSPEx.Signature do
       defmodule unquote(module_name) do
         @behaviour DSPEx.Signature
 
-        # Create struct with all fields
-        defstruct unquote(all_fields |> Enum.map(&{&1, nil}))
-
-        # Define type specification
-        @type t :: %__MODULE__{
-                unquote_splicing(
-                  all_fields
-                  |> Enum.map(fn field ->
-                    {field, quote(do: any())}
-                  end)
-                )
-              }
-
-        # Store field information
-        @instructions unquote(base_instructions)
-        @input_fields unquote(inputs)
-        @output_fields unquote(outputs)
-        @all_fields unquote(all_fields)
-
-        # Implement behavior callbacks
-        @impl DSPEx.Signature
-        def instructions, do: @instructions
-
-        @impl DSPEx.Signature
-        def input_fields, do: @input_fields
-
-        @impl DSPEx.Signature
-        def output_fields, do: @output_fields
-
-        @impl DSPEx.Signature
-        def fields, do: @all_fields
-
-        # Helper functions
-        def new(fields \\ %{}) when is_map(fields) do
-          struct(__MODULE__, fields)
-        end
-
-        def validate_inputs(inputs) when is_map(inputs) do
-          required_inputs = MapSet.new(@input_fields)
-          provided_inputs = MapSet.new(Map.keys(inputs))
-          missing = MapSet.difference(required_inputs, provided_inputs)
-
-          case MapSet.size(missing) do
-            0 -> :ok
-            _ -> {:error, {:missing_inputs, MapSet.to_list(missing)}}
-          end
-        end
-
-        def validate_outputs(outputs) when is_map(outputs) do
-          required_outputs = MapSet.new(@output_fields)
-          provided_outputs = MapSet.new(Map.keys(outputs))
-          missing = MapSet.difference(required_outputs, provided_outputs)
-
-          case MapSet.size(missing) do
-            0 -> :ok
-            _ -> {:error, {:missing_outputs, MapSet.to_list(missing)}}
-          end
-        end
+        unquote(create_struct_definition(all_fields))
+        unquote(create_type_specification(all_fields))
+        unquote(create_module_attributes(base_instructions, inputs, outputs, all_fields))
+        unquote(create_behavior_implementations())
+        unquote(create_helper_functions())
       end
+    end
+  end
+
+  defp create_struct_definition(all_fields) do
+    quote do
+      defstruct unquote(all_fields |> Enum.map(&{&1, nil}))
+    end
+  end
+
+  defp create_type_specification(all_fields) do
+    quote do
+      @type t :: %__MODULE__{
+              unquote_splicing(
+                all_fields
+                |> Enum.map(fn field ->
+                  {field, quote(do: any())}
+                end)
+              )
+            }
+    end
+  end
+
+  defp create_module_attributes(base_instructions, inputs, outputs, all_fields) do
+    quote do
+      @instructions unquote(base_instructions)
+      @input_fields unquote(inputs)
+      @output_fields unquote(outputs)
+      @all_fields unquote(all_fields)
+    end
+  end
+
+  defp create_behavior_implementations do
+    quote do
+      @impl DSPEx.Signature
+      def instructions, do: @instructions
+
+      @impl DSPEx.Signature
+      def input_fields, do: @input_fields
+
+      @impl DSPEx.Signature
+      def output_fields, do: @output_fields
+
+      @impl DSPEx.Signature
+      def fields, do: @all_fields
+    end
+  end
+
+  defp create_helper_functions do
+    quote do
+      def new(fields \\ %{}) when is_map(fields) do
+        struct(__MODULE__, fields)
+      end
+
+      def validate_inputs(inputs) when is_map(inputs) do
+        unquote(__MODULE__).validate_field_set(@input_fields, inputs, :missing_inputs)
+      end
+
+      def validate_outputs(outputs) when is_map(outputs) do
+        unquote(__MODULE__).validate_field_set(@output_fields, outputs, :missing_outputs)
+      end
+    end
+  end
+
+  def validate_field_set(required_fields, provided_map, error_type) do
+    required = MapSet.new(required_fields)
+    provided = MapSet.new(Map.keys(provided_map))
+    missing = MapSet.difference(required, provided)
+
+    if MapSet.size(missing) == 0 do
+      :ok
+    else
+      {:error, {error_type, MapSet.to_list(missing)}}
     end
   end
 

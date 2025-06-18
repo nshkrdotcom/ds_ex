@@ -158,7 +158,7 @@ defmodule DSPEx.Integration.SimbaTelemetryValidationTest do
 
       # Note: SIMBA doesn't emit strategy_name in current implementation
       # We can check that strategy events are being emitted with proper structure
-      if length(strategy_events) > 0 do
+      if not Enum.empty?(strategy_events) do
         {_event, _measurements, metadata} = hd(strategy_events)
 
         assert Map.has_key?(metadata, :correlation_id),
@@ -244,7 +244,7 @@ defmodule DSPEx.Integration.SimbaTelemetryValidationTest do
         IO.puts("  Error events: #{length(append_rule_error_events)}")
 
         # Verify event structure for AppendRule events
-        if length(append_rule_start_events) > 0 do
+        if not Enum.empty?(append_rule_start_events) do
           {_event, measurements, metadata} = hd(append_rule_start_events)
           assert Map.has_key?(measurements, :system_time)
           assert Map.has_key?(metadata, :trajectory_count)
@@ -296,7 +296,7 @@ defmodule DSPEx.Integration.SimbaTelemetryValidationTest do
       end
 
       # Verify trajectory event structure
-      if length(trajectory_start_events) > 0 do
+      if not Enum.empty?(trajectory_start_events) do
         {_event, measurements, metadata} = hd(trajectory_start_events)
         assert Map.has_key?(measurements, :trajectory_count)
         assert Map.has_key?(metadata, :correlation_id)
@@ -328,7 +328,7 @@ defmodule DSPEx.Integration.SimbaTelemetryValidationTest do
       performance_events =
         filter_events(events, [:dspex, :teleprompter, :simba, :performance, :measure])
 
-      if length(performance_events) > 0 do
+      if not Enum.empty?(performance_events) do
         assert length(performance_events) >= 1, "Should emit performance measurement events"
 
         {_event, measurements, metadata} = hd(performance_events)
@@ -372,7 +372,7 @@ defmodule DSPEx.Integration.SimbaTelemetryValidationTest do
       optimization_error_events = filter_events(events, [:dspex, :teleprompter, :simba, :error])
 
       # Should emit error events for failed optimization
-      if length(optimization_error_events) > 0 do
+      if not Enum.empty?(optimization_error_events) do
         {_event, measurements, metadata} = hd(optimization_error_events)
 
         assert Map.has_key?(metadata, :error_type) || Map.has_key?(metadata, :reason),
@@ -415,7 +415,7 @@ defmodule DSPEx.Integration.SimbaTelemetryValidationTest do
       strategy_skip_events =
         filter_events(events, [:dspex, :teleprompter, :simba, :strategy, :skip])
 
-      if length(strategy_skip_events) > 0 do
+      if not Enum.empty?(strategy_skip_events) do
         {_event, _measurements, metadata} = hd(strategy_skip_events)
 
         assert Map.has_key?(metadata, :strategy_name),
@@ -454,7 +454,7 @@ defmodule DSPEx.Integration.SimbaTelemetryValidationTest do
         filter_events(events, [:dspex, :teleprompter, :simba, :start]) ++
           filter_events(events, [:dspex, :teleprompter, :simba, :stop])
 
-      if length(optimization_events) >= 2 do
+      if Enum.count(optimization_events) >= 2 do
         correlation_ids =
           Enum.map(optimization_events, fn {_, _, metadata} ->
             Map.get(metadata, :correlation_id) || Map.get(metadata, :optimization_id)

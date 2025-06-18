@@ -7,7 +7,7 @@ defmodule DSPEx.Integration.BEACONReadinessTest do
   use ExUnit.Case, async: false
   @moduletag :group_3
 
-  alias DSPEx.{Teleprompter, Example, Predict, OptimizedProgram, Program}
+  alias DSPEx.{Example, OptimizedProgram, Predict, Program, Teleprompter}
   alias DSPEx.Test.MockProvider
   alias DSPEx.Teleprompter.BootstrapFewShot
   alias __MODULE__.BEACONCompatSignature

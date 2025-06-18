@@ -555,48 +555,50 @@ defmodule DSPEx.Config.Validator do
   @spec generate_suggestion(list(atom()), term(), atom()) :: String.t()
   defp generate_suggestion(path, _value, _error_code) do
     field = List.last(path)
-
-    cond do
-      field in [:timeout] ->
-        suggest_timeout()
-
-      field in [:retry_attempts] ->
-        suggest_retry_attempts()
-
-      field in [:backoff_factor] ->
-        suggest_backoff_factor()
-
-      field in [:batch_size, :parallel_limit] ->
-        suggest_positive_integer()
-
-      field in [:default_temperature] ->
-        suggest_temperature()
-
-      field in [:default_max_tokens] ->
-        suggest_max_tokens()
-
-      field in [:level] ->
-        suggest_log_level()
-
-      field in [:default_provider] ->
-        suggest_provider()
-
-      field in [:api_key] ->
-        suggest_api_key()
-
-      field in [
-        :enabled,
-        :correlation_enabled,
-        :cache_enabled,
-        :detailed_logging,
-        :performance_tracking
-      ] ->
-        suggest_boolean()
-
-      true ->
-        suggest_generic()
-    end
+    get_field_suggestion(field)
   end
+
+  defp get_field_suggestion(field) when field in [:timeout, :retry_attempts, :backoff_factor] do
+    get_numeric_field_suggestion(field)
+  end
+
+  defp get_field_suggestion(field) when field in [:batch_size, :parallel_limit] do
+    suggest_positive_integer()
+  end
+
+  defp get_field_suggestion(field) when field in [:default_temperature, :default_max_tokens] do
+    get_model_field_suggestion(field)
+  end
+
+  defp get_field_suggestion(field) when field in [:level, :default_provider, :api_key] do
+    get_config_field_suggestion(field)
+  end
+
+  defp get_field_suggestion(field)
+       when field in [
+              :enabled,
+              :correlation_enabled,
+              :cache_enabled,
+              :detailed_logging,
+              :performance_tracking
+            ] do
+    suggest_boolean()
+  end
+
+  defp get_field_suggestion(_field) do
+    suggest_generic()
+  end
+
+  defp get_numeric_field_suggestion(:timeout), do: suggest_timeout()
+  defp get_numeric_field_suggestion(:retry_attempts), do: suggest_retry_attempts()
+  defp get_numeric_field_suggestion(:backoff_factor), do: suggest_backoff_factor()
+
+  defp get_model_field_suggestion(:default_temperature), do: suggest_temperature()
+  defp get_model_field_suggestion(:default_max_tokens), do: suggest_max_tokens()
+
+  defp get_config_field_suggestion(:level), do: suggest_log_level()
+  defp get_config_field_suggestion(:default_provider), do: suggest_provider()
+  defp get_config_field_suggestion(:api_key), do: suggest_api_key()
 
   defp suggest_timeout, do: "Use a positive integer value in milliseconds, e.g., 30000"
   defp suggest_retry_attempts, do: "Use a non-negative integer, e.g., 3"

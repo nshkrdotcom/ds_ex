@@ -30,11 +30,7 @@ defmodule DSPEx.EvaluateTest do
             {:ok, inputs}
 
           :multiply ->
-            if Map.has_key?(inputs, :number) do
-              {:ok, %{result: inputs.number * 2}}
-            else
-              {:error, :missing_number}
-            end
+            handle_multiply(inputs)
 
           :custom_response ->
             response = Map.get(program.response_map, inputs[:question], "default response")
@@ -43,6 +39,14 @@ defmodule DSPEx.EvaluateTest do
           _ ->
             {:ok, %{processed: true, id: program.id}}
         end
+      end
+    end
+
+    defp handle_multiply(inputs) do
+      if Map.has_key?(inputs, :number) do
+        {:ok, %{result: inputs.number * 2}}
+      else
+        {:error, :missing_number}
       end
     end
   end

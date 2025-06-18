@@ -24,7 +24,7 @@ defmodule DSPEx.Predict.ChainOfThought do
   4. The underlying model generates reasoning in the rationale field first
   """
 
-  alias DSPEx.{Predict}
+  alias DSPEx.Predict
 
   @doc """
   Create a new Chain of Thought program.

@@ -591,71 +591,39 @@ defmodule DSPEx.Signature.EnhancedParser do
   # Parses regex patterns like /^pattern$/ or 'pattern'
   @spec parse_regex_value(String.t()) :: Regex.t() | no_return()
   defp parse_regex_value(value_str) do
+    {pattern, flags} = extract_regex_pattern_and_flags(value_str)
+    compile_regex_with_error_handling(pattern, flags)
+  end
+
+  defp extract_regex_pattern_and_flags(value_str) do
     cond do
-      # Regex literal: /pattern/flags
       Regex.match?(~r|^/(.*)/(.*)?$|, value_str) ->
         [_full, pattern, flags] = Regex.run(~r|^/(.*)/(.*)?$|, value_str)
+        {pattern, parse_regex_flags(flags)}
 
-        try do
-          Regex.compile!(pattern, parse_regex_flags(flags))
-        rescue
-          error ->
-            reraise CompileError,
-                    [
-                      description: "Invalid regex pattern '#{pattern}': #{inspect(error)}",
-                      file: __ENV__.file,
-                      line: __ENV__.line
-                    ],
-                    __STACKTRACE__
-        end
-
-      # String literal: 'pattern' or "pattern"
       String.starts_with?(value_str, "'") and String.ends_with?(value_str, "'") ->
-        pattern = String.slice(value_str, 1..-2//1)
-
-        try do
-          Regex.compile!(pattern)
-        rescue
-          error ->
-            reraise CompileError,
-                    [
-                      description: "Invalid regex pattern '#{pattern}': #{inspect(error)}",
-                      file: __ENV__.file,
-                      line: __ENV__.line
-                    ],
-                    __STACKTRACE__
-        end
+        {String.slice(value_str, 1..-2//1), []}
 
       String.starts_with?(value_str, "\"") and String.ends_with?(value_str, "\"") ->
-        pattern = String.slice(value_str, 1..-2//1)
+        {String.slice(value_str, 1..-2//1), []}
 
-        try do
-          Regex.compile!(pattern)
-        rescue
-          error ->
-            reraise CompileError,
-                    [
-                      description: "Invalid regex pattern '#{pattern}': #{inspect(error)}",
-                      file: __ENV__.file,
-                      line: __ENV__.line
-                    ],
-                    __STACKTRACE__
-        end
-
-      # Plain pattern (treat as string)
       true ->
-        try do
-          Regex.compile!(value_str)
-        rescue
-          error ->
-            reraise CompileError,
-                    [
-                      description: "Invalid regex pattern '#{value_str}': #{inspect(error)}",
-                      file: __ENV__.file,
-                      line: __ENV__.line
-                    ],
-                    __STACKTRACE__
-        end
+        {value_str, []}
+    end
+  end
+
+  defp compile_regex_with_error_handling(pattern, flags) do
+    try do
+      Regex.compile!(pattern, flags)
+    rescue
+      error ->
+        reraise CompileError,
+                [
+                  description: "Invalid regex pattern '#{pattern}': #{inspect(error)}",
+                  file: __ENV__.file,
+                  line: __ENV__.line
+                ],
+                __STACKTRACE__
     end
   end
 

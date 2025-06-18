@@ -447,23 +447,22 @@ defmodule DSPEx.Performance.ElixactVsBaselineTest do
           # Simulate manual validation implementation
           defmodule ManualSignatureImplementation do
             def validate_inputs(data) do
-              case {:ok, data.query} do
-                {:ok, query}
-                when is_binary(query) and byte_size(query) >= 1 and byte_size(query) <= 500 ->
-                  {:ok, %{query: query}}
+              query = data.query
 
-                _ ->
-                  {:error, "query validation failed"}
+              if is_binary(query) and byte_size(query) >= 1 and byte_size(query) <= 500 do
+                {:ok, %{query: query}}
+              else
+                {:error, "query validation failed"}
               end
             end
 
             def validate_outputs(data) do
-              case {:ok, data.response} do
-                {:ok, response} when is_binary(response) and byte_size(response) <= 1000 ->
-                  {:ok, %{response: response}}
+              response = data.response
 
-                _ ->
-                  {:error, "response validation failed"}
+              if is_binary(response) and byte_size(response) <= 1000 do
+                {:ok, %{response: response}}
+              else
+                {:error, "response validation failed"}
               end
             end
 

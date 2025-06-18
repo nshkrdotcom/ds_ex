@@ -117,9 +117,7 @@ defmodule DSPEx.Teleprompter.BEACON.Examples do
             IO.puts("- Optimized program type: OptimizedProgram")
             IO.puts("- Demo count: #{length(optimized.demos)}")
 
-            if Map.has_key?(optimized, :instruction) do
-              IO.puts("- Instruction: \"#{String.slice(optimized.instruction, 0, 100)}...\"")
-            end
+            print_instruction_if_present(optimized)
 
           _ ->
             IO.puts("- Optimized program type: #{optimized.__struct__}")
@@ -147,6 +145,12 @@ defmodule DSPEx.Teleprompter.BEACON.Examples do
     end
 
     IO.puts("\n" <> String.duplicate("=", 60) <> "\n")
+  end
+
+  defp print_instruction_if_present(optimized) do
+    if Map.has_key?(optimized, :instruction) do
+      IO.puts("- Instruction: \"#{String.slice(optimized.instruction, 0, 100)}...\"")
+    end
   end
 
   @doc """

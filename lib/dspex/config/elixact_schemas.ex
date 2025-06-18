@@ -119,25 +119,21 @@ defmodule DSPEx.Config.ElixactSchemas do
   """
   @spec export_json_schema(atom()) :: {:ok, map()} | {:error, term()}
   def export_json_schema(domain) do
-    schema =
-      case domain do
-        :client -> client_json_schema()
-        :provider -> provider_json_schema()
-        :prediction -> prediction_json_schema()
-        :evaluation -> evaluation_json_schema()
-        :teleprompter -> teleprompter_json_schema()
-        :beacon -> beacon_json_schema()
-        :logging -> logging_json_schema()
-        :telemetry -> telemetry_json_schema()
-        _ -> nil
-      end
-
-    if schema do
-      {:ok, schema}
-    else
-      {:error, {:unknown_domain, domain}}
+    case get_domain_schema(domain) do
+      nil -> {:error, {:unknown_domain, domain}}
+      schema -> {:ok, schema}
     end
   end
+
+  defp get_domain_schema(:client), do: client_json_schema()
+  defp get_domain_schema(:provider), do: provider_json_schema()
+  defp get_domain_schema(:prediction), do: prediction_json_schema()
+  defp get_domain_schema(:evaluation), do: evaluation_json_schema()
+  defp get_domain_schema(:teleprompter), do: teleprompter_json_schema()
+  defp get_domain_schema(:beacon), do: beacon_json_schema()
+  defp get_domain_schema(:logging), do: logging_json_schema()
+  defp get_domain_schema(:telemetry), do: telemetry_json_schema()
+  defp get_domain_schema(_), do: nil
 
   ## Private validation functions
 

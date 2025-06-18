@@ -30,12 +30,7 @@ defmodule DSPEx.ErrorRecoveryTest do
         error_type ->
           case program.recovery_strategy do
             :retry_once ->
-              # Simulate retry logic
-              if Map.get(inputs, :retry_attempt, false) do
-                {:ok, Map.put(inputs, :recovered, true)}
-              else
-                {:error, error_type}
-              end
+              handle_retry_recovery(inputs, error_type)
 
             :fallback_response ->
               {:ok, %{fallback: true, original_error: error_type}}
@@ -46,6 +41,14 @@ defmodule DSPEx.ErrorRecoveryTest do
             _ ->
               {:error, error_type}
           end
+      end
+    end
+
+    defp handle_retry_recovery(inputs, error_type) do
+      if Map.get(inputs, :retry_attempt, false) do
+        {:ok, Map.put(inputs, :recovered, true)}
+      else
+        {:error, error_type}
       end
     end
 

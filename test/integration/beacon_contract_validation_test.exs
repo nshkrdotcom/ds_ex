@@ -14,7 +14,7 @@ defmodule DSPEx.BEACONContractValidationTest do
 
   use ExUnit.Case, async: false
 
-  alias DSPEx.{Program, Predict, Client, Example, OptimizedProgram}
+  alias DSPEx.{Client, Example, OptimizedProgram, Predict, Program}
   alias DSPEx.Services.ConfigManager
   alias DSPEx.Teleprompter.BootstrapFewShot
 

@@ -271,11 +271,11 @@ defmodule DSPEx.Predict do
 
     # Add demonstrations if present
     parts =
-      if length(program.demos) > 0 do
+      if Enum.empty?(program.demos) do
+        parts
+      else
         demo_text = format_demonstrations(program.demos)
         ["Examples:\n#{demo_text}" | parts]
-      else
-        parts
       end
 
     # Add original content

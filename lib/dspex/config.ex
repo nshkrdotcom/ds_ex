@@ -85,7 +85,7 @@ defmodule DSPEx.Config do
       :ok
   """
   @spec reset() :: :ok
-  def reset() do
+  def reset do
     Store.reset()
   end
 

@@ -10,7 +10,7 @@ defmodule DSPEx.Integration.BEACONPerformanceValidationTest do
   import Mox
   setup :verify_on_exit!
 
-  alias DSPEx.{Program, Predict}
+  alias DSPEx.{Predict, Program}
   alias DSPEx.Teleprompter.BEACON
   alias DSPEx.Teleprompter.BEACON.Benchmark
   alias DSPEx.Test.MockProvider

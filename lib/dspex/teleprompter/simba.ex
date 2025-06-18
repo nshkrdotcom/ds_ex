@@ -24,7 +24,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
   @behaviour DSPEx.Teleprompter
 
   alias DSPEx.{Example, Program}
-  alias DSPEx.Teleprompter.SIMBA.{Trajectory, Bucket}
+  alias DSPEx.Teleprompter.SIMBA.{Bucket, Trajectory}
 
   @enforce_keys []
   defstruct bsize: 32,
@@ -641,7 +641,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
     # Prune program pool if it gets too large (keep top performers + baseline)
     # Configurable threshold
-    if length(updated_programs) > 50 do
+    if Enum.count(updated_programs) > 50 do
       # Keep top 30
       prune_program_pool(updated_programs, updated_scores, 30)
     else
@@ -716,7 +716,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
         # Limit winning programs list size
         updated_list = [candidate | current_winning]
         # Configurable
-        if length(updated_list) > 20 do
+        if Enum.count(updated_list) > 20 do
           Enum.take(updated_list, 20)
         else
           updated_list
@@ -1002,46 +1002,52 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   # Select final best program from winning programs
   defp select_final_best_program(winning_programs, trainset, metric_fn) do
-    # Filter out invalid programs and SIMBA instances
-    valid_programs =
-      Enum.filter(winning_programs, fn program ->
-        is_struct(program) and
-          Map.has_key?(program, :__struct__) and
-          program.__struct__ != DSPEx.Teleprompter.SIMBA and
-          function_exported?(program.__struct__, :forward, 2)
-      end)
+    valid_programs = filter_valid_programs(winning_programs)
 
     if Enum.empty?(valid_programs) do
-      # Fall back to first winning program if no valid ones
       List.first(winning_programs)
     else
-      program_scores =
-        valid_programs
-        |> Enum.with_index()
-        |> Task.async_stream(
-          fn {program, _idx} ->
-            sample_size = min(50, length(trainset))
-            sample = Enum.take_random(trainset, sample_size)
-
-            scores = evaluate_program_on_sample(program, sample, metric_fn)
-
-            avg_score = if Enum.empty?(scores), do: 0.0, else: Enum.sum(scores) / length(scores)
-            {program, avg_score}
-          end,
-          max_concurrency: 5,
-          timeout: 60_000
-        )
-        |> Stream.filter(&match?({:ok, _}, &1))
-        |> Stream.map(fn {:ok, result} -> result end)
-        |> Enum.to_list()
-
-      if Enum.empty?(program_scores) do
-        List.first(valid_programs)
-      else
-        {best_program, _best_score} = Enum.max_by(program_scores, fn {_prog, score} -> score end)
-        best_program
-      end
+      select_best_by_evaluation(valid_programs, trainset, metric_fn)
     end
+  end
+
+  defp filter_valid_programs(winning_programs) do
+    Enum.filter(winning_programs, fn program ->
+      is_struct(program) and
+        Map.has_key?(program, :__struct__) and
+        program.__struct__ != DSPEx.Teleprompter.SIMBA and
+        function_exported?(program.__struct__, :forward, 2)
+    end)
+  end
+
+  defp select_best_by_evaluation(valid_programs, trainset, metric_fn) do
+    program_scores = evaluate_programs_concurrently(valid_programs, trainset, metric_fn)
+
+    if Enum.empty?(program_scores) do
+      List.first(valid_programs)
+    else
+      {best_program, _best_score} = Enum.max_by(program_scores, fn {_prog, score} -> score end)
+      best_program
+    end
+  end
+
+  defp evaluate_programs_concurrently(valid_programs, trainset, metric_fn) do
+    valid_programs
+    |> Enum.with_index()
+    |> Task.async_stream(
+      fn {program, _idx} ->
+        sample_size = min(50, Enum.count(trainset))
+        sample = Enum.take_random(trainset, sample_size)
+        scores = evaluate_program_on_sample(program, sample, metric_fn)
+        avg_score = if Enum.empty?(scores), do: 0.0, else: Enum.sum(scores) / Enum.count(scores)
+        {program, avg_score}
+      end,
+      max_concurrency: 5,
+      timeout: 60_000
+    )
+    |> Stream.filter(&match?({:ok, _}, &1))
+    |> Stream.map(fn {:ok, result} -> result end)
+    |> Enum.to_list()
   end
 
   # Helper functions

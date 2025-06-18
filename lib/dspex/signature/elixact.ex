@@ -344,25 +344,26 @@ defmodule DSPEx.Signature.Elixact do
   @spec map_single_constraint_to_elixact(atom(), term()) ::
           {:ok, atom(), term()} | {:skip}
   defp map_single_constraint_to_elixact(constraint_name, value) do
-    case constraint_name do
-      # Direct mappings
-      :min_length -> {:ok, :min_length, value}
-      :max_length -> {:ok, :max_length, value}
-      :min_items -> {:ok, :min_items, value}
-      :max_items -> {:ok, :max_items, value}
-      :format -> {:ok, :format, value}
-      :choices -> {:ok, :choices, value}
-      # Numeric constraints (map to Elixact equivalents)
-      :gteq -> {:ok, :gteq, value}
-      :lteq -> {:ok, :lteq, value}
-      :gt -> {:ok, :gt, value}
-      :lt -> {:ok, :lt, value}
-      # These are handled by required/default fields, not constraints
-      :default -> {:skip}
-      :optional -> {:skip}
-      # Unknown constraints - preserve as-is for custom validation
-      _ -> {:ok, constraint_name, value}
+    cond do
+      constraint_name in [:default, :optional] -> {:skip}
+      direct_mapping_constraint?(constraint_name) -> {:ok, constraint_name, value}
+      true -> {:ok, constraint_name, value}
     end
+  end
+
+  defp direct_mapping_constraint?(constraint_name) do
+    constraint_name in [
+      :min_length,
+      :max_length,
+      :min_items,
+      :max_items,
+      :format,
+      :choices,
+      :gteq,
+      :lteq,
+      :gt,
+      :lt
+    ]
   end
 
   @spec signature_to_schema_for_field_type(signature_module(), atom()) ::
@@ -586,23 +587,8 @@ defmodule DSPEx.Signature.Elixact do
   defp convert_type_to_elixact(type) do
     case type do
       # Basic types - direct mapping
-      :string ->
-        :string
-
-      :integer ->
-        :integer
-
-      :float ->
-        :float
-
-      :boolean ->
-        :boolean
-
-      :any ->
-        :any
-
-      :map ->
-        :map
+      basic_type when basic_type in [:string, :integer, :float, :boolean, :any, :map] ->
+        basic_type
 
       # Array types - convert to Elixact array format
       {:array, inner_type} ->
@@ -611,27 +597,27 @@ defmodule DSPEx.Signature.Elixact do
 
       # Object types (for future nested object support)
       {:object, fields} when is_list(fields) ->
-        # Convert object fields to nested schema
         {:object, Enum.map(fields, &convert_object_field_to_elixact/1)}
 
       # Custom module types - preserve as-is
       module_type when is_atom(module_type) ->
-        # Check if it's a module name (starts with uppercase)
-        type_str = Atom.to_string(module_type)
-
-        if String.match?(type_str, ~r/^[A-Z]/) do
-          # Custom module type - preserve
-          module_type
-        else
-          # Unknown type - default to string with warning
-          IO.warn("Unknown type #{inspect(module_type)}, defaulting to :string")
-          :string
-        end
+        handle_module_type(module_type)
 
       # Fallback for other types
       unknown_type ->
         IO.warn("Unknown type format #{inspect(unknown_type)}, defaulting to :string")
         :string
+    end
+  end
+
+  defp handle_module_type(module_type) do
+    type_str = Atom.to_string(module_type)
+
+    if String.match?(type_str, ~r/^[A-Z]/) do
+      module_type
+    else
+      IO.warn("Unknown type #{inspect(module_type)}, defaulting to :string")
+      :string
     end
   end
 
