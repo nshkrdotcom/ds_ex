@@ -538,30 +538,31 @@ defmodule DSPEx.Performance.OptimizationBenchmarksTest do
 
   defp create_accuracy_metric do
     fn example, prediction ->
-      # For performance testing, use a more lenient metric that works with mock responses
       cond do
-        # Check if prediction has an answer field
-        Map.has_key?(prediction, :answer) and Map.get(prediction, :answer) != nil ->
-          # Mock responses are always considered good quality for performance testing
-          1.0
-
-        # Check if prediction has content (direct string response)
-        is_binary(prediction) and String.length(prediction) > 0 ->
-          1.0
-
-        # Check for map with string keys (from mock responses)
-        is_map(prediction) and Map.has_key?(prediction, "answer") ->
-          1.0
-
-        # Default case - check for any meaningful content
-        true ->
-          case example do
-            # Good enough for performance testing
-            %{outputs: %{answer: _}} -> 0.8
-            # Still acceptable for performance benchmarks
-            _ -> 0.5
-          end
+        has_answer_field?(prediction) -> 1.0
+        is_string_response?(prediction) -> 1.0
+        has_string_answer_key?(prediction) -> 1.0
+        true -> default_performance_score(example)
       end
+    end
+  end
+
+  defp has_answer_field?(prediction) do
+    Map.has_key?(prediction, :answer) and Map.get(prediction, :answer) != nil
+  end
+
+  defp is_string_response?(prediction) do
+    is_binary(prediction) and String.length(prediction) > 0
+  end
+
+  defp has_string_answer_key?(prediction) do
+    is_map(prediction) and Map.has_key?(prediction, "answer")
+  end
+
+  defp default_performance_score(example) do
+    case example do
+      %{outputs: %{answer: _}} -> 0.8
+      _ -> 0.5
     end
   end
 

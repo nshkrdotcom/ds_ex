@@ -441,29 +441,31 @@ defmodule DSPEx.Performance.MemoryPerformanceTest do
 
   defp create_memory_test_metric do
     fn example, prediction ->
-      # For performance testing, use a lenient metric that works with mock responses
       cond do
-        # Check if prediction has an answer field
-        Map.has_key?(prediction, :answer) and Map.get(prediction, :answer) != nil ->
-          1.0
-
-        # Check if prediction has content (direct string response)
-        is_binary(prediction) and String.length(prediction) > 0 ->
-          1.0
-
-        # Check for map with string keys (from mock responses)
-        is_map(prediction) and Map.has_key?(prediction, "answer") ->
-          1.0
-
-        # Default case - check for any meaningful content
-        true ->
-          case example do
-            # Good enough for performance testing
-            %{outputs: %{answer: _}} -> 0.8
-            # Still acceptable for performance benchmarks
-            _ -> 0.5
-          end
+        has_valid_answer_field?(prediction) -> 1.0
+        is_valid_string_response?(prediction) -> 1.0
+        has_string_key_answer?(prediction) -> 1.0
+        true -> fallback_score(example)
       end
+    end
+  end
+
+  defp has_valid_answer_field?(prediction) do
+    Map.has_key?(prediction, :answer) and Map.get(prediction, :answer) != nil
+  end
+
+  defp is_valid_string_response?(prediction) do
+    is_binary(prediction) and String.length(prediction) > 0
+  end
+
+  defp has_string_key_answer?(prediction) do
+    is_map(prediction) and Map.has_key?(prediction, "answer")
+  end
+
+  defp fallback_score(example) do
+    case example do
+      %{outputs: %{answer: _}} -> 0.8
+      _ -> 0.5
     end
   end
 

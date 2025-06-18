@@ -441,66 +441,10 @@ defmodule DSPEx.Signature.Elixact do
     try do
       case field_type do
         :inputs ->
-          case get_enhanced_field_definitions(signature) do
-            {:ok, enhanced_fields} ->
-              # Filter to only input fields and convert
-              input_names = MapSet.new(signature.input_fields())
-
-              filtered_fields =
-                enhanced_fields
-                |> Enum.filter(&MapSet.member?(input_names, &1.name))
-                |> Enum.map(&convert_enhanced_to_field_definition/1)
-
-              {:ok, filtered_fields}
-
-            {:error, :no_enhanced_fields} ->
-              # Fall back to basic definitions
-              input_fields = signature.input_fields()
-
-              definitions =
-                Enum.map(input_fields, fn field ->
-                  %{
-                    name: field,
-                    type: :string,
-                    constraints: %{},
-                    required: true,
-                    default: nil
-                  }
-                end)
-
-              {:ok, definitions}
-          end
+          extract_filtered_field_definitions(signature, signature.input_fields())
 
         :outputs ->
-          case get_enhanced_field_definitions(signature) do
-            {:ok, enhanced_fields} ->
-              # Filter to only output fields and convert
-              output_names = MapSet.new(signature.output_fields())
-
-              filtered_fields =
-                enhanced_fields
-                |> Enum.filter(&MapSet.member?(output_names, &1.name))
-                |> Enum.map(&convert_enhanced_to_field_definition/1)
-
-              {:ok, filtered_fields}
-
-            {:error, :no_enhanced_fields} ->
-              # Fall back to basic definitions
-              output_fields = signature.output_fields()
-
-              definitions =
-                Enum.map(output_fields, fn field ->
-                  %{
-                    name: field,
-                    type: :string,
-                    constraints: %{},
-                    required: true,
-                    default: nil
-                  }
-                end)
-
-              {:ok, definitions}
-          end
+          extract_filtered_field_definitions(signature, signature.output_fields())
 
         :all ->
           extract_field_definitions(signature)
@@ -510,6 +454,36 @@ defmodule DSPEx.Signature.Elixact do
       end
     rescue
       error -> {:error, {:field_extraction_failed, error}}
+    end
+  end
+
+  @spec extract_filtered_field_definitions(signature_module(), [atom()]) ::
+          {:ok, [field_definition()]} | {:error, term()}
+  defp extract_filtered_field_definitions(signature, field_names) do
+    case get_enhanced_field_definitions(signature) do
+      {:ok, enhanced_fields} ->
+        field_names_set = MapSet.new(field_names)
+
+        filtered_fields =
+          enhanced_fields
+          |> Enum.filter(&MapSet.member?(field_names_set, &1.name))
+          |> Enum.map(&convert_enhanced_to_field_definition/1)
+
+        {:ok, filtered_fields}
+
+      {:error, :no_enhanced_fields} ->
+        definitions =
+          Enum.map(field_names, fn field ->
+            %{
+              name: field,
+              type: :string,
+              constraints: %{},
+              required: true,
+              default: nil
+            }
+          end)
+
+        {:ok, definitions}
     end
   end
 

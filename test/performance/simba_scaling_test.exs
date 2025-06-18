@@ -622,22 +622,26 @@ defmodule DSPEx.Performance.SimbaScalingTest do
   defp create_scaling_metric do
     fn example, prediction ->
       expected = get_in(example, [:outputs, :answer]) || ""
+      actual = extract_actual_answer(prediction)
+      calculate_similarity_score(actual, expected)
+    end
+  end
 
-      actual =
-        case prediction do
-          %{answer: answer} -> answer
-          %{"answer" => answer} -> answer
-          binary when is_binary(binary) -> binary
-          _ -> ""
-        end
+  defp extract_actual_answer(prediction) do
+    case prediction do
+      %{answer: answer} -> answer
+      %{"answer" => answer} -> answer
+      binary when is_binary(binary) -> binary
+      _ -> ""
+    end
+  end
 
-      # Simple similarity scoring for performance testing
-      cond do
-        actual == expected -> 1.0
-        String.contains?(actual, expected) -> 0.8
-        String.length(actual) > 0 -> 0.5
-        true -> 0.0
-      end
+  defp calculate_similarity_score(actual, expected) do
+    cond do
+      actual == expected -> 1.0
+      String.contains?(actual, expected) -> 0.8
+      String.length(actual) > 0 -> 0.5
+      true -> 0.0
     end
   end
 end

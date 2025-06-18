@@ -292,7 +292,7 @@ defmodule DSPEx.Integration.SimbaTelemetryValidationTest do
       if Enum.empty?(trajectory_sampled_events) do
         IO.puts("No trajectory sampled events (expected with mock data that doesn't execute)")
       else
-        assert length(trajectory_sampled_events) >= 1, "Should emit trajectory sampled events"
+        assert not Enum.empty?(trajectory_sampled_events), "Should emit trajectory sampled events"
       end
 
       # Verify trajectory event structure

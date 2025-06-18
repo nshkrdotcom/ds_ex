@@ -47,31 +47,26 @@ defmodule DSPEx.Concurrent.TeleprompterStressTest do
         question = Map.get(inputs, :question, "")
 
         # Generate high-quality responses based on teacher quality level
-        quality_score = teacher.quality_level + (:rand.uniform() - 0.5) * 0.2
-        quality_score = max(0.0, min(1.0, quality_score))
-
-        answer =
-          cond do
-            String.contains?(question, "2+2") ->
-              "4"
-
-            String.contains?(question, "3+3") ->
-              "6"
-
-            String.contains?(question, "5+5") ->
-              "10"
-
-            String.contains?(question, "capital") and String.contains?(question, "France") ->
-              "Paris"
-
-            String.contains?(question, "capital") and String.contains?(question, "Spain") ->
-              "Madrid"
-
-            true ->
-              "High quality teacher response (quality: #{Float.round(quality_score, 2)})"
-          end
+        quality_score = calculate_quality_score(teacher.quality_level)
+        answer = generate_teacher_answer(question, quality_score)
 
         {:ok, %{answer: answer, quality_score: quality_score, teacher_id: teacher.id}}
+      end
+    end
+
+    defp calculate_quality_score(base_quality) do
+      quality_score = base_quality + (:rand.uniform() - 0.5) * 0.2
+      max(0.0, min(1.0, quality_score))
+    end
+
+    defp generate_teacher_answer(question, quality_score) do
+      cond do
+        String.contains?(question, "2+2") -> "4"
+        String.contains?(question, "3+3") -> "6"
+        String.contains?(question, "5+5") -> "10"
+        String.contains?(question, "capital") and String.contains?(question, "France") -> "Paris"
+        String.contains?(question, "capital") and String.contains?(question, "Spain") -> "Madrid"
+        true -> "High quality teacher response (quality: #{Float.round(quality_score, 2)})"
       end
     end
   end

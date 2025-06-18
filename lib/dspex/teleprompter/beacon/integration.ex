@@ -209,36 +209,37 @@ defmodule DSPEx.Teleprompter.BEACON.Integration do
   def monitor_optimization_health(correlation_id, config) do
     spawn_link(fn ->
       start_time = System.monotonic_time()
-      # 30 seconds
       check_interval = 30_000
 
       Stream.repeatedly(fn ->
         Process.sleep(check_interval)
-
         current_time = System.monotonic_time()
         elapsed = System.convert_time_unit(current_time - start_time, :native, :millisecond)
 
-        # Check for timeout
-        if elapsed > config.timeout * 1.5 do
-          IO.puts(
-            "⚠️  Optimization #{correlation_id} may be taking longer than expected (#{elapsed}ms)"
-          )
-        end
-
-        # Monitor system resources
-        # MB
-        memory_usage = :erlang.memory(:total) / 1_048_576
-
-        # 1GB
-        if memory_usage > 1000 do
-          IO.puts("⚠️  High memory usage during optimization: #{Float.round(memory_usage, 1)}MB")
-        end
+        check_timeout_warning(correlation_id, elapsed, config.timeout)
+        check_memory_usage()
 
         :continue
       end)
       |> Stream.take_while(fn status -> status == :continue end)
       |> Enum.to_list()
     end)
+  end
+
+  defp check_timeout_warning(correlation_id, elapsed, timeout) do
+    if elapsed > timeout * 1.5 do
+      IO.puts(
+        "⚠️  Optimization #{correlation_id} may be taking longer than expected (#{elapsed}ms)"
+      )
+    end
+  end
+
+  defp check_memory_usage do
+    memory_usage = :erlang.memory(:total) / 1_048_576
+
+    if memory_usage > 1000 do
+      IO.puts("⚠️  High memory usage during optimization: #{Float.round(memory_usage, 1)}MB")
+    end
   end
 
   @doc """
