@@ -253,51 +253,50 @@ defmodule DSPEx.Teleprompter.BEACON.Integration do
     IO.puts("   Quality threshold: #{quality_threshold}")
 
     Enum.reduce_while(stages, {:ok, nil}, fn stage, {:ok, previous_result} ->
-      stage_id = "#{pipeline_id}_stage_#{stage.name}"
-
-      IO.puts("\n🎯 Running stage: #{stage.name}")
-
-      # Determine input for this stage
-      input_program = previous_result || stage.student
-
-      case optimize_for_production(
-             input_program,
-             stage.teacher,
-             stage.trainset,
-             stage.metric_fn,
-             Keyword.put(opts, :correlation_id, stage_id)
-           ) do
-        {:ok, optimized_program} ->
-          # Quality gate check
-          quality_score =
-            evaluate_program_quality(
-              optimized_program,
-              stage.validation_set || Enum.take(stage.trainset, 10),
-              stage.metric_fn
-            )
-
-          if quality_score >= quality_threshold do
-            IO.puts(
-              "✅ Stage #{stage.name} passed quality gate (#{Float.round(quality_score, 3)})"
-            )
-
-            {:cont, {:ok, optimized_program}}
-          else
-            IO.puts(
-              "⚠️  Stage #{stage.name} failed quality gate (#{Float.round(quality_score, 3)})"
-            )
-
-            {:halt, {:error, {:quality_gate_failed, stage.name, quality_score}}}
-          end
-
-        {:error, reason} ->
-          IO.puts("❌ Stage #{stage.name} failed: #{inspect(reason)}")
-          {:halt, {:error, {:stage_failed, stage.name, reason}}}
-      end
+      execute_pipeline_stage(stage, previous_result, pipeline_id, quality_threshold, opts)
     end)
   end
 
   # Private implementation functions
+
+  defp execute_pipeline_stage(stage, previous_result, pipeline_id, quality_threshold, opts) do
+    stage_id = "#{pipeline_id}_stage_#{stage.name}"
+    IO.puts("\n🎯 Running stage: #{stage.name}")
+
+    input_program = previous_result || stage.student
+
+    case optimize_for_production(
+           input_program,
+           stage.teacher,
+           stage.trainset,
+           stage.metric_fn,
+           Keyword.put(opts, :correlation_id, stage_id)
+         ) do
+      {:ok, optimized_program} ->
+        validate_quality_gate(stage, optimized_program, quality_threshold)
+
+      {:error, reason} ->
+        IO.puts("❌ Stage #{stage.name} failed: #{inspect(reason)}")
+        {:halt, {:error, {:stage_failed, stage.name, reason}}}
+    end
+  end
+
+  defp validate_quality_gate(stage, optimized_program, quality_threshold) do
+    quality_score =
+      evaluate_program_quality(
+        optimized_program,
+        stage.validation_set || Enum.take(stage.trainset, 10),
+        stage.metric_fn
+      )
+
+    if quality_score >= quality_threshold do
+      IO.puts("✅ Stage #{stage.name} passed quality gate (#{Float.round(quality_score, 3)})")
+      {:cont, {:ok, optimized_program}}
+    else
+      IO.puts("⚠️  Stage #{stage.name} failed quality gate (#{Float.round(quality_score, 3)})")
+      {:halt, {:error, {:quality_gate_failed, stage.name, quality_score}}}
+    end
+  end
 
   defp validate_optimization_inputs(student, teacher, trainset, metric_fn) do
     cond do
@@ -451,28 +450,39 @@ defmodule DSPEx.Teleprompter.BEACON.Integration do
 
   defp create_production_progress_callback(correlation_id) do
     fn progress ->
-      case progress.phase do
-        :bootstrap_generation ->
-          if rem(progress.completed, 10) == 0 do
-            percentage = Float.round(progress.completed / progress.total * 100, 1)
-
-            IO.puts(
-              "[#{correlation_id}] Bootstrap: #{percentage}% (#{progress.completed}/#{progress.total})"
-            )
-          end
-
-        :bayesian_optimization ->
-          if rem(progress.trial, 5) == 0 do
-            IO.puts(
-              "[#{correlation_id}] Optimization: Trial #{progress.trial} - Score #{Float.round(progress.current_score, 4)}"
-            )
-          end
-
-        _ ->
-          IO.puts("[#{correlation_id}] #{progress.phase}: #{inspect(progress)}")
-      end
-
+      report_production_progress(correlation_id, progress)
       :ok
+    end
+  end
+
+  defp report_production_progress(correlation_id, progress) do
+    case progress.phase do
+      :bootstrap_generation ->
+        report_bootstrap_progress(correlation_id, progress)
+
+      :bayesian_optimization ->
+        report_optimization_progress(correlation_id, progress)
+
+      _ ->
+        IO.puts("[#{correlation_id}] #{progress.phase}: #{inspect(progress)}")
+    end
+  end
+
+  defp report_bootstrap_progress(correlation_id, progress) do
+    if rem(progress.completed, 10) == 0 do
+      percentage = Float.round(progress.completed / progress.total * 100, 1)
+
+      IO.puts(
+        "[#{correlation_id}] Bootstrap: #{percentage}% (#{progress.completed}/#{progress.total})"
+      )
+    end
+  end
+
+  defp report_optimization_progress(correlation_id, progress) do
+    if rem(progress.trial, 5) == 0 do
+      IO.puts(
+        "[#{correlation_id}] Optimization: Trial #{progress.trial} - Score #{Float.round(progress.current_score, 4)}"
+      )
     end
   end
 

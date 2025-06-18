@@ -52,17 +52,24 @@ defmodule DSPEx.ErrorRecoveryTest do
       end
     end
 
-    defp should_error?(pattern, operation_id) do
-      case pattern do
-        :never -> false
-        :always -> :always_fails
-        {:every_nth, n} -> if rem(operation_id, n) == 0, do: :periodic_failure, else: false
-        {:random, rate} -> if :rand.uniform() < rate, do: :random_failure, else: false
-        {:specific_ids, ids} -> if operation_id in ids, do: :specific_failure, else: false
-        {:after_count, count} -> if operation_id > count, do: :exhaustion_failure, else: false
-        _ -> false
-      end
+    defp should_error?(:never, _operation_id), do: false
+    defp should_error?(:always, _operation_id), do: :always_fails
+
+    defp should_error?({:every_nth, n}, operation_id) when rem(operation_id, n) == 0,
+      do: :periodic_failure
+
+    defp should_error?({:random, rate}, _operation_id) do
+      if :rand.uniform() < rate, do: :random_failure, else: false
     end
+
+    defp should_error?({:specific_ids, ids}, operation_id) do
+      if operation_id in ids, do: :specific_failure, else: false
+    end
+
+    defp should_error?({:after_count, count}, operation_id) when operation_id > count,
+      do: :exhaustion_failure
+
+    defp should_error?(_, _operation_id), do: false
   end
 
   defmodule ErrorCategoriesProgram do
@@ -77,23 +84,22 @@ defmodule DSPEx.ErrorRecoveryTest do
     @impl DSPEx.Program
     def forward(program, inputs, _opts) do
       error_type = Enum.random(program.error_types)
-
-      case error_type do
-        :network_error -> {:error, :network_error}
-        :api_error -> {:error, :api_error}
-        :timeout -> {:error, :timeout}
-        :invalid_input -> {:error, :invalid_input}
-        :rate_limit -> {:error, :rate_limit}
-        :auth_error -> {:error, :auth_error}
-        :server_error -> {:error, :server_error}
-        :parse_error -> {:error, :parse_error}
-        :validation_error -> {:error, :validation_error}
-        :success -> {:ok, Map.put(inputs, :success, true)}
-        :exception -> raise "Simulated exception"
-        :exit -> exit(:simulated_exit)
-        :throw -> throw(:simulated_throw)
-      end
+      execute_error_type(error_type, inputs)
     end
+
+    defp execute_error_type(:network_error, _inputs), do: {:error, :network_error}
+    defp execute_error_type(:api_error, _inputs), do: {:error, :api_error}
+    defp execute_error_type(:timeout, _inputs), do: {:error, :timeout}
+    defp execute_error_type(:invalid_input, _inputs), do: {:error, :invalid_input}
+    defp execute_error_type(:rate_limit, _inputs), do: {:error, :rate_limit}
+    defp execute_error_type(:auth_error, _inputs), do: {:error, :auth_error}
+    defp execute_error_type(:server_error, _inputs), do: {:error, :server_error}
+    defp execute_error_type(:parse_error, _inputs), do: {:error, :parse_error}
+    defp execute_error_type(:validation_error, _inputs), do: {:error, :validation_error}
+    defp execute_error_type(:success, inputs), do: {:ok, Map.put(inputs, :success, true)}
+    defp execute_error_type(:exception, _inputs), do: raise("Simulated exception")
+    defp execute_error_type(:exit, _inputs), do: exit(:simulated_exit)
+    defp execute_error_type(:throw, _inputs), do: throw(:simulated_throw)
   end
 
   defmodule RecoveryStrategiesProgram do
@@ -117,25 +123,28 @@ defmodule DSPEx.ErrorRecoveryTest do
       current_failures = Agent.get(program.failure_count, & &1)
 
       if current_failures < program.max_failures do
-        # Fail this attempt
         Agent.update(program.failure_count, &(&1 + 1))
-
-        case program.recovery_mode do
-          :eventual_success -> {:error, :temporary_failure}
-          :circuit_breaker -> {:error, :circuit_open}
-          :backoff_retry -> {:error, :retry_later}
-          _ -> {:error, :generic_failure}
-        end
+        handle_failure(program.recovery_mode)
       else
-        # Succeed after max failures
-        case program.recovery_mode do
-          :eventual_success -> {:ok, %{recovered: true, attempts: current_failures + 1}}
-          :circuit_breaker -> {:ok, %{circuit_closed: true, failures: current_failures}}
-          :backoff_retry -> {:ok, %{retry_succeeded: true, total_attempts: current_failures + 1}}
-          _ -> {:ok, %{finally_succeeded: true}}
-        end
+        handle_success(program.recovery_mode, current_failures)
       end
     end
+
+    defp handle_failure(:eventual_success), do: {:error, :temporary_failure}
+    defp handle_failure(:circuit_breaker), do: {:error, :circuit_open}
+    defp handle_failure(:backoff_retry), do: {:error, :retry_later}
+    defp handle_failure(_), do: {:error, :generic_failure}
+
+    defp handle_success(:eventual_success, attempts),
+      do: {:ok, %{recovered: true, attempts: attempts + 1}}
+
+    defp handle_success(:circuit_breaker, failures),
+      do: {:ok, %{circuit_closed: true, failures: failures}}
+
+    defp handle_success(:backoff_retry, attempts),
+      do: {:ok, %{retry_succeeded: true, total_attempts: attempts + 1}}
+
+    defp handle_success(_, _), do: {:ok, %{finally_succeeded: true}}
 
     def stop(program) do
       Agent.stop(program.failure_count)

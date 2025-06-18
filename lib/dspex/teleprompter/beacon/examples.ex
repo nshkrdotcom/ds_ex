@@ -300,58 +300,10 @@ defmodule DSPEx.Teleprompter.BEACON.Examples do
     teacher = %Predict{signature: ChainOfThoughtSignature, client: :openai}
 
     # Create training dataset for math word problems
-    trainset = [
-      Example.new(
-        %{
-          problem:
-            "A store has 48 apples. They sell 15 apples in the morning and 12 apples in the afternoon. How many apples do they have left?",
-          reasoning:
-            "Start with 48 apples. Subtract 15 sold in morning: 48 - 15 = 33. Subtract 12 sold in afternoon: 33 - 12 = 21.",
-          answer: "21"
-        },
-        [:problem]
-      ),
-      Example.new(
-        %{
-          problem: "If a train travels 60 miles per hour for 2.5 hours, how far does it travel?",
-          reasoning:
-            "Distance = speed × time. Speed is 60 mph, time is 2.5 hours. Distance = 60 × 2.5 = 150 miles.",
-          answer: "150 miles"
-        },
-        [:problem]
-      ),
-      Example.new(
-        %{
-          problem:
-            "Sarah has 3 times as many books as Tom. If Tom has 8 books, how many books does Sarah have?",
-          reasoning:
-            "Tom has 8 books. Sarah has 3 times as many as Tom. Sarah's books = 3 × 8 = 24 books.",
-          answer: "24"
-        },
-        [:problem]
-      )
-    ]
+    trainset = create_chain_of_thought_trainset()
 
     # Evaluation metric that considers both reasoning and answer
-    metric_fn = fn example, prediction ->
-      # Check if the final answer is correct (simplified)
-      expected_answer = String.trim(example.data.answer)
-      predicted_answer = String.trim(prediction.answer || "")
-
-      answer_correct = String.contains?(predicted_answer, expected_answer)
-
-      # Check if reasoning contains key mathematical concepts
-      reasoning = String.downcase(prediction.reasoning || "")
-      # Basic reasoning length check
-      has_reasoning = String.length(reasoning) > 20
-
-      cond do
-        answer_correct and has_reasoning -> 1.0
-        answer_correct -> 0.7
-        has_reasoning -> 0.3
-        true -> 0.0
-      end
-    end
+    metric_fn = &chain_of_thought_metric/2
 
     # Create BEACON teleprompter for complex reasoning
     teleprompter =
@@ -546,6 +498,60 @@ defmodule DSPEx.Teleprompter.BEACON.Examples do
   end
 
   # Helper functions
+
+  defp create_chain_of_thought_trainset do
+    [
+      Example.new(
+        %{
+          problem:
+            "A store has 48 apples. They sell 15 apples in the morning and 12 apples in the afternoon. How many apples do they have left?",
+          reasoning:
+            "Start with 48 apples. Subtract 15 sold in morning: 48 - 15 = 33. Subtract 12 sold in afternoon: 33 - 12 = 21.",
+          answer: "21"
+        },
+        [:problem]
+      ),
+      Example.new(
+        %{
+          problem: "If a train travels 60 miles per hour for 2.5 hours, how far does it travel?",
+          reasoning:
+            "Distance = speed × time. Speed is 60 mph, time is 2.5 hours. Distance = 60 × 2.5 = 150 miles.",
+          answer: "150 miles"
+        },
+        [:problem]
+      ),
+      Example.new(
+        %{
+          problem:
+            "Sarah has 3 times as many books as Tom. If Tom has 8 books, how many books does Sarah have?",
+          reasoning:
+            "Tom has 8 books. Sarah has 3 times as many as Tom. Sarah's books = 3 × 8 = 24 books.",
+          answer: "24"
+        },
+        [:problem]
+      )
+    ]
+  end
+
+  defp chain_of_thought_metric(example, prediction) do
+    # Check if the final answer is correct (simplified)
+    expected_answer = String.trim(example.data.answer)
+    predicted_answer = String.trim(prediction.answer || "")
+
+    answer_correct = String.contains?(predicted_answer, expected_answer)
+
+    # Check if reasoning contains key mathematical concepts
+    reasoning = String.downcase(prediction.reasoning || "")
+    # Basic reasoning length check
+    has_reasoning = String.length(reasoning) > 20
+
+    cond do
+      answer_correct and has_reasoning -> 1.0
+      answer_correct -> 0.7
+      has_reasoning -> 0.3
+      true -> 0.0
+    end
+  end
 
   defp calculate_text_similarity(text1, text2) when is_binary(text1) and is_binary(text2) do
     # Simple word overlap similarity metric
