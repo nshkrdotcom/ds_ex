@@ -81,7 +81,7 @@ defmodule DSPEx.SignatureIntrospectionTest do
 
       # Module that doesn't implement Signature behavior
       defmodule NotASignatureModule do
-        def some_function(), do: :ok
+        def some_function, do: :ok
       end
 
       assert {:error, _} =
@@ -122,7 +122,7 @@ defmodule DSPEx.SignatureIntrospectionTest do
 
       # Module that doesn't implement Signature behavior
       defmodule NotASignatureForIntrospect do
-        def some_function(), do: :ok
+        def some_function, do: :ok
       end
 
       assert {:error, _} = Signature.introspect(NotASignatureForIntrospect)
@@ -142,7 +142,7 @@ defmodule DSPEx.SignatureIntrospectionTest do
         @behaviour DSPEx.Signature
 
         # Missing some required functions
-        def input_fields(), do: [:input]
+        def input_fields, do: [:input]
         # Missing output_fields, instructions, fields
       end
 
@@ -155,10 +155,10 @@ defmodule DSPEx.SignatureIntrospectionTest do
     test "validates behavior implementation" do
       defmodule NonBehaviorSignature do
         # Has functions but doesn't declare behavior
-        def input_fields(), do: [:input]
-        def output_fields(), do: [:output]
-        def fields(), do: [:input, :output]
-        def instructions(), do: "test"
+        def input_fields, do: [:input]
+        def output_fields, do: [:output]
+        def fields, do: [:input, :output]
+        def instructions, do: "test"
       end
 
       assert {:error, error_msg} =
@@ -172,17 +172,17 @@ defmodule DSPEx.SignatureIntrospectionTest do
         @behaviour DSPEx.Signature
 
         @impl DSPEx.Signature
-        def input_fields(), do: [:input1, :input2]
+        def input_fields, do: [:input1, :input2]
 
         @impl DSPEx.Signature
-        def output_fields(), do: [:output1]
+        def output_fields, do: [:output1]
 
         @impl DSPEx.Signature
         # Inconsistent with inputs+outputs
-        def fields(), do: [:wrong, :fields]
+        def fields, do: [:wrong, :fields]
 
         @impl DSPEx.Signature
-        def instructions(), do: "test instructions"
+        def instructions, do: "test instructions"
       end
 
       assert {:error, error_msg} =
@@ -197,16 +197,16 @@ defmodule DSPEx.SignatureIntrospectionTest do
 
         @impl DSPEx.Signature
         # Should return list of atoms
-        def input_fields(), do: "not a list"
+        def input_fields, do: "not a list"
 
         @impl DSPEx.Signature
-        def output_fields(), do: [:output]
+        def output_fields, do: [:output]
 
         @impl DSPEx.Signature
-        def fields(), do: [:input, :output]
+        def fields, do: [:input, :output]
 
         @impl DSPEx.Signature
-        def instructions(), do: "test"
+        def instructions, do: "test"
       end
 
       assert {:error, error_msg} =
@@ -331,10 +331,10 @@ defmodule DSPEx.SignatureIntrospectionTest do
     test "handles malformed signature modules" do
       defmodule MalformedSignature do
         # Has some functions but they crash
-        def input_fields(), do: raise("error")
-        def output_fields(), do: [:output]
-        def fields(), do: [:input, :output]
-        def instructions(), do: "test"
+        def input_fields, do: raise("error")
+        def output_fields, do: [:output]
+        def fields, do: [:input, :output]
+        def instructions, do: "test"
       end
 
       # Should handle errors gracefully

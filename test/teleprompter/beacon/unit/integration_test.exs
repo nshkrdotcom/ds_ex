@@ -544,30 +544,32 @@ defmodule DSPEx.Teleprompter.BEACON.IntegrationTest do
 
   defp create_mock_progress_callback(_correlation_id) do
     fn progress ->
-      case progress.phase do
-        :bootstrap_generation ->
-          if rem(progress[:completed] || 0, 10) == 0 do
-            # Mock logging without actual IO
-            :ok
-          else
-            :ok
-          end
-
-        :bayesian_optimization ->
-          if rem(progress[:trial] || 0, 5) == 0 do
-            # Mock logging without actual IO
-            :ok
-          else
-            :ok
-          end
-
-        _ ->
-          # Mock logging for unknown phases
-          :ok
-      end
-
+      handle_progress_phase(progress.phase, progress)
       :ok
     end
+  end
+
+  defp handle_progress_phase(:bootstrap_generation, progress) do
+    if rem(progress[:completed] || 0, 10) == 0 do
+      # Mock logging without actual IO
+      :ok
+    else
+      :ok
+    end
+  end
+
+  defp handle_progress_phase(:bayesian_optimization, progress) do
+    if rem(progress[:trial] || 0, 5) == 0 do
+      # Mock logging without actual IO
+      :ok
+    else
+      :ok
+    end
+  end
+
+  defp handle_progress_phase(_, _progress) do
+    # Mock logging for unknown phases
+    :ok
   end
 
   # Helper functions to test private functions

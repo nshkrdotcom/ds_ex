@@ -4,7 +4,7 @@ defmodule DSPEx.BEACONInstructionGenerationTest do
   @moduletag :integration
   @moduletag :phase2_features
 
-  alias DSPEx.{Predict, Example}
+  alias DSPEx.{Example, Predict}
   alias DSPEx.Teleprompter.BEACON
 
   defmodule TestSignature do

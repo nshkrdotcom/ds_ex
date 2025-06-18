@@ -147,7 +147,7 @@ defmodule DSPEx.Test.BeaconMockProvider do
       setup_bootstrap_mocks(teacher_responses)
     end
 
-    # Set up evaluation scores if provided  
+    # Set up evaluation scores if provided
     if evaluation_scores = config[:evaluation_scores] do
       setup_evaluation_mocks(evaluation_scores)
     end
@@ -180,7 +180,7 @@ defmodule DSPEx.Test.BeaconMockProvider do
     default_teacher_responses = [
       # Math: 2+2
       %{content: "4"},
-      # Math: 3+3  
+      # Math: 3+3
       %{content: "6"},
       # Geography: capital of France
       %{content: "Paris"},

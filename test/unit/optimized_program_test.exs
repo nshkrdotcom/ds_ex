@@ -3,7 +3,7 @@ defmodule DSPEx.OptimizedProgramTest do
 
   @moduletag :group_1
 
-  alias DSPEx.{OptimizedProgram, Example}
+  alias DSPEx.{Example, OptimizedProgram}
 
   # Mock program for testing
   defmodule MockProgram do

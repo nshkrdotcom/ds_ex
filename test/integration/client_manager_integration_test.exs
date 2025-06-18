@@ -22,7 +22,7 @@ defmodule DSPEx.ClientManagerIntegrationTest do
 
   @moduletag :group_1
 
-  alias DSPEx.{ClientManager, Predict, Program, MockHelpers}
+  alias DSPEx.{ClientManager, MockHelpers, Predict, Program}
 
   # Test signature for integration testing
   defmodule TestSignature do

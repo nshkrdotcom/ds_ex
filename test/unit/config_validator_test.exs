@@ -1,8 +1,8 @@
 defmodule DSPEx.Config.ValidatorTest do
   use ExUnit.Case, async: true
 
-  alias DSPEx.Config.Validator
   alias DSPEx.Config.ElixactSchemas
+  alias DSPEx.Config.Validator
 
   doctest DSPEx.Config.Validator
 

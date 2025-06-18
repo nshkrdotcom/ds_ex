@@ -1,8 +1,8 @@
 defmodule DSPEx.Teleprompter.SimbaProgramPoolTest do
   use ExUnit.Case, async: true
 
-  alias DSPEx.Teleprompter.SIMBA
   alias DSPEx.Predict
+  alias DSPEx.Teleprompter.SIMBA
 
   # Mock signature for testing
   defmodule MockSignature do

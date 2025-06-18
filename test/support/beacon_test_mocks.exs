@@ -149,7 +149,7 @@ defmodule DSPEx.Test.BeaconMockProvider do
   This should be called between tests to ensure clean mock state.
   """
   @spec reset_all_beacon_mocks() :: :ok
-  def reset_all_beacon_mocks() do
+  def reset_all_beacon_mocks do
     # Reset all known mock providers
     providers = [
       :gpt4,
@@ -213,7 +213,7 @@ defmodule DSPEx.Test.BeaconMockProvider do
   needs to handle errors gracefully.
   """
   @spec setup_error_recovery_mocks() :: :ok
-  def setup_error_recovery_mocks() do
+  def setup_error_recovery_mocks do
     # Mix of successful and error responses
     error_recovery_responses = [
       %{content: "Success 1", metadata: %{step: 1}},
@@ -284,7 +284,7 @@ defmodule DSPEx.Test.BeaconMockProvider do
   Useful for debugging test setup issues.
   """
   @spec validate_mock_setup() :: :ok | {:error, term()}
-  def validate_mock_setup() do
+  def validate_mock_setup do
     # Check for any configured providers - we need at least some basic setup
     all_providers = [:gpt4, :gpt3_5, :teacher, :student, :evaluator, :instruction_model]
 

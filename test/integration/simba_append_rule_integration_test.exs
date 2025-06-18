@@ -1,7 +1,7 @@
 defmodule DSPEx.Integration.SimbaAppendRuleTest do
   use ExUnit.Case
-  alias DSPEx.Teleprompter.SIMBA, as: Simba
   alias DSPEx.Predict
+  alias DSPEx.Teleprompter.SIMBA, as: Simba
 
   @moduletag :integration_test
   @moduletag timeout: 60_000
@@ -88,7 +88,7 @@ defmodule DSPEx.Integration.SimbaAppendRuleTest do
 
       metric_fn = fn _example, _prediction -> 1.0 end
 
-      # Valid strategy configuration should succeed  
+      # Valid strategy configuration should succeed
       simba =
         Simba.new(
           strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendRule],

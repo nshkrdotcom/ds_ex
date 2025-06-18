@@ -1,7 +1,7 @@
 defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendRuleTest do
   use ExUnit.Case
   alias DSPEx.Teleprompter.SIMBA.Strategy.AppendRule
-  alias DSPEx.Teleprompter.SIMBA.{Trajectory, Bucket}
+  alias DSPEx.Teleprompter.SIMBA.{Bucket, Trajectory}
 
   @moduletag :group_2
   @moduletag :append_rule

@@ -2,7 +2,7 @@ defmodule DSPEx.Integration.Phase3AdvancedFeaturesTest do
   use ExUnit.Case, async: true
 
   alias DSPEx.Predict.{ChainOfThought, ReAct}
-  alias DSPEx.Retrieve.{Embeddings, BasicRetriever}
+  alias DSPEx.Retrieve.{BasicRetriever, Embeddings}
   # alias DSPEx.{Program, Teleprompter}
   alias DSPEx.Program
 

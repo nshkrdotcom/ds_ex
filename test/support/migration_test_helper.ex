@@ -7,7 +7,7 @@ defmodule DSPEx.Test.MigrationTestHelper do
   and BEACON-related workflows.
   """
 
-  alias DSPEx.{Program, Signature, Predict, OptimizedProgram}
+  alias DSPEx.{OptimizedProgram, Predict, Program, Signature}
 
   @doc """
   Creates a mock optimization configuration with default values.

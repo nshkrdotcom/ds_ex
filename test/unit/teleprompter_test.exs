@@ -3,7 +3,7 @@ defmodule DSPEx.TeleprompterTest do
 
   @moduletag :group_1
 
-  alias DSPEx.{Teleprompter, Example}
+  alias DSPEx.{Example, Teleprompter}
 
   describe "exact_match/1" do
     test "creates metric function for exact field matching" do

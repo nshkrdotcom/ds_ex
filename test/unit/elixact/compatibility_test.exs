@@ -180,7 +180,7 @@ defmodule DSPEx.Elixact.CompatibilityTest do
             "query:string -> result:string, count:integer, valid:boolean, metadata:map"
       end
 
-      # Warmup  
+      # Warmup
       for _i <- 1..10 do
         DSPEx.Elixact.generate_json_schema(JsonBenchmarkSignature)
       end

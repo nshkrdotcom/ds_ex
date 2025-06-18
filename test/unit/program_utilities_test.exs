@@ -8,7 +8,7 @@ defmodule DSPEx.ProgramUtilitiesTest do
   """
   use ExUnit.Case, async: true
 
-  alias DSPEx.{Program, Predict, OptimizedProgram, Example}
+  alias DSPEx.{Example, OptimizedProgram, Predict, Program}
 
   @moduletag :group_2
 

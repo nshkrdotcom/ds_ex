@@ -321,7 +321,7 @@ defmodule DSPEx.MockClientManager do
     {["hello", "hi", "hey"], "Hello! This is a mock response."},
     # Questions about testing
     {["test", "testing", "mock"], "This is indeed a mock response for testing purposes."},
-    # Integration test patterns  
+    # Integration test patterns
     {["integration", "client", "manager"], "Mock ClientManager integration test response."},
     # Network or API related
     {["network", "api", "request"], "Mock API response - no actual network request made."}

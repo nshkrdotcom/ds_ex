@@ -1,7 +1,7 @@
 defmodule DSPEx.Integration.SimbaElixactTest do
   use ExUnit.Case
-  alias DSPEx.Teleprompter.SIMBA
   alias DSPEx.Predict
+  alias DSPEx.Teleprompter.SIMBA
 
   @moduletag :integration_test
   @moduletag timeout: 120_000

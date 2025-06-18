@@ -5,7 +5,7 @@ defmodule DSPEx.Teleprompter.BEACON.ContinuousOptimizerTest do
 
   use ExUnit.Case, async: false
 
-  alias DSPEx.{Example}
+  alias DSPEx.Example
   alias DSPEx.Teleprompter.BEACON.ContinuousOptimizer
 
   # Mock program for testing

@@ -8,8 +8,8 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
   use ExUnit.Case, async: false
 
   alias DSPEx.Teleprompter.SIMBA
-  alias DSPEx.Teleprompter.SIMBA.{Strategy, Trajectory, Bucket}
-  alias DSPEx.{Predict, Example}
+  alias DSPEx.Teleprompter.SIMBA.{Bucket, Strategy, Trajectory}
+  alias DSPEx.{Example, Predict}
 
   @moduletag :group_3
   @moduletag :edge_cases

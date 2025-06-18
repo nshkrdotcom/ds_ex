@@ -3,7 +3,7 @@ defmodule DSPEx.Teleprompter.BootstrapAdvancedTest do
   use ExUnit.Case, async: true
   @moduletag :group_3
 
-  alias DSPEx.{Teleprompter, Example, Predict, OptimizedProgram, Program}
+  alias DSPEx.{Example, OptimizedProgram, Predict, Program, Teleprompter}
   alias DSPEx.Teleprompter.BootstrapFewShot
   alias DSPEx.Test.MockProvider
 

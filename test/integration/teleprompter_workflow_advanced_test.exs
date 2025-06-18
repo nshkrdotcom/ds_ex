@@ -9,7 +9,7 @@ defmodule DSPEx.Integration.TeleprompterWorkflowAdvancedTest do
   use ExUnit.Case, async: false
   @moduletag :group_3
 
-  alias DSPEx.{Teleprompter, Example, Predict, OptimizedProgram, Program}
+  alias DSPEx.{Example, OptimizedProgram, Predict, Program, Teleprompter}
   alias DSPEx.Teleprompter.BootstrapFewShot
 
   @moduletag :phase5a
@@ -267,7 +267,8 @@ defmodule DSPEx.Integration.TeleprompterWorkflowAdvancedTest do
       assert reason != nil
     end
 
-    # test "workflow with different teleprompter configurations", %{student: student, teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
+    # test "workflow with different teleprompter configurations",
+    #      %{student: student, teacher: teacher, trainset: trainset, metric_fn: metric_fn} do
     #   # Test various teleprompter configurations BEACON might use
 
     #   configurations = [

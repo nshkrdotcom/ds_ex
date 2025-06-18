@@ -7,7 +7,7 @@ defmodule DSPEx.BeaconMockProviderTest do
   """
   use ExUnit.Case, async: false
 
-  alias DSPEx.{Test.BeaconMockProvider, MockClientManager}
+  alias DSPEx.{MockClientManager, Test.BeaconMockProvider}
 
   @moduletag :group_2
 

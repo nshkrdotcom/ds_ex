@@ -28,7 +28,7 @@ defmodule DSPEx.Predict.ReAct do
   4. The underlying model generates reasoning, actions, and observations iteratively
   """
 
-  alias DSPEx.{Predict}
+  alias DSPEx.Predict
 
   @doc """
   Create a new ReAct program.

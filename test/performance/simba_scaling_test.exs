@@ -8,8 +8,8 @@ defmodule DSPEx.Performance.SimbaScalingTest do
   """
   use ExUnit.Case, async: false
 
-  alias DSPEx.Teleprompter.SIMBA
   alias DSPEx.Predict
+  alias DSPEx.Teleprompter.SIMBA
 
   @moduletag :group_3
   @moduletag :performance

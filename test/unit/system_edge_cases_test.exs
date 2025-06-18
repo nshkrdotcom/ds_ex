@@ -4,8 +4,8 @@ defmodule DSPEx.SystemEdgeCasesTest do
   @moduletag :group_3
 
   alias DSPEx.{Example, Predict, Program, Signature}
-  alias DSPEx.Test.MockProvider
   alias DSPEx.Teleprompter.BootstrapFewShot
+  alias DSPEx.Test.MockProvider
 
   # Define signature modules at module level to prevent redefinition warnings
   defmodule EdgeCaseSignature do

@@ -192,7 +192,7 @@ defmodule DSPEx.Elixact do
         defmodule unquote(module_name) do
           @moduledoc unquote(title)
 
-          def __enhanced_fields__(), do: unquote(Macro.escape(enhanced_fields))
+          def __enhanced_fields__, do: unquote(Macro.escape(enhanced_fields))
 
           use DSPEx.Signature, unquote(signature_string)
         end

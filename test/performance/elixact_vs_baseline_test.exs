@@ -267,7 +267,8 @@ defmodule DSPEx.Performance.ElixactVsBaselineTest do
       IO.puts("  Manual:  #{manual_avg_us}µs per generation")
       IO.puts("  Ratio:   #{performance_ratio}x")
 
-      # Elixact should be at most 5000x slower than manual (JSON generation has significant overhead but provides rich features)
+      # Elixact should be at most 5000x slower than manual
+      # (JSON generation has significant overhead but provides rich features)
       assert performance_ratio < 5000.0,
              "Elixact JSON generation too slow: #{performance_ratio}x slower than manual"
 

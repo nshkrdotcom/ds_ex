@@ -443,7 +443,7 @@ defmodule DSPEx.Performance.MemoryPerformanceTest do
     fn example, prediction ->
       cond do
         has_valid_answer_field?(prediction) -> 1.0
-        is_valid_string_response?(prediction) -> 1.0
+        valid_string_response?(prediction) -> 1.0
         has_string_key_answer?(prediction) -> 1.0
         true -> fallback_score(example)
       end
@@ -454,7 +454,7 @@ defmodule DSPEx.Performance.MemoryPerformanceTest do
     Map.has_key?(prediction, :answer) and Map.get(prediction, :answer) != nil
   end
 
-  defp is_valid_string_response?(prediction) do
+  defp valid_string_response?(prediction) do
     is_binary(prediction) and String.length(prediction) > 0
   end
 

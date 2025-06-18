@@ -6,7 +6,7 @@ defmodule DSPEx.Teleprompter.BEACON.Examples do
   BEACON across different types of programs and datasets.
   """
 
-  alias DSPEx.{Example, Predict, OptimizedProgram}
+  alias DSPEx.{Example, OptimizedProgram, Predict}
   alias DSPEx.Teleprompter.BEACON
 
   @doc """

@@ -76,7 +76,7 @@ defmodule DSPEx.Signature do
       result = extended.new(%{question: "What is 2+2?", reasoning: "Basic math", answer: "4"})
   """
   # Module aliases for nested modules
-  alias DSPEx.Signature.{Parser, EnhancedParser}
+  alias DSPEx.Signature.{EnhancedParser, Parser}
 
   @spec extend(module(), map()) :: {:ok, module()} | {:error, term()}
   def extend(base_signature, additional_fields)

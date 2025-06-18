@@ -36,7 +36,7 @@ defmodule DSPEx.Teleprompter.SimbaTrajectoryTest do
       program_scores = %{
         # avg: 0.2
         0 => [0.2, 0.3, 0.1],
-        # avg: 0.8  
+        # avg: 0.8
         1 => [0.8, 0.9, 0.7],
         # avg: 0.5
         2 => [0.5, 0.6, 0.4]

@@ -158,7 +158,7 @@ defmodule DSPEx.Config.Store do
   Reset configuration to defaults.
   """
   @spec reset() :: :ok
-  def reset() do
+  def reset do
     GenServer.call(@server, :reset)
   end
 

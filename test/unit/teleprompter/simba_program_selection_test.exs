@@ -11,7 +11,7 @@ defmodule DSPEx.Teleprompter.SimbaProgramSelectionTest do
       program_scores = %{
         # avg: 0.2
         0 => [0.2, 0.3, 0.1],
-        # avg: 0.8  
+        # avg: 0.8
         1 => [0.8, 0.9, 0.7],
         # avg: 0.5
         2 => [0.5, 0.6, 0.4]
@@ -92,7 +92,7 @@ defmodule DSPEx.Teleprompter.SimbaProgramSelectionTest do
         0 => [0.1],
         # excellent
         1 => [0.9],
-        # great  
+        # great
         2 => [0.8],
         # good
         3 => [0.7]

@@ -3,7 +3,7 @@ defmodule DSPEx.TeleprompterIntegrationTest do
 
   @moduletag :group_1
 
-  alias DSPEx.{Example, Teleprompter, Evaluate}
+  alias DSPEx.{Evaluate, Example, Teleprompter}
   alias DSPEx.Teleprompter.BootstrapFewShot
 
   # Mock signature for testing
@@ -224,7 +224,7 @@ defmodule DSPEx.TeleprompterIntegrationTest do
         if improved do
           assert optimized_score >= original_score
         else
-          # Even if individual predictions don't show improvement, 
+          # Even if individual predictions don't show improvement,
           # the overall score should at least not get worse
           assert optimized_score >= original_score
         end

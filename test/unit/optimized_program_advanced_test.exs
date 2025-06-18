@@ -9,7 +9,7 @@ defmodule DSPEx.OptimizedProgramAdvancedTest do
   use ExUnit.Case, async: true
   @moduletag :group_3
 
-  alias DSPEx.{OptimizedProgram, Example, Predict, Program}
+  alias DSPEx.{Example, OptimizedProgram, Predict, Program}
 
   # Create test signature
   defmodule TestSignature do

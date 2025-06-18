@@ -540,7 +540,7 @@ defmodule DSPEx.Performance.OptimizationBenchmarksTest do
     fn example, prediction ->
       cond do
         has_answer_field?(prediction) -> 1.0
-        is_string_response?(prediction) -> 1.0
+        string_response?(prediction) -> 1.0
         has_string_answer_key?(prediction) -> 1.0
         true -> default_performance_score(example)
       end
@@ -551,7 +551,7 @@ defmodule DSPEx.Performance.OptimizationBenchmarksTest do
     Map.has_key?(prediction, :answer) and Map.get(prediction, :answer) != nil
   end
 
-  defp is_string_response?(prediction) do
+  defp string_response?(prediction) do
     is_binary(prediction) and String.length(prediction) > 0
   end
 

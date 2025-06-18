@@ -43,10 +43,10 @@ defmodule DSPEx.Teleprompter.BEACON do
 
   @behaviour DSPEx.Teleprompter
 
-  alias DSPEx.{Program, Example, OptimizedProgram, Client}
-  alias DSPEx.Teleprompter.BootstrapFewShot
-  alias DSPEx.Teleprompter.BEACON.BayesianOptimizer
+  alias DSPEx.{Client, Example, OptimizedProgram, Program}
   alias DSPEx.Services.ConfigManager
+  alias DSPEx.Teleprompter.BEACON.BayesianOptimizer
+  alias DSPEx.Teleprompter.BootstrapFewShot
 
   @enforce_keys []
   defstruct num_candidates: 20,

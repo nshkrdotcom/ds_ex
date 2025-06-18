@@ -8,7 +8,7 @@ defmodule DSPEx.TeleprompterAdvancedTest do
   use ExUnit.Case, async: true
   @moduletag :group_3
 
-  alias DSPEx.{Teleprompter, Example, Predict}
+  alias DSPEx.{Example, Predict, Teleprompter}
 
   # Create a test signature for validation
   defmodule TestSignature do

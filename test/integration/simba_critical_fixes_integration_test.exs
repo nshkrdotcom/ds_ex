@@ -1,7 +1,7 @@
 defmodule DSPEx.Teleprompter.SimbaCriticalFixesIntegrationTest do
   use ExUnit.Case, async: true
   alias DSPEx.Teleprompter.SIMBA
-  alias DSPEx.{Predict, Program, Example}
+  alias DSPEx.{Example, Predict, Program}
 
   @moduletag :integration
   @moduletag :group_1

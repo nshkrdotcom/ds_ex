@@ -9,9 +9,9 @@ defmodule DSPEx.Integration.SIMBAExampleTest do
 
   use ExUnit.Case
 
-  alias DSPEx.{Example, Predict, OptimizedProgram}
+  alias DSPEx.{Example, OptimizedProgram, Predict}
   alias DSPEx.Teleprompter.SIMBA
-  alias DSPEx.Teleprompter.SIMBA.{Performance, Trajectory, Bucket}
+  alias DSPEx.Teleprompter.SIMBA.{Bucket, Performance, Trajectory}
 
   # Math QA signature for testing
   defmodule MathQASignature do
