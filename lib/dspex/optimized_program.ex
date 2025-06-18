@@ -120,9 +120,9 @@ defmodule DSPEx.OptimizedProgram do
         enhanced_opts =
           opts
           |> Keyword.put(:demos, demos)
-          |> (fn opts ->
-                if instruction, do: Keyword.put(opts, :instruction, instruction), else: opts
-              end).()
+          |> then(fn opts ->
+            if instruction, do: Keyword.put(opts, :instruction, instruction), else: opts
+          end)
 
         DSPEx.Program.forward(program, inputs, enhanced_opts)
     end
@@ -424,16 +424,16 @@ defmodule DSPEx.OptimizedProgram do
     |> Enum.map(fn example ->
       inputs = DSPEx.Example.inputs(example)
 
-      case DSPEx.Program.forward(program, inputs) do
-        {:ok, outputs} ->
-          try do
+      try do
+        case DSPEx.Program.forward(program, inputs) do
+          {:ok, outputs} ->
             metric_fn.(example, outputs)
-          rescue
-            _ -> 0.0
-          end
 
-        {:error, _} ->
-          0.0
+          {:error, _} ->
+            0.0
+        end
+      rescue
+        _ -> 0.0
       end
     end)
   end

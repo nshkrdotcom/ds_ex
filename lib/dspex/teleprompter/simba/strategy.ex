@@ -97,12 +97,10 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy do
   """
   @spec implements_strategy?(module()) :: boolean()
   def implements_strategy?(module) when is_atom(module) do
-    try do
-      behaviours = module.module_info(:attributes) |> Keyword.get(:behaviour, [])
-      __MODULE__ in behaviours
-    rescue
-      UndefinedFunctionError -> false
-    end
+    behaviours = module.module_info(:attributes) |> Keyword.get(:behaviour, [])
+    __MODULE__ in behaviours
+  rescue
+    UndefinedFunctionError -> false
   end
 
   def implements_strategy?(_), do: false

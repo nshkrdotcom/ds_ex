@@ -613,18 +613,16 @@ defmodule DSPEx.Signature.EnhancedParser do
   end
 
   defp compile_regex_with_error_handling(pattern, flags) do
-    try do
-      Regex.compile!(pattern, flags)
-    rescue
-      error ->
-        reraise CompileError,
-                [
-                  description: "Invalid regex pattern '#{pattern}': #{inspect(error)}",
-                  file: __ENV__.file,
-                  line: __ENV__.line
-                ],
-                __STACKTRACE__
-    end
+    Regex.compile!(pattern, flags)
+  rescue
+    error ->
+      reraise CompileError,
+              [
+                description: "Invalid regex pattern '#{pattern}': #{inspect(error)}",
+                file: __ENV__.file,
+                line: __ENV__.line
+              ],
+              __STACKTRACE__
   end
 
   # Parses regex flags like "i" for case-insensitive

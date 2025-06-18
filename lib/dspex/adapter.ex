@@ -127,26 +127,24 @@ defmodule DSPEx.Adapter do
   @spec build_prompt(signature(), inputs()) ::
           {:ok, String.t()} | {:error, :prompt_generation_failed}
   defp build_prompt(signature, inputs) do
-    try do
-      # Try to get signature description for context
-      description =
-        if function_exported?(signature, :description, 0) do
-          signature.description()
-        else
-          "Please process the following input"
-        end
+    # Try to get signature description for context
+    description =
+      if function_exported?(signature, :description, 0) do
+        signature.description()
+      else
+        "Please process the following input"
+      end
 
-      # Build a simple prompt with the inputs
-      input_text =
-        Enum.map_join(inputs, "\n", fn {key, value} ->
-          "#{key}: #{value}"
-        end)
+    # Build a simple prompt with the inputs
+    input_text =
+      Enum.map_join(inputs, "\n", fn {key, value} ->
+        "#{key}: #{value}"
+      end)
 
-      prompt = "#{description}\n\n#{input_text}"
-      {:ok, prompt}
-    rescue
-      _ -> {:error, :prompt_generation_failed}
-    end
+    prompt = "#{description}\n\n#{input_text}"
+    {:ok, prompt}
+  rescue
+    _ -> {:error, :prompt_generation_failed}
   end
 
   @spec extract_response_text(api_response()) :: {:ok, String.t()} | {:error, :invalid_response}
@@ -164,28 +162,26 @@ defmodule DSPEx.Adapter do
 
   @spec parse_output_text([atom()], String.t()) :: {:ok, outputs()} | {:error, :parsing_failed}
   defp parse_output_text(output_fields, response_text) do
-    try do
-      # For now, use simple parsing - put all response text in first output field
-      # In a more sophisticated implementation, this would parse structured output
-      case output_fields do
-        [single_field] ->
-          {:ok, %{single_field => String.trim(response_text)}}
+    # For now, use simple parsing - put all response text in first output field
+    # In a more sophisticated implementation, this would parse structured output
+    case output_fields do
+      [single_field] ->
+        {:ok, %{single_field => String.trim(response_text)}}
 
-        multiple_fields ->
-          # For multiple fields, try to split by lines or use first field as fallback
-          lines = String.split(response_text, "\n", trim: true)
+      multiple_fields ->
+        # For multiple fields, try to split by lines or use first field as fallback
+        lines = String.split(response_text, "\n", trim: true)
 
-          if length(lines) >= length(multiple_fields) do
-            outputs = Enum.zip(multiple_fields, lines) |> Enum.into(%{})
-            {:ok, outputs}
-          else
-            # Fallback: put all text in first field
-            [first_field | _] = multiple_fields
-            {:ok, %{first_field => String.trim(response_text)}}
-          end
-      end
-    rescue
-      _ -> {:error, :parsing_failed}
+        if length(lines) >= length(multiple_fields) do
+          outputs = Enum.zip(multiple_fields, lines) |> Enum.into(%{})
+          {:ok, outputs}
+        else
+          # Fallback: put all text in first field
+          [first_field | _] = multiple_fields
+          {:ok, %{first_field => String.trim(response_text)}}
+        end
     end
+  rescue
+    _ -> {:error, :parsing_failed}
   end
 end

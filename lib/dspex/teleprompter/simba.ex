@@ -129,130 +129,128 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   defp run_simba_optimization(student, _teacher, trainset, metric_fn, config, correlation_id) do
-    try do
-      # Initialize properly
-      programs = [student]
-      program_scores = %{0 => []}
-      next_program_idx = 1
-      winning_programs = [student]
+    # Initialize properly
+    programs = [student]
+    program_scores = %{0 => []}
+    next_program_idx = 1
+    winning_programs = [student]
 
-      # Initialize RNG with better seed
-      :rand.seed(
-        :exsplus,
-        {System.unique_integer(), System.system_time(), self() |> :erlang.phash2()}
+    # Initialize RNG with better seed
+    :rand.seed(
+      :exsplus,
+      {System.unique_integer(), System.system_time(), self() |> :erlang.phash2()}
+    )
+
+    data_indices = 0..(length(trainset) - 1) |> Enum.to_list() |> Enum.shuffle()
+
+    # Build predictor mappings
+    {predictor2name, name2predictor} = build_predictor_mappings(student)
+
+    # Main optimization loop
+    final_state =
+      Enum.reduce(
+        0..(config.max_steps - 1),
+        {programs, program_scores, winning_programs, next_program_idx},
+        fn step, {current_programs, current_scores, current_winning, prog_idx} ->
+          emit_telemetry(
+            [:dspex, :teleprompter, :simba, :iteration, :start],
+            %{step: step},
+            %{correlation_id: correlation_id}
+          )
+
+          # STEP 1: Get next batch (fixed circular indexing)
+          instance_idx = step * config.bsize
+          batch_indices = get_circular_batch_indices(data_indices, instance_idx, config.bsize)
+          batch = Enum.map(batch_indices, &Enum.at(trainset, &1))
+
+          # STEP 2: Prepare models with temperature variations
+          models =
+            prepare_models_for_resampling(List.first(current_programs), config.num_candidates)
+
+          top_programs =
+            select_top_programs(current_programs, current_scores, config.num_candidates)
+
+          # STEP 3: Sample trajectories
+          trajectories =
+            sample_trajectories(
+              batch,
+              top_programs,
+              current_programs,
+              current_scores,
+              models,
+              metric_fn,
+              config,
+              correlation_id
+            )
+
+          # STEP 4: Create performance buckets
+          buckets = create_performance_buckets(trajectories, config, correlation_id)
+
+          # STEP 5: Apply strategies to create candidates
+          {new_candidates, updated_prog_idx} =
+            apply_strategies_to_buckets(
+              buckets,
+              current_programs,
+              current_scores,
+              config,
+              prog_idx,
+              predictor2name,
+              name2predictor,
+              correlation_id
+            )
+
+          # STEP 6: Evaluate candidates and update state
+          candidate_scores = evaluate_candidates_batch(new_candidates, batch, metric_fn)
+
+          # STEP 7: Select winning programs
+          updated_winning =
+            case select_best_from_candidates(new_candidates, candidate_scores) do
+              nil ->
+                # No valid candidates, keep current winning programs
+                current_winning
+
+              best_candidate_program ->
+                [best_candidate_program | current_winning]
+            end
+
+          # STEP 8: Update program pool
+          {updated_programs, updated_scores} =
+            update_program_pool(
+              current_programs,
+              current_scores,
+              new_candidates,
+              candidate_scores,
+              updated_prog_idx
+            )
+
+          emit_telemetry(
+            [:dspex, :teleprompter, :simba, :iteration, :stop],
+            %{step: step, candidates_generated: length(new_candidates)},
+            %{correlation_id: correlation_id}
+          )
+
+          {updated_programs, updated_scores, updated_winning, updated_prog_idx}
+        end
       )
 
-      data_indices = 0..(length(trainset) - 1) |> Enum.to_list() |> Enum.shuffle()
+    {_final_programs, _final_scores, final_winning, _final_idx} = final_state
 
-      # Build predictor mappings
-      {predictor2name, name2predictor} = build_predictor_mappings(student)
+    # Select final best program
+    best_program = select_final_best_program(final_winning, trainset, metric_fn)
 
-      # Main optimization loop
-      final_state =
-        Enum.reduce(
-          0..(config.max_steps - 1),
-          {programs, program_scores, winning_programs, next_program_idx},
-          fn step, {current_programs, current_scores, current_winning, prog_idx} ->
-            emit_telemetry(
-              [:dspex, :teleprompter, :simba, :iteration, :start],
-              %{step: step},
-              %{correlation_id: correlation_id}
-            )
+    {:ok, best_program}
+  rescue
+    error ->
+      emit_telemetry(
+        [:dspex, :teleprompter, :simba, :error],
+        %{error_type: error.__struct__},
+        %{correlation_id: correlation_id, error: inspect(error)}
+      )
 
-            # STEP 1: Get next batch (fixed circular indexing)
-            instance_idx = step * config.bsize
-            batch_indices = get_circular_batch_indices(data_indices, instance_idx, config.bsize)
-            batch = Enum.map(batch_indices, &Enum.at(trainset, &1))
-
-            # STEP 2: Prepare models with temperature variations
-            models =
-              prepare_models_for_resampling(List.first(current_programs), config.num_candidates)
-
-            top_programs =
-              select_top_programs(current_programs, current_scores, config.num_candidates)
-
-            # STEP 3: Sample trajectories
-            trajectories =
-              sample_trajectories(
-                batch,
-                top_programs,
-                current_programs,
-                current_scores,
-                models,
-                metric_fn,
-                config,
-                correlation_id
-              )
-
-            # STEP 4: Create performance buckets
-            buckets = create_performance_buckets(trajectories, config, correlation_id)
-
-            # STEP 5: Apply strategies to create candidates
-            {new_candidates, updated_prog_idx} =
-              apply_strategies_to_buckets(
-                buckets,
-                current_programs,
-                current_scores,
-                config,
-                prog_idx,
-                predictor2name,
-                name2predictor,
-                correlation_id
-              )
-
-            # STEP 6: Evaluate candidates and update state
-            candidate_scores = evaluate_candidates_batch(new_candidates, batch, metric_fn)
-
-            # STEP 7: Select winning programs
-            updated_winning =
-              case select_best_from_candidates(new_candidates, candidate_scores) do
-                nil ->
-                  # No valid candidates, keep current winning programs
-                  current_winning
-
-                best_candidate_program ->
-                  [best_candidate_program | current_winning]
-              end
-
-            # STEP 8: Update program pool
-            {updated_programs, updated_scores} =
-              update_program_pool(
-                current_programs,
-                current_scores,
-                new_candidates,
-                candidate_scores,
-                updated_prog_idx
-              )
-
-            emit_telemetry(
-              [:dspex, :teleprompter, :simba, :iteration, :stop],
-              %{step: step, candidates_generated: length(new_candidates)},
-              %{correlation_id: correlation_id}
-            )
-
-            {updated_programs, updated_scores, updated_winning, updated_prog_idx}
-          end
-        )
-
-      {_final_programs, _final_scores, final_winning, _final_idx} = final_state
-
-      # Select final best program
-      best_program = select_final_best_program(final_winning, trainset, metric_fn)
-
-      {:ok, best_program}
-    rescue
-      error ->
-        emit_telemetry(
-          [:dspex, :teleprompter, :simba, :error],
-          %{error_type: error.__struct__},
-          %{correlation_id: correlation_id, error: inspect(error)}
-        )
-
-        {:error, {:optimization_failed, error}}
-    catch
-      :exit, reason ->
-        {:error, {:optimization_exit, reason}}
-    end
+      {:error, {:optimization_failed, error}}
+  catch
+    :exit, reason ->
+      {:error, {:optimization_exit, reason}}
   end
 
   # Sample trajectories for the current mini-batch
@@ -930,13 +928,11 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   defp calculate_score_safely(metric_fn, example, outputs) do
-    try do
-      metric_fn.(example, outputs)
-    rescue
-      _ -> 0.0
-    catch
-      _ -> 0.0
-    end
+    metric_fn.(example, outputs)
+  rescue
+    _ -> 0.0
+  catch
+    _ -> 0.0
   end
 
   defp build_successful_trajectory(

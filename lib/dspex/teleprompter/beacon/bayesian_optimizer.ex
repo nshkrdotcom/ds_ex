@@ -526,23 +526,21 @@ defmodule DSPEx.Teleprompter.BEACON.BayesianOptimizer do
   end
 
   defp evaluate_configuration(config, objective_function) do
-    try do
-      score = objective_function.(config)
+    score = objective_function.(config)
 
-      observation = %{
-        configuration: config,
-        score: score,
-        timestamp: DateTime.utc_now()
-      }
+    observation = %{
+      configuration: config,
+      score: score,
+      timestamp: DateTime.utc_now()
+    }
 
-      {:ok, observation}
-    rescue
-      error ->
-        {:error, {:evaluation_exception, error}}
-    catch
-      :exit, reason ->
-        {:error, {:evaluation_exit, reason}}
-    end
+    {:ok, observation}
+  rescue
+    error ->
+      {:error, {:evaluation_exception, error}}
+  catch
+    :exit, reason ->
+      {:error, {:evaluation_exit, reason}}
   end
 
   defp create_optimization_result(observations, best_observation, convergence_iteration) do

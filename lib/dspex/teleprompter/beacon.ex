@@ -489,41 +489,39 @@ defmodule DSPEx.Teleprompter.BEACON do
   end
 
   defp evaluate_configuration(program, validation_set, metric_fn) do
-    try do
-      scores =
-        validation_set
-        |> Task.async_stream(
-          fn example ->
-            # Extract inputs from Example struct based on input_keys
-            inputs =
-              example.data
-              |> Map.take(MapSet.to_list(example.input_keys))
+    scores =
+      validation_set
+      |> Task.async_stream(
+        fn example ->
+          # Extract inputs from Example struct based on input_keys
+          inputs =
+            example.data
+            |> Map.take(MapSet.to_list(example.input_keys))
 
-            case Program.forward(program, inputs, timeout: 30_000) do
-              {:ok, outputs} ->
-                metric_fn.(example, outputs)
+          case Program.forward(program, inputs, timeout: 30_000) do
+            {:ok, outputs} ->
+              metric_fn.(example, outputs)
 
-              {:error, _} ->
-                0.0
-            end
-          end,
-          max_concurrency: 3,
-          timeout: 35_000
-        )
-        |> Stream.filter(&match?({:ok, _}, &1))
-        |> Stream.map(fn {:ok, score} -> score end)
-        |> Enum.to_list()
+            {:error, _} ->
+              0.0
+          end
+        end,
+        max_concurrency: 3,
+        timeout: 35_000
+      )
+      |> Stream.filter(&match?({:ok, _}, &1))
+      |> Stream.map(fn {:ok, score} -> score end)
+      |> Enum.to_list()
 
-      if Enum.empty?(scores) do
-        {:error, :no_valid_evaluations}
-      else
-        average_score = Enum.sum(scores) / length(scores)
-        {:ok, average_score}
-      end
-    rescue
-      error ->
-        {:error, {:evaluation_exception, error}}
+    if Enum.empty?(scores) do
+      {:error, :no_valid_evaluations}
+    else
+      average_score = Enum.sum(scores) / length(scores)
+      {:ok, average_score}
     end
+  rescue
+    error ->
+      {:error, {:evaluation_exception, error}}
   end
 
   defp create_optimized_student(student, optimization_result, _config) do

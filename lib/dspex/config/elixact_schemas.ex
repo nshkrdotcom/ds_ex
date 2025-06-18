@@ -148,10 +148,10 @@ defmodule DSPEx.Config.ElixactSchemas do
         {:error, {error_atom, "Value cannot be nil"}}
 
       elixact_supported_field?(field_path) ->
-        try do
-          # Create a nested map structure for the field path
-          test_data = build_nested_map(field_path, value)
+        # Create a nested map structure for the field path
+        test_data = build_nested_map(field_path, value)
 
+        try do
           case schema_module.validate(test_data) do
             {:ok, _validated} -> :ok
             {:error, errors} -> {:error, format_elixact_error(errors)}

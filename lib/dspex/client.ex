@@ -200,42 +200,38 @@ defmodule DSPEx.Client do
   """
   @spec normalize_response_format(map(), atom()) :: {:ok, response()} | {:error, error_reason()}
   def normalize_response_format(response, provider) when is_map(response) do
-    try do
-      case response do
-        # Already in correct format
-        %{choices: choices} when is_list(choices) ->
-          normalized_choices = Enum.map(choices, &normalize_choice/1)
-          {:ok, %{choices: normalized_choices}}
+    case response do
+      # Already in correct format
+      %{choices: choices} when is_list(choices) ->
+        normalized_choices = Enum.map(choices, &normalize_choice/1)
+        {:ok, %{choices: normalized_choices}}
 
-        # Gemini-style response
-        %{candidates: candidates} when is_list(candidates) ->
-          normalized_choices = Enum.map(candidates, &normalize_gemini_candidate/1)
-          {:ok, %{choices: normalized_choices}}
+      # Gemini-style response
+      %{candidates: candidates} when is_list(candidates) ->
+        normalized_choices = Enum.map(candidates, &normalize_gemini_candidate/1)
+        {:ok, %{choices: normalized_choices}}
 
-        # Single message response (some providers)
-        %{message: message} when is_map(message) ->
-          normalized_choice = normalize_choice(%{message: message})
-          {:ok, %{choices: [normalized_choice]}}
+      # Single message response (some providers)
+      %{message: message} when is_map(message) ->
+        normalized_choice = normalize_choice(%{message: message})
+        {:ok, %{choices: [normalized_choice]}}
 
-        # Raw content response
-        %{content: content} when is_binary(content) ->
-          normalized_choice = %{message: %{role: "assistant", content: content}}
-          {:ok, %{choices: [normalized_choice]}}
+      # Raw content response
+      %{content: content} when is_binary(content) ->
+        normalized_choice = %{message: %{role: "assistant", content: content}}
+        {:ok, %{choices: [normalized_choice]}}
 
-        # Fallback for unknown format
-        _ ->
-          Logger.warning(
-            "Unknown response format from #{provider}: #{inspect(Map.keys(response))}"
-          )
+      # Fallback for unknown format
+      _ ->
+        Logger.warning("Unknown response format from #{provider}: #{inspect(Map.keys(response))}")
 
-          # Create minimal valid response
-          {:ok, %{choices: [%{message: %{role: "assistant", content: ""}}]}}
-      end
-    rescue
-      error ->
-        Logger.error("Response normalization failed for #{provider}: #{inspect(error)}")
-        {:error, :invalid_response}
+        # Create minimal valid response
+        {:ok, %{choices: [%{message: %{role: "assistant", content: ""}}]}}
     end
+  rescue
+    error ->
+      Logger.error("Response normalization failed for #{provider}: #{inspect(error)}")
+      {:error, :invalid_response}
   end
 
   def normalize_response_format(_, _), do: {:error, :invalid_response}

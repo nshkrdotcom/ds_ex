@@ -192,20 +192,18 @@ defmodule DSPEx.Signature.Elixact do
   def to_json_schema(signature, opts \\ []) when is_atom(signature) do
     case signature_to_schema(signature) do
       {:ok, schema_module} ->
-        try do
-          json_schema = JsonSchema.from_schema(schema_module)
+        json_schema = JsonSchema.from_schema(schema_module)
 
-          # Customize the schema based on options
-          customized_schema = customize_json_schema(json_schema, signature, opts)
+        # Customize the schema based on options
+        customized_schema = customize_json_schema(json_schema, signature, opts)
 
-          {:ok, customized_schema}
-        rescue
-          error -> {:error, {:json_schema_generation_failed, error}}
-        end
+        {:ok, customized_schema}
 
       {:error, reason} ->
         {:error, reason}
     end
+  rescue
+    error -> {:error, {:json_schema_generation_failed, error}}
   end
 
   @doc """
@@ -298,15 +296,13 @@ defmodule DSPEx.Signature.Elixact do
     # Check if the signature module has enhanced field definitions stored
     # This would be set by the enhanced DSPEx.Signature.__using__ macro
     if function_exported?(signature, :__enhanced_fields__, 0) do
-      try do
-        enhanced_fields = signature.__enhanced_fields__()
-        {:ok, enhanced_fields}
-      rescue
-        _ -> {:error, :no_enhanced_fields}
-      end
+      enhanced_fields = signature.__enhanced_fields__()
+      {:ok, enhanced_fields}
     else
       {:error, :no_enhanced_fields}
     end
+  rescue
+    _ -> {:error, :no_enhanced_fields}
   end
 
   # Converts enhanced field definition to our field_definition format
@@ -391,70 +387,66 @@ defmodule DSPEx.Signature.Elixact do
   @spec extract_field_definitions(signature_module()) ::
           {:ok, [field_definition()]} | {:error, term()}
   defp extract_field_definitions(signature) do
-    try do
-      # Check if this signature has enhanced field definitions stored
-      case get_enhanced_field_definitions(signature) do
-        {:ok, enhanced_fields} ->
-          # Convert enhanced fields to our field_definition format
-          converted_fields =
-            Enum.map(enhanced_fields, &convert_enhanced_to_field_definition/1)
+    # Check if this signature has enhanced field definitions stored
+    case get_enhanced_field_definitions(signature) do
+      {:ok, enhanced_fields} ->
+        # Convert enhanced fields to our field_definition format
+        converted_fields =
+          Enum.map(enhanced_fields, &convert_enhanced_to_field_definition/1)
 
-          {:ok, converted_fields}
+        {:ok, converted_fields}
 
-        {:error, :no_enhanced_fields} ->
-          # Fall back to basic field definitions for compatibility
-          input_fields = signature.input_fields()
-          output_fields = signature.output_fields()
+      {:error, :no_enhanced_fields} ->
+        # Fall back to basic field definitions for compatibility
+        input_fields = signature.input_fields()
+        output_fields = signature.output_fields()
 
-          input_definitions =
-            Enum.map(input_fields, fn field ->
-              %{
-                name: field,
-                type: :string,
-                constraints: %{},
-                required: true,
-                default: nil
-              }
-            end)
+        input_definitions =
+          Enum.map(input_fields, fn field ->
+            %{
+              name: field,
+              type: :string,
+              constraints: %{},
+              required: true,
+              default: nil
+            }
+          end)
 
-          output_definitions =
-            Enum.map(output_fields, fn field ->
-              %{
-                name: field,
-                type: :string,
-                constraints: %{},
-                required: true,
-                default: nil
-              }
-            end)
+        output_definitions =
+          Enum.map(output_fields, fn field ->
+            %{
+              name: field,
+              type: :string,
+              constraints: %{},
+              required: true,
+              default: nil
+            }
+          end)
 
-          {:ok, input_definitions ++ output_definitions}
-      end
-    rescue
-      error -> {:error, {:field_extraction_failed, error}}
+        {:ok, input_definitions ++ output_definitions}
     end
+  rescue
+    error -> {:error, {:field_extraction_failed, error}}
   end
 
   @spec extract_field_definitions_for_type(signature_module(), atom()) ::
           {:ok, [field_definition()]} | {:error, term()}
   defp extract_field_definitions_for_type(signature, field_type) do
-    try do
-      case field_type do
-        :inputs ->
-          extract_filtered_field_definitions(signature, signature.input_fields())
+    case field_type do
+      :inputs ->
+        extract_filtered_field_definitions(signature, signature.input_fields())
 
-        :outputs ->
-          extract_filtered_field_definitions(signature, signature.output_fields())
+      :outputs ->
+        extract_filtered_field_definitions(signature, signature.output_fields())
 
-        :all ->
-          extract_field_definitions(signature)
+      :all ->
+        extract_field_definitions(signature)
 
-        _ ->
-          {:error, {:invalid_field_type, field_type}}
-      end
-    rescue
-      error -> {:error, {:field_extraction_failed, error}}
+      _ ->
+        {:error, {:invalid_field_type, field_type}}
     end
+  rescue
+    error -> {:error, {:field_extraction_failed, error}}
   end
 
   @spec extract_filtered_field_definitions(signature_module(), [atom()]) ::
@@ -496,13 +488,11 @@ defmodule DSPEx.Signature.Elixact do
     # Build the module definition using Elixact DSL
     module_definition = build_schema_module(schema_name, signature, field_definitions)
 
-    try do
-      # Compile and load the new module
-      {_result, _binding} = Code.eval_quoted(module_definition)
-      {:ok, schema_name}
-    rescue
-      error -> {:error, {:schema_compilation_failed, error}}
-    end
+    # Compile and load the new module
+    {_result, _binding} = Code.eval_quoted(module_definition)
+    {:ok, schema_name}
+  rescue
+    error -> {:error, {:schema_compilation_failed, error}}
   end
 
   @spec build_schema_module(atom(), signature_module(), [field_definition()]) :: Macro.t()
@@ -681,27 +671,25 @@ defmodule DSPEx.Signature.Elixact do
   @spec filter_data_by_field_type(signature_module(), map(), atom()) ::
           {:ok, map()} | {:error, term()}
   defp filter_data_by_field_type(signature, data, field_type) do
-    try do
-      case field_type do
-        :inputs ->
-          input_fields = signature.input_fields()
-          filtered = Map.take(data, input_fields)
-          {:ok, filtered}
+    case field_type do
+      :inputs ->
+        input_fields = signature.input_fields()
+        filtered = Map.take(data, input_fields)
+        {:ok, filtered}
 
-        :outputs ->
-          output_fields = signature.output_fields()
-          filtered = Map.take(data, output_fields)
-          {:ok, filtered}
+      :outputs ->
+        output_fields = signature.output_fields()
+        filtered = Map.take(data, output_fields)
+        {:ok, filtered}
 
-        :all ->
-          {:ok, data}
+      :all ->
+        {:ok, data}
 
-        _ ->
-          {:error, {:invalid_field_type, field_type}}
-      end
-    rescue
-      error -> {:error, {:field_filtering_failed, error}}
+      _ ->
+        {:error, {:invalid_field_type, field_type}}
     end
+  rescue
+    error -> {:error, {:field_filtering_failed, error}}
   end
 
   @spec normalize_elixact_errors(term()) :: [Elixact.Error.t()]

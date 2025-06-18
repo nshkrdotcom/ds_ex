@@ -380,26 +380,24 @@ defmodule DSPEx.Teleprompter.BEACON.Integration do
   end
 
   defp optimize_single_program_in_batch(config, program_id, batch_opts) do
-    try do
-      # Extract program configuration
-      student = Map.fetch!(config, :student)
-      teacher = Map.fetch!(config, :teacher)
-      trainset = Map.fetch!(config, :trainset)
-      metric_fn = Map.fetch!(config, :metric_fn)
+    # Extract program configuration
+    student = Map.fetch!(config, :student)
+    teacher = Map.fetch!(config, :teacher)
+    trainset = Map.fetch!(config, :trainset)
+    metric_fn = Map.fetch!(config, :metric_fn)
 
-      # Use batch-specific optimization settings
-      optimization_opts = [
-        correlation_id: program_id,
-        num_candidates: Keyword.get(batch_opts, :num_candidates, 15),
-        num_trials: Keyword.get(batch_opts, :num_trials, 30),
-        timeout: Keyword.get(batch_opts, :timeout, 60_000)
-      ]
+    # Use batch-specific optimization settings
+    optimization_opts = [
+      correlation_id: program_id,
+      num_candidates: Keyword.get(batch_opts, :num_candidates, 15),
+      num_trials: Keyword.get(batch_opts, :num_trials, 30),
+      timeout: Keyword.get(batch_opts, :timeout, 60_000)
+    ]
 
-      optimize_for_production(student, teacher, trainset, metric_fn, optimization_opts)
-    rescue
-      exception ->
-        {:error, {:program_optimization_failed, program_id, exception}}
-    end
+    optimize_for_production(student, teacher, trainset, metric_fn, optimization_opts)
+  rescue
+    exception ->
+      {:error, {:program_optimization_failed, program_id, exception}}
   end
 
   defp adapt_configuration(base_config, exploratory_score, trainset) do

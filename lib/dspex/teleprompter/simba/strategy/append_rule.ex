@@ -121,13 +121,11 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendRule do
     # Use the client from context or fall back to default
     client_fn = Map.get(context, :client, &default_client_call/3)
 
-    try do
-      # Call the LLM with OfferFeedback signature
-      client_fn.(OfferFeedback, inputs, temperature: 0.3)
-    rescue
-      error ->
-        {:error, "LLM call failed: #{inspect(error)}"}
-    end
+    # Call the LLM with OfferFeedback signature
+    client_fn.(OfferFeedback, inputs, temperature: 0.3)
+  rescue
+    error ->
+      {:error, "LLM call failed: #{inspect(error)}"}
   end
 
   defp default_client_call(signature, inputs, options) do

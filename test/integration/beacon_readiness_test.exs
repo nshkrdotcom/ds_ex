@@ -8,8 +8,8 @@ defmodule DSPEx.Integration.BEACONReadinessTest do
   @moduletag :group_3
 
   alias DSPEx.{Example, OptimizedProgram, Predict, Program, Teleprompter}
-  alias DSPEx.Teleprompter.BootstrapFewShot
   alias DSPEx.Test.MockProvider
+  alias DSPEx.Teleprompter.BootstrapFewShot
   alias __MODULE__.BEACONCompatSignature
 
   @moduletag :phase5a

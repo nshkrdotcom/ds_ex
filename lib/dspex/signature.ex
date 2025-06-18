@@ -540,30 +540,28 @@ defmodule DSPEx.Signature do
   @spec validate_signature_compatibility(module(), module()) :: :ok | {:error, String.t()}
   def validate_signature_compatibility(producer_sig, consumer_sig)
       when is_atom(producer_sig) and is_atom(consumer_sig) do
-    try do
-      # Validate both modules implement the signature behavior
-      with :ok <- validate_signature_implementation(producer_sig),
-           :ok <- validate_signature_implementation(consumer_sig) do
-        producer_outputs = MapSet.new(producer_sig.output_fields())
-        consumer_inputs = MapSet.new(consumer_sig.input_fields())
+    # Validate both modules implement the signature behavior
+    with :ok <- validate_signature_implementation(producer_sig),
+         :ok <- validate_signature_implementation(consumer_sig) do
+      producer_outputs = MapSet.new(producer_sig.output_fields())
+      consumer_inputs = MapSet.new(consumer_sig.input_fields())
 
-        # Check if producer outputs can satisfy consumer inputs
-        missing_inputs = MapSet.difference(consumer_inputs, producer_outputs)
+      # Check if producer outputs can satisfy consumer inputs
+      missing_inputs = MapSet.difference(consumer_inputs, producer_outputs)
 
-        case MapSet.size(missing_inputs) do
-          0 ->
-            :ok
+      case MapSet.size(missing_inputs) do
+        0 ->
+          :ok
 
-          _ ->
-            {:error,
-             "Producer outputs #{inspect(MapSet.to_list(producer_outputs))} " <>
-               "do not match consumer inputs #{inspect(MapSet.to_list(consumer_inputs))}. " <>
-               "Missing: #{inspect(MapSet.to_list(missing_inputs))}"}
-        end
+        _ ->
+          {:error,
+           "Producer outputs #{inspect(MapSet.to_list(producer_outputs))} " <>
+             "do not match consumer inputs #{inspect(MapSet.to_list(consumer_inputs))}. " <>
+             "Missing: #{inspect(MapSet.to_list(missing_inputs))}"}
       end
-    rescue
-      error -> {:error, "Compatibility check failed: #{inspect(error)}"}
     end
+  rescue
+    error -> {:error, "Compatibility check failed: #{inspect(error)}"}
   end
 
   @doc """
@@ -595,35 +593,33 @@ defmodule DSPEx.Signature do
   """
   @spec introspect(module()) :: {:ok, map()} | {:error, String.t()}
   def introspect(signature_module) when is_atom(signature_module) do
-    try do
-      case validate_signature_implementation(signature_module) do
-        :ok ->
-          inputs = signature_module.input_fields()
-          outputs = signature_module.output_fields()
-          all_fields = signature_module.fields()
+    case validate_signature_implementation(signature_module) do
+      :ok ->
+        inputs = signature_module.input_fields()
+        outputs = signature_module.output_fields()
+        all_fields = signature_module.fields()
 
-          introspection_data = %{
-            module: signature_module,
-            instructions: signature_module.instructions(),
-            inputs: inputs,
-            outputs: outputs,
-            all_fields: all_fields,
-            field_count: %{
-              inputs: length(inputs),
-              outputs: length(outputs),
-              total: length(all_fields)
-            },
-            introspected_at: DateTime.utc_now()
-          }
+        introspection_data = %{
+          module: signature_module,
+          instructions: signature_module.instructions(),
+          inputs: inputs,
+          outputs: outputs,
+          all_fields: all_fields,
+          field_count: %{
+            inputs: length(inputs),
+            outputs: length(outputs),
+            total: length(all_fields)
+          },
+          introspected_at: DateTime.utc_now()
+        }
 
-          {:ok, introspection_data}
+        {:ok, introspection_data}
 
-        {:error, reason} ->
-          {:error, reason}
-      end
-    rescue
-      error -> {:error, "Introspection failed: #{inspect(error)}"}
+      {:error, reason} ->
+        {:error, reason}
     end
+  rescue
+    error -> {:error, "Introspection failed: #{inspect(error)}"}
   end
 
   @doc """
@@ -650,45 +646,43 @@ defmodule DSPEx.Signature do
   """
   @spec validate_signature_implementation(module()) :: :ok | {:error, String.t()}
   def validate_signature_implementation(module) when is_atom(module) do
-    try do
-      # Check if module exists and is loaded
-      if Code.ensure_loaded?(module) do
-        # Check if module implements the behavior
-        behaviors = module.module_info(:attributes) |> Keyword.get(:behaviour, [])
+    # Check if module exists and is loaded
+    if Code.ensure_loaded?(module) do
+      # Check if module implements the behavior
+      behaviors = module.module_info(:attributes) |> Keyword.get(:behaviour, [])
 
-        if DSPEx.Signature in behaviors do
-          # Check required functions exist
-          required_functions = [
-            {:instructions, 0},
-            {:input_fields, 0},
-            {:output_fields, 0},
-            {:fields, 0}
-          ]
+      if DSPEx.Signature in behaviors do
+        # Check required functions exist
+        required_functions = [
+          {:instructions, 0},
+          {:input_fields, 0},
+          {:output_fields, 0},
+          {:fields, 0}
+        ]
 
-          missing_functions =
-            required_functions
-            |> Enum.reject(fn {func, arity} ->
-              function_exported?(module, func, arity)
-            end)
+        missing_functions =
+          required_functions
+          |> Enum.reject(fn {func, arity} ->
+            function_exported?(module, func, arity)
+          end)
 
-          if Enum.empty?(missing_functions) do
-            # Validate function return types and consistency
-            case validate_field_lists(module) do
-              :ok -> validate_instructions(module)
-              error -> error
-            end
-          else
-            {:error, "Missing required functions: #{inspect(missing_functions)}"}
+        if Enum.empty?(missing_functions) do
+          # Validate function return types and consistency
+          case validate_field_lists(module) do
+            :ok -> validate_instructions(module)
+            error -> error
           end
         else
-          {:error, "Module does not implement DSPEx.Signature behavior"}
+          {:error, "Missing required functions: #{inspect(missing_functions)}"}
         end
       else
-        {:error, "Module #{inspect(module)} cannot be loaded"}
+        {:error, "Module does not implement DSPEx.Signature behavior"}
       end
-    rescue
-      error -> {:error, "Validation failed: #{inspect(error)}"}
+    else
+      {:error, "Module #{inspect(module)} cannot be loaded"}
     end
+  rescue
+    error -> {:error, "Validation failed: #{inspect(error)}"}
   end
 
   @doc """

@@ -111,17 +111,16 @@ defmodule DSPEx.Services.TelemetrySetup do
 
   @spec graceful_detach_handlers() :: :ok
   defp graceful_detach_handlers do
-    try do
-      :telemetry.detach("dspex-telemetry-handlers")
-      Logger.debug("DSPEx Telemetry: Handlers detached successfully")
-    rescue
-      error ->
-        Logger.debug(
-          "DSPEx Telemetry: Handler detach failed (expected during shutdown): #{inspect(error)}"
-        )
-    end
-
+    :telemetry.detach("dspex-telemetry-handlers")
+    Logger.debug("DSPEx Telemetry: Handlers detached successfully")
     :ok
+  rescue
+    error ->
+      Logger.debug(
+        "DSPEx Telemetry: Handler detach failed (expected during shutdown): #{inspect(error)}"
+      )
+
+      :ok
   end
 
   @impl GenServer

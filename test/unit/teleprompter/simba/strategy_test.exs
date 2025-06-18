@@ -16,18 +16,16 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
 
     @impl true
     def apply(bucket, source_program, _opts) do
-      try do
-        case Bucket.best_trajectory(bucket) do
-          nil -> {:skip, "No trajectories found"}
-          trajectory when trajectory.score > 0.5 -> {:ok, source_program}
-          _ -> {:skip, "Score too low"}
-        end
-      rescue
-        _error ->
-          reraise RuntimeError,
-                  [message: "Strategy cannot handle malformed bucket"],
-                  __STACKTRACE__
+      case Bucket.best_trajectory(bucket) do
+        nil -> {:skip, "No trajectories found"}
+        trajectory when trajectory.score > 0.5 -> {:ok, source_program}
+        _ -> {:skip, "Score too low"}
       end
+    rescue
+      _error ->
+        reraise RuntimeError,
+                [message: "Strategy cannot handle malformed bucket"],
+                __STACKTRACE__
     end
 
     @impl true
