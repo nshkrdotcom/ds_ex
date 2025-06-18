@@ -233,68 +233,77 @@ defmodule DSPEx.Config.ElixactSchemas do
     end
   end
 
+  # Supported single-level fields (organized by category)
+  @supported_single_fields MapSet.new([
+                             # Client fields - all supported (string, integer, float)
+                             :timeout,
+                             :retry_attempts,
+                             :backoff_factor,
+                             # Provider fields - partial support
+                             :base_url,
+                             :default_model,
+                             # Prediction fields - partial support
+                             :default_temperature,
+                             :default_max_tokens,
+                             :cache_enabled,
+                             :cache_ttl,
+                             # Evaluation fields - supported
+                             :batch_size,
+                             :parallel_limit,
+                             # Teleprompter fields - supported
+                             :bootstrap_examples,
+                             :validation_threshold,
+                             # Logging fields - partial support
+                             :correlation_enabled,
+                             # BEACON fields - partial support
+                             :max_concurrent_operations,
+                             :default_timeout,
+                             # Telemetry fields - supported
+                             :enabled,
+                             :detailed_logging,
+                             :performance_tracking
+                           ])
+
   # Check support for single-level fields
   @spec elixact_supports_single_field?(list(atom())) :: boolean()
-  defp elixact_supports_single_field?(field_path) do
-    case field_path do
-      # Client fields - all supported (string, integer, float)
-      [:timeout] -> true
-      [:retry_attempts] -> true
-      [:backoff_factor] -> true
-      # Provider fields - partial support
-      [:base_url] -> true
-      [:default_model] -> true
-      # Prediction fields - partial support
-      [:default_temperature] -> true
-      [:default_max_tokens] -> true
-      [:cache_enabled] -> true
-      [:cache_ttl] -> true
-      # Evaluation fields - supported
-      [:batch_size] -> true
-      [:parallel_limit] -> true
-      # Teleprompter fields - supported
-      [:bootstrap_examples] -> true
-      [:validation_threshold] -> true
-      # Logging fields - partial support
-      [:correlation_enabled] -> true
-      # BEACON fields - partial support
-      [:max_concurrent_operations] -> true
-      [:default_timeout] -> true
-      # Telemetry fields - supported
-      [:enabled] -> true
-      [:detailed_logging] -> true
-      [:performance_tracking] -> true
-      # Unsupported single fields (mostly atom types and union types)
-      _ -> elixact_supports_atom_or_union_field?(field_path)
-    end
+  defp elixact_supports_single_field?([field]) do
+    MapSet.member?(@supported_single_fields, field) or
+      elixact_supports_atom_or_union_field?([field])
   end
+
+  defp elixact_supports_single_field?(_), do: false
+
+  # Unsupported atom/union fields - all return false
+  @unsupported_atom_union_fields MapSet.new([
+                                   :api_key,
+                                   :default_provider,
+                                   :level,
+                                   :default_instruction_model,
+                                   :default_evaluation_model
+                                 ])
 
   # Check support for atom types and union types (not supported)
   @spec elixact_supports_atom_or_union_field?(list(atom())) :: boolean()
-  defp elixact_supports_atom_or_union_field?(field_path) do
-    case field_path do
-      # Union type not supported
-      [:api_key] -> false
-      # Atom type not supported
-      [:default_provider] -> false
-      [:level] -> false
-      [:default_instruction_model] -> false
-      [:default_evaluation_model] -> false
-      _ -> false
-    end
+  defp elixact_supports_atom_or_union_field?([field]) do
+    # All atom/union fields are unsupported, but we maintain the set for clarity
+    MapSet.member?(@unsupported_atom_union_fields, field) and false
   end
+
+  defp elixact_supports_atom_or_union_field?(_), do: false
+
+  # Nested field prefixes - all are unsupported
+  @unsupported_nested_prefixes MapSet.new([
+                                 :rate_limit,
+                                 :circuit_breaker,
+                                 :optimization,
+                                 :bayesian_optimization
+                               ])
 
   # Check support for nested fields
   @spec elixact_supports_nested_field?(list(atom())) :: boolean()
-  defp elixact_supports_nested_field?(field_path) do
-    case field_path do
-      # Nested maps - not supported
-      [:rate_limit, _] -> false
-      [:circuit_breaker, _] -> false
-      [:optimization, _] -> false
-      [:bayesian_optimization, _] -> false
-      _ -> false
-    end
+  defp elixact_supports_nested_field?([prefix, _field]) do
+    # All nested fields are unsupported
+    MapSet.member?(@unsupported_nested_prefixes, prefix) and false
   end
 
   # Legacy validation functions for unsupported Elixact cases

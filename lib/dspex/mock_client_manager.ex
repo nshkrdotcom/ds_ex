@@ -302,42 +302,50 @@ defmodule DSPEx.MockClientManager do
 
   defp generate_contextual_response(_), do: "Mock response for unknown message format"
 
+  # Mock response patterns organized by category
+  @response_patterns [
+    # Math questions - provide realistic answers
+    {["2+2", "2 + 2", "what is 2+2"], "4"},
+    {["3+3", "3 + 3", "what is 3+3"], "6"},
+    {["25% of 80", "25 percent of 80"], "20"},
+    {["15 apples", "sells 7", "gets 8"],
+     "Starting with 15 apples. After selling 7: 15 - 7 = 8 apples. After getting 8 more: 8 + 8 = 16 apples. The answer is 16."},
+    {["apples", "selling", "getting"], "16"},
+    {["reasoning", "step-by-step", "chain of thought"],
+     "Let me think step by step. First, I need to identify the problem. Then I'll work through each part systematically to reach the correct answer."},
+    {["math", "calculate", "sum", "add"], "42"},
+    # Capital questions
+    {["capital of france", "capital france"], "Paris"},
+    {["capital of", "capital"], "The capital city (mock response)"},
+    # Greetings
+    {["hello", "hi", "hey"], "Hello! This is a mock response."},
+    # Questions about testing
+    {["test", "testing", "mock"], "This is indeed a mock response for testing purposes."},
+    # Integration test patterns  
+    {["integration", "client", "manager"], "Mock ClientManager integration test response."},
+    # Network or API related
+    {["network", "api", "request"], "Mock API response - no actual network request made."}
+  ]
+
   defp generate_contextual_response_for_content(content) do
     content_lower = String.downcase(content)
 
-    # Debug: Log what content we're processing
-    # IO.puts("🔍 MockClientManager fallback for content: #{inspect(String.slice(content, 0, 100))}")
+    # Try pattern matching first
+    case find_matching_response(content_lower, @response_patterns) do
+      {:ok, response} -> response
+      :not_found -> check_special_patterns(content, content_lower)
+    end
+  end
 
+  defp find_matching_response(content_lower, patterns) do
+    patterns
+    |> Enum.find_value(:not_found, fn {keywords, response} ->
+      if String.contains?(content_lower, keywords), do: {:ok, response}
+    end)
+  end
+
+  defp check_special_patterns(content, content_lower) do
     cond do
-      # Math questions - provide realistic answers
-      String.contains?(content_lower, ["2+2", "2 + 2", "what is 2+2"]) ->
-        "4"
-
-      String.contains?(content_lower, ["3+3", "3 + 3", "what is 3+3"]) ->
-        "6"
-
-      String.contains?(content_lower, ["25% of 80", "25 percent of 80"]) ->
-        "20"
-
-      String.contains?(content_lower, ["15 apples", "sells 7", "gets 8"]) ->
-        "Starting with 15 apples. After selling 7: 15 - 7 = 8 apples. After getting 8 more: 8 + 8 = 16 apples. The answer is 16."
-
-      String.contains?(content_lower, ["apples", "selling", "getting"]) ->
-        "16"
-
-      String.contains?(content_lower, ["reasoning", "step-by-step", "chain of thought"]) ->
-        "Let me think step by step. First, I need to identify the problem. Then I'll work through each part systematically to reach the correct answer."
-
-      String.contains?(content_lower, ["math", "calculate", "sum", "add"]) ->
-        "42"
-
-      # Capital questions
-      String.contains?(content_lower, ["capital of france", "capital france"]) ->
-        "Paris"
-
-      String.contains?(content_lower, ["capital of", "capital"]) ->
-        "The capital city (mock response)"
-
       # Question answering patterns
       String.contains?(content_lower, ["question:", "answer:", "qa"]) ->
         generate_qa_response(content)
@@ -345,22 +353,6 @@ defmodule DSPEx.MockClientManager do
       # Chain of thought patterns
       String.contains?(content_lower, ["reasoning:", "think step", "step by step"]) ->
         generate_cot_response(content)
-
-      # Greetings
-      String.contains?(content_lower, ["hello", "hi", "hey"]) ->
-        "Hello! This is a mock response."
-
-      # Questions about testing
-      String.contains?(content_lower, ["test", "testing", "mock"]) ->
-        "This is indeed a mock response for testing purposes."
-
-      # Integration test patterns
-      String.contains?(content_lower, ["integration", "client", "manager"]) ->
-        "Mock ClientManager integration test response."
-
-      # Network or API related
-      String.contains?(content_lower, ["network", "api", "request"]) ->
-        "Mock API response - no actual network request made."
 
       # Default contextual response
       String.length(content) > 0 ->

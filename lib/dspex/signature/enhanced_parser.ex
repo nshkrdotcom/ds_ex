@@ -501,82 +501,89 @@ defmodule DSPEx.Signature.EnhancedParser do
     end
   end
 
+  # Numeric constraint types
+  @numeric_constraints [
+    :min_length,
+    :max_length,
+    :min_items,
+    :max_items,
+    :gteq,
+    :lteq,
+    :gt,
+    :lt
+  ]
+
   # Parses constraint values based on constraint type
   @spec parse_constraint_value(atom(), String.t()) :: term() | no_return()
   defp parse_constraint_value(constraint_name, value_str) do
-    case constraint_name do
-      # Numeric constraints
-      constraint
-      when constraint in [
-             :min_length,
-             :max_length,
-             :min_items,
-             :max_items,
-             :gteq,
-             :lteq,
-             :gt,
-             :lt
-           ] ->
-        case Integer.parse(value_str) do
-          {int_value, ""} ->
-            int_value
+    cond do
+      constraint_name in @numeric_constraints ->
+        parse_numeric_constraint(constraint_name, value_str)
 
-          _ ->
-            case Float.parse(value_str) do
-              {float_value, ""} ->
-                float_value
-
-              _ ->
-                raise CompileError,
-                  description:
-                    "Invalid numeric value '#{value_str}' for constraint '#{constraint_name}'",
-                  file: __ENV__.file,
-                  line: __ENV__.line
-            end
-        end
-
-      # Regex constraints
-      :format ->
+      constraint_name == :format ->
         parse_regex_value(value_str)
 
-      # Choice constraints
-      :choices ->
+      constraint_name == :choices ->
         parse_choices_value(value_str)
 
-      # Default values
-      :default ->
+      constraint_name == :default ->
         parse_default_value(value_str)
 
-      # Boolean constraints
-      :optional ->
-        case String.downcase(value_str) do
-          "true" ->
-            true
+      constraint_name == :optional ->
+        parse_boolean_constraint(constraint_name, value_str)
 
-          "false" ->
-            false
+      true ->
+        parse_unknown_constraint(value_str)
+    end
+  end
+
+  defp parse_numeric_constraint(constraint_name, value_str) do
+    case Integer.parse(value_str) do
+      {int_value, ""} ->
+        int_value
+
+      _ ->
+        case Float.parse(value_str) do
+          {float_value, ""} ->
+            float_value
 
           _ ->
             raise CompileError,
               description:
-                "Invalid boolean value '#{value_str}' for constraint '#{constraint_name}'. Use 'true' or 'false'.",
+                "Invalid numeric value '#{value_str}' for constraint '#{constraint_name}'",
               file: __ENV__.file,
               line: __ENV__.line
         end
+    end
+  end
 
-      # Unknown constraint
+  defp parse_boolean_constraint(constraint_name, value_str) do
+    case String.downcase(value_str) do
+      "true" ->
+        true
+
+      "false" ->
+        false
+
       _ ->
-        # For unknown constraints, try to parse as string, integer, or keep as string
-        case Integer.parse(value_str) do
-          {int_value, ""} ->
-            int_value
+        raise CompileError,
+          description:
+            "Invalid boolean value '#{value_str}' for constraint '#{constraint_name}'. Use 'true' or 'false'.",
+          file: __ENV__.file,
+          line: __ENV__.line
+    end
+  end
 
-          _ ->
-            case Float.parse(value_str) do
-              {float_value, ""} -> float_value
-              # Keep as string
-              _ -> value_str
-            end
+  defp parse_unknown_constraint(value_str) do
+    case Integer.parse(value_str) do
+      {int_value, ""} ->
+        int_value
+
+      _ ->
+        case Float.parse(value_str) do
+          {float_value, ""} -> float_value
+          # Keep as string
+          _ -> value_str
         end
     end
   end

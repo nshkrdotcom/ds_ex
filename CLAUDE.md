@@ -313,3 +313,128 @@ mix test test/unit/teleprompter/simba/strategy/append_demo_test.exs
 - Integration risk is minimal (single signature dependency)
 
 **Bottom Line:** This is a focused TDD implementation to add the final 5% of SIMBA functionality to an already exceptional implementation.
+
+---
+
+## Credo Code Quality Cleanup Plan
+
+### **Current Credo Status (2025-06-18)**
+- **1 Warning**: Expensive `length/1` check 
+- **2 Readability Issues**: `with` statements that should be `case`
+- **60 Refactoring Opportunities**: Function complexity, nesting depth
+
+### **Cleanup Strategy: Iterative Quality Improvement**
+
+#### **Phase A: Critical Warnings (Priority 1)**
+**Target:** 0 warnings  
+**Impact:** Performance and best practices
+
+1. **Fix Expensive Length Check** ⚠️ HIGH PRIORITY
+   - **File:** `test/integration/simba_telemetry_validation_test.exs:292`
+   - **Change:** Replace `length(list) > 0` with `not Enum.empty?(list)`
+   - **Rationale:** O(1) vs O(n) performance improvement
+
+#### **Phase B: Readability Issues (Priority 2)**
+**Target:** 0 readability issues  
+**Impact:** Code maintainability
+
+2. **Convert with/case Statements** 📖 MEDIUM PRIORITY
+   - **File 1:** `test/performance/elixact_vs_baseline_test.exs:460` (validate_outputs)
+   - **File 2:** `test/performance/elixact_vs_baseline_test.exs:450` (validate_inputs)
+   - **Change:** Replace single-clause `with` statements with `case`
+   - **Rationale:** Better semantic clarity for single condition checks
+
+#### **Phase C: Refactoring Opportunities (Priority 3)**
+**Target:** Reduce from 60 to <20 issues  
+**Impact:** Long-term maintainability
+
+3. **Function Complexity Reduction** 🔧 STRUCTURED APPROACH
+   
+   **3.1 High-Impact Complexity Issues (>15 cyclomatic complexity)**
+   - `DSPEx.Config.ElixactSchemas.elixact_supports_single_field?/1` (21)
+   - `DSPEx.MockClientManager.generate_contextual_response_for_content/1` (19)
+   - `DSPEx.Signature.EnhancedParser.parse_constraint_value/1` (18)
+   
+   **3.2 Medium-Impact Complexity Issues (10-15 cyclomatic complexity)**
+   - `DSPEx.Config.Validator.generate_suggestion/1` (14)
+   - `DSPEx.Signature.Elixact.map_single_constraint_to_elixact/1` (14)
+   - `DSPEx.Teleprompter.SIMBA.select_final_best_program/1` (13)
+   - Plus 8 more functions in 10-12 range
+
+4. **Nesting Depth Reduction** 🏗️ SYSTEMATIC REFACTORING
+   
+   **4.1 Critical Nesting Issues (depth 4)**
+   - `DSPEx.Teleprompter.BEACON.BayesianOptimizer.run_optimization_loop/1`
+   - `DSPEx.Teleprompter.SIMBA.Strategy.apply_first_applicable/2`
+   - `DSPEx.Teleprompter.SIMBA.select_final_best_program/1`
+   
+   **4.2 Standard Nesting Issues (depth 3)** 
+   - 30+ functions with moderate nesting depth
+   - Target: Extract helper functions, use early returns
+
+### **Implementation Approach**
+
+#### **Milestone 1: Quick Wins (1-2 hours)**
+- Phase A: Fix warning (1 line change)
+- Phase B: Fix readability (4-6 line changes each)
+- **Test Coverage:** Run basic test suite after each fix
+
+#### **Milestone 2: Complexity Reduction (4-6 hours)**
+- Target highest complexity functions first
+- Break down into smaller, single-purpose functions
+- **Test Coverage:** Run full test suite between major changes
+
+#### **Milestone 3: Nesting Cleanup (2-4 hours)**
+- Extract helper functions for deeply nested logic
+- Use pattern matching and early returns
+- **Test Coverage:** Comprehensive test validation
+
+#### **Milestone 4: Final Validation (1 hour)**
+- Run complete test suite: `mix test --include group_1 --include group_2`
+- Validate dialyzer: `mix dialyzer`
+- Confirm credo improvement: `mix credo --strict`
+
+### **Quality Gates Per Milestone**
+
+```bash
+# After each milestone
+mix test                    # Core functionality preserved
+mix credo                   # Progress tracking
+mix dialyzer                # No new warnings introduced
+
+# Periodic comprehensive checks
+mix test --include group_1 --include group_2  # Full test coverage
+```
+
+### **Success Metrics**
+
+**Milestone 1 Success:**
+- ✅ 0 warnings (down from 1)
+- ✅ 0 readability issues (down from 2)
+- ✅ All existing tests pass
+
+**Milestone 2 Success:**
+- ✅ <5 high-complexity functions (down from 8)
+- ✅ <40 total refactoring opportunities (down from 60)
+- ✅ Maintained test coverage
+
+**Milestone 3 Success:**
+- ✅ <3 critical nesting issues (down from 6)
+- ✅ <25 total refactoring opportunities
+- ✅ Improved code readability
+
+**Milestone 4 Success:**
+- ✅ `mix credo --strict` shows <15 total issues
+- ✅ Zero dialyzer warnings
+- ✅ Complete test suite passes
+- ✅ Code maintainability significantly improved
+
+### **Risk Mitigation**
+
+1. **Test-First Approach**: Run tests before and after each change
+2. **Incremental Changes**: One function at a time for complex refactoring
+3. **Git Staging**: Stage changes incrementally for easy rollback
+4. **Documentation**: Update function docs when extracting helpers
+
+**Estimated Total Time:** 8-12 hours of focused refactoring work
+**Expected Outcome:** Professional-grade code quality with <15 credo issues

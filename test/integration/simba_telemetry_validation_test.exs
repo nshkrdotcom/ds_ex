@@ -289,7 +289,7 @@ defmodule DSPEx.Integration.SimbaTelemetryValidationTest do
 
       # Note: trajectory_sampled events may be 0 if no valid trajectories are generated in mock environment
       # This is expected behavior with mock data that may not execute properly
-      if length(trajectory_sampled_events) == 0 do
+      if Enum.empty?(trajectory_sampled_events) do
         IO.puts("No trajectory sampled events (expected with mock data that doesn't execute)")
       else
         assert length(trajectory_sampled_events) >= 1, "Should emit trajectory sampled events"
