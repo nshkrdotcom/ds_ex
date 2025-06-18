@@ -18,7 +18,7 @@ defmodule DSPEx.Config.ElixactSchemas do
     {:ok, ClientConfiguration, [field]}
   end
 
-  # Evaluation configuration mappings  
+  # Evaluation configuration mappings
   def path_to_schema([:dspex, :evaluation, field]) when field in [:batch_size, :parallel_limit] do
     {:ok, EvaluationConfiguration, [field]}
   end
@@ -177,7 +177,7 @@ defmodule DSPEx.Config.ElixactSchemas do
   defp build_nested_map([field | rest], value), do: %{field => build_nested_map(rest, value)}
 
   # Format Elixact errors to match legacy error format
-  @spec format_elixact_error([%Elixact.Error{}] | %Elixact.Error{}) :: term()
+  @spec format_elixact_error([term()] | term()) :: term()
   defp format_elixact_error([error | _]), do: format_elixact_error(error)
 
   defp format_elixact_error(%Elixact.Error{path: [field], message: message}) do
@@ -219,21 +219,32 @@ defmodule DSPEx.Config.ElixactSchemas do
   @spec elixact_supported_field?(list(atom())) :: boolean()
   defp elixact_supported_field?(field_path) do
     case field_path do
+      # Basic single fields
+      single_field when length(single_field) == 1 ->
+        elixact_supports_single_field?(single_field)
+
+      # Nested fields with two levels
+      nested_field when length(nested_field) == 2 ->
+        elixact_supports_nested_field?(nested_field)
+
+      # Default to unsupported for deeper nesting
+      _ ->
+        false
+    end
+  end
+
+  # Check support for single-level fields
+  @spec elixact_supports_single_field?(list(atom())) :: boolean()
+  defp elixact_supports_single_field?(field_path) do
+    case field_path do
       # Client fields - all supported (string, integer, float)
       [:timeout] -> true
       [:retry_attempts] -> true
       [:backoff_factor] -> true
       # Provider fields - partial support
-      # Union type not supported
-      [:api_key] -> false
       [:base_url] -> true
       [:default_model] -> true
-      # Nested maps - not supported
-      [:rate_limit, _] -> false
-      [:circuit_breaker, _] -> false
       # Prediction fields - partial support
-      # Atom type not supported
-      [:default_provider] -> false
       [:default_temperature] -> true
       [:default_max_tokens] -> true
       [:cache_enabled] -> true
@@ -245,25 +256,43 @@ defmodule DSPEx.Config.ElixactSchemas do
       [:bootstrap_examples] -> true
       [:validation_threshold] -> true
       # Logging fields - partial support
-      # Atom type not supported
-      [:level] -> false
       [:correlation_enabled] -> true
-      # BEACON fields - not supported
-      # Atom type
-      [:default_instruction_model] -> false
-      # Atom type
-      [:default_evaluation_model] -> false
+      # BEACON fields - partial support
       [:max_concurrent_operations] -> true
       [:default_timeout] -> true
-      # Nested map
-      [:optimization, _] -> false
-      # Nested map
-      [:bayesian_optimization, _] -> false
       # Telemetry fields - supported
       [:enabled] -> true
       [:detailed_logging] -> true
       [:performance_tracking] -> true
-      # Default to unsupported
+      # Unsupported single fields (mostly atom types and union types)
+      _ -> elixact_supports_atom_or_union_field?(field_path)
+    end
+  end
+
+  # Check support for atom types and union types (not supported)
+  @spec elixact_supports_atom_or_union_field?(list(atom())) :: boolean()
+  defp elixact_supports_atom_or_union_field?(field_path) do
+    case field_path do
+      # Union type not supported
+      [:api_key] -> false
+      # Atom type not supported
+      [:default_provider] -> false
+      [:level] -> false
+      [:default_instruction_model] -> false
+      [:default_evaluation_model] -> false
+      _ -> false
+    end
+  end
+
+  # Check support for nested fields
+  @spec elixact_supports_nested_field?(list(atom())) :: boolean()
+  defp elixact_supports_nested_field?(field_path) do
+    case field_path do
+      # Nested maps - not supported
+      [:rate_limit, _] -> false
+      [:circuit_breaker, _] -> false
+      [:optimization, _] -> false
+      [:bayesian_optimization, _] -> false
       _ -> false
     end
   end
@@ -289,40 +318,81 @@ defmodule DSPEx.Config.ElixactSchemas do
       [:default_evaluation_model] ->
         validate_provider_atom(value)
 
-      # Nested map validations
-      [:rate_limit, :requests_per_minute] ->
-        validate_positive_integer(value, :invalid_rate_limit)
-
-      [:rate_limit, :tokens_per_minute] ->
-        validate_positive_integer(value, :invalid_rate_limit)
-
-      [:circuit_breaker, :failure_threshold] ->
-        validate_positive_integer(value, :invalid_failure_threshold)
-
-      [:circuit_breaker, :recovery_time] ->
-        validate_positive_integer(value, :invalid_recovery_time)
-
-      [:optimization, :max_trials] ->
-        validate_positive_integer(value, :invalid_max_trials)
-
-      [:optimization, :convergence_patience] ->
-        validate_positive_integer(value, :invalid_convergence_patience)
-
-      [:optimization, :improvement_threshold] ->
-        validate_float_range(value, 0.0, 1.0, :invalid_improvement_threshold)
-
-      [:bayesian_optimization, :acquisition_function] ->
-        validate_acquisition_function(value)
-
-      [:bayesian_optimization, :surrogate_model] ->
-        validate_surrogate_model(value)
-
-      [:bayesian_optimization, :exploration_exploitation_tradeoff] ->
-        validate_float_range(value, 0.0, 1.0, :invalid_tradeoff)
+      # Nested map validations - delegate to specialized functions
+      nested_path when length(nested_path) == 2 ->
+        validate_nested_field(nested_path, value)
 
       # Unknown field
       _ ->
         {:error, {:unknown_field, "Unknown configuration field"}}
+    end
+  end
+
+  # Validates nested configuration fields
+  @spec validate_nested_field(list(atom()), term()) :: :ok | {:error, term()}
+  defp validate_nested_field(field_path, value) do
+    case field_path do
+      [:rate_limit, field] -> validate_rate_limit_field(field, value)
+      [:circuit_breaker, field] -> validate_circuit_breaker_field(field, value)
+      [:optimization, field] -> validate_optimization_field(field, value)
+      [:bayesian_optimization, field] -> validate_bayesian_field(field, value)
+      _ -> {:error, {:unknown_field, "Unknown nested configuration field"}}
+    end
+  end
+
+  # Rate limit field validation
+  @spec validate_rate_limit_field(atom(), term()) :: :ok | {:error, term()}
+  defp validate_rate_limit_field(field, value) do
+    case field do
+      :requests_per_minute -> validate_positive_integer(value, :invalid_rate_limit)
+      :tokens_per_minute -> validate_positive_integer(value, :invalid_rate_limit)
+      _ -> {:error, {:unknown_field, "Unknown rate limit field"}}
+    end
+  end
+
+  # Circuit breaker field validation
+  @spec validate_circuit_breaker_field(atom(), term()) :: :ok | {:error, term()}
+  defp validate_circuit_breaker_field(field, value) do
+    case field do
+      :failure_threshold -> validate_positive_integer(value, :invalid_failure_threshold)
+      :recovery_time -> validate_positive_integer(value, :invalid_recovery_time)
+      _ -> {:error, {:unknown_field, "Unknown circuit breaker field"}}
+    end
+  end
+
+  # Optimization field validation
+  @spec validate_optimization_field(atom(), term()) :: :ok | {:error, term()}
+  defp validate_optimization_field(field, value) do
+    case field do
+      :max_trials ->
+        validate_positive_integer(value, :invalid_max_trials)
+
+      :convergence_patience ->
+        validate_positive_integer(value, :invalid_convergence_patience)
+
+      :improvement_threshold ->
+        validate_float_range(value, 0.0, 1.0, :invalid_improvement_threshold)
+
+      _ ->
+        {:error, {:unknown_field, "Unknown optimization field"}}
+    end
+  end
+
+  # Bayesian optimization field validation
+  @spec validate_bayesian_field(atom(), term()) :: :ok | {:error, term()}
+  defp validate_bayesian_field(field, value) do
+    case field do
+      :acquisition_function ->
+        validate_acquisition_function(value)
+
+      :surrogate_model ->
+        validate_surrogate_model(value)
+
+      :exploration_exploitation_tradeoff ->
+        validate_float_range(value, 0.0, 1.0, :invalid_tradeoff)
+
+      _ ->
+        {:error, {:unknown_field, "Unknown bayesian optimization field"}}
     end
   end
 

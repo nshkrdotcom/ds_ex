@@ -315,14 +315,15 @@ defmodule DSPEx.Teleprompter.SIMBA do
   # Execute a program and capture the trajectory
   defp execute_with_trajectory(program, example, model_config, metric_fn, exec_id) do
     start_time = System.monotonic_time()
-    
+
     # Handle both Example structs and raw maps
-    inputs = case example do
-      %DSPEx.Example{} -> Example.inputs(example)
-      %{inputs: inputs} -> inputs
-      _ -> %{}
-    end
-    
+    inputs =
+      case example do
+        %DSPEx.Example{} -> Example.inputs(example)
+        %{inputs: inputs} -> inputs
+        _ -> %{}
+      end
+
     execution_opts = model_config_to_opts(model_config)
 
     case Program.forward(program, inputs, execution_opts) do
@@ -365,12 +366,13 @@ defmodule DSPEx.Teleprompter.SIMBA do
   rescue
     error ->
       # Handle both Example structs and raw maps
-      safe_inputs = case example do
-        %DSPEx.Example{} -> Example.inputs(example)
-        %{inputs: inputs} -> inputs
-        _ -> %{}
-      end
-      
+      safe_inputs =
+        case example do
+          %DSPEx.Example{} -> Example.inputs(example)
+          %{inputs: inputs} -> inputs
+          _ -> %{}
+        end
+
       %Trajectory{
         program: program,
         example: example,
@@ -513,11 +515,12 @@ defmodule DSPEx.Teleprompter.SIMBA do
           batch
           |> Enum.map(fn example ->
             # Handle both Example structs and raw maps
-            inputs = case example do
-              %DSPEx.Example{} -> Example.inputs(example)
-              %{inputs: inputs} -> inputs
-              _ -> %{}
-            end
+            inputs =
+              case example do
+                %DSPEx.Example{} -> Example.inputs(example)
+                %{inputs: inputs} -> inputs
+                _ -> %{}
+              end
 
             case Program.forward(candidate, inputs) do
               {:ok, outputs} ->
@@ -561,7 +564,13 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   # Update program pool with new candidates and their scores
   defp update_program_pool(programs, program_scores, new_candidates, candidate_scores, next_idx) do
-    update_program_pool_fixed(programs, program_scores, new_candidates, candidate_scores, next_idx)
+    update_program_pool_fixed(
+      programs,
+      program_scores,
+      new_candidates,
+      candidate_scores,
+      next_idx
+    )
   end
 
   # Enhanced program pool updates with pruning and winning program tracking
@@ -818,13 +827,14 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
   def execute_with_trajectory_fixed(program, example, model_config, metric_fn, exec_id) do
     start_time = System.monotonic_time()
-    
+
     # Handle both Example structs and raw maps
-    inputs = case example do
-      %DSPEx.Example{} -> Example.inputs(example)
-      %{inputs: inputs} -> inputs
-      _ -> %{}
-    end
+    inputs =
+      case example do
+        %DSPEx.Example{} -> Example.inputs(example)
+        %{inputs: inputs} -> inputs
+        _ -> %{}
+      end
 
     # Convert model config to execution options
     execution_opts = [
@@ -874,11 +884,12 @@ defmodule DSPEx.Teleprompter.SIMBA do
       %Trajectory{
         program: program,
         example: example,
-        inputs: case example do
-          %DSPEx.Example{} -> Example.inputs(example)
-          %{inputs: inputs} -> inputs
-          _ -> %{}
-        end,
+        inputs:
+          case example do
+            %DSPEx.Example{} -> Example.inputs(example)
+            %{inputs: inputs} -> inputs
+            _ -> %{}
+          end,
         outputs: %{},
         score: 0.0,
         duration: 0,
@@ -894,10 +905,10 @@ defmodule DSPEx.Teleprompter.SIMBA do
     # Filter out invalid programs and SIMBA instances
     valid_programs =
       Enum.filter(winning_programs, fn program ->
-        is_struct(program) and 
-        Map.has_key?(program, :__struct__) and
-        program.__struct__ != DSPEx.Teleprompter.SIMBA and
-        function_exported?(program.__struct__, :forward, 2)
+        is_struct(program) and
+          Map.has_key?(program, :__struct__) and
+          program.__struct__ != DSPEx.Teleprompter.SIMBA and
+          function_exported?(program.__struct__, :forward, 2)
       end)
 
     if Enum.empty?(valid_programs) do
@@ -916,11 +927,12 @@ defmodule DSPEx.Teleprompter.SIMBA do
               sample
               |> Enum.map(fn example ->
                 # Handle both Example structs and raw maps
-                inputs = case example do
-                  %DSPEx.Example{} -> Example.inputs(example)
-                  %{inputs: inputs} -> inputs
-                  _ -> %{}
-                end
+                inputs =
+                  case example do
+                    %DSPEx.Example{} -> Example.inputs(example)
+                    %{inputs: inputs} -> inputs
+                    _ -> %{}
+                  end
 
                 case Program.forward(program, inputs) do
                   {:ok, outputs} ->
@@ -1169,5 +1181,4 @@ defmodule DSPEx.Teleprompter.SIMBA do
       [0 | Enum.take(top_indices, k - 1)]
     end
   end
-
 end

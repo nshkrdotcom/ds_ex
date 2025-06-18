@@ -52,9 +52,9 @@ defmodule SIMBA.UnitTestSuiteTest do
 
   test "helper functions work correctly" do
     # Test some of the helper functions from our tests
-    assert is_successful?(%{success: true, score: 0.8})
-    refute is_successful?(%{success: false, score: 0.8})
-    refute is_successful?(%{success: true, score: 0.0})
+    assert successful?(%{success: true, score: 0.8})
+    refute successful?(%{success: false, score: 0.8})
+    refute successful?(%{success: true, score: 0.0})
   end
 
   test "mock functions return expected formats" do
@@ -67,7 +67,7 @@ defmodule SIMBA.UnitTestSuiteTest do
 
   # Helper functions (copied from our test files)
 
-  defp is_successful?(trajectory_data) do
+  defp successful?(trajectory_data) do
     trajectory_data[:success] != false and trajectory_data[:score] > 0.0
   end
 

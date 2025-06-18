@@ -403,16 +403,14 @@ defmodule DSPEx.Signature.EnhancedParser do
   defp parse_field_type(type_str) do
     type_str = String.trim(type_str)
 
-    cond do
+    if Regex.match?(~r/^array\s*\(\s*(\w+)\s*\)$/, type_str) do
       # Array types: array(string), array(integer), etc.
-      Regex.match?(~r/^array\s*\(\s*(\w+)\s*\)$/, type_str) ->
-        [_full, inner_type] = Regex.run(~r/^array\s*\(\s*(\w+)\s*\)$/, type_str)
-        inner_type_atom = parse_simple_type(String.trim(inner_type))
-        {:array, inner_type_atom}
-
+      [_full, inner_type] = Regex.run(~r/^array\s*\(\s*(\w+)\s*\)$/, type_str)
+      inner_type_atom = parse_simple_type(String.trim(inner_type))
+      {:array, inner_type_atom}
+    else
       # Simple types: string, integer, float, boolean, any
-      true ->
-        parse_simple_type(type_str)
+      parse_simple_type(type_str)
     end
   end
 
@@ -595,10 +593,13 @@ defmodule DSPEx.Signature.EnhancedParser do
           Regex.compile!(pattern, parse_regex_flags(flags))
         rescue
           error ->
-            raise CompileError,
-              description: "Invalid regex pattern '#{pattern}': #{inspect(error)}",
-              file: __ENV__.file,
-              line: __ENV__.line
+            reraise CompileError,
+                    [
+                      description: "Invalid regex pattern '#{pattern}': #{inspect(error)}",
+                      file: __ENV__.file,
+                      line: __ENV__.line
+                    ],
+                    __STACKTRACE__
         end
 
       # String literal: 'pattern' or "pattern"
@@ -609,10 +610,13 @@ defmodule DSPEx.Signature.EnhancedParser do
           Regex.compile!(pattern)
         rescue
           error ->
-            raise CompileError,
-              description: "Invalid regex pattern '#{pattern}': #{inspect(error)}",
-              file: __ENV__.file,
-              line: __ENV__.line
+            reraise CompileError,
+                    [
+                      description: "Invalid regex pattern '#{pattern}': #{inspect(error)}",
+                      file: __ENV__.file,
+                      line: __ENV__.line
+                    ],
+                    __STACKTRACE__
         end
 
       String.starts_with?(value_str, "\"") and String.ends_with?(value_str, "\"") ->
@@ -622,10 +626,13 @@ defmodule DSPEx.Signature.EnhancedParser do
           Regex.compile!(pattern)
         rescue
           error ->
-            raise CompileError,
-              description: "Invalid regex pattern '#{pattern}': #{inspect(error)}",
-              file: __ENV__.file,
-              line: __ENV__.line
+            reraise CompileError,
+                    [
+                      description: "Invalid regex pattern '#{pattern}': #{inspect(error)}",
+                      file: __ENV__.file,
+                      line: __ENV__.line
+                    ],
+                    __STACKTRACE__
         end
 
       # Plain pattern (treat as string)
@@ -634,10 +641,13 @@ defmodule DSPEx.Signature.EnhancedParser do
           Regex.compile!(value_str)
         rescue
           error ->
-            raise CompileError,
-              description: "Invalid regex pattern '#{value_str}': #{inspect(error)}",
-              file: __ENV__.file,
-              line: __ENV__.line
+            reraise CompileError,
+                    [
+                      description: "Invalid regex pattern '#{value_str}': #{inspect(error)}",
+                      file: __ENV__.file,
+                      line: __ENV__.line
+                    ],
+                    __STACKTRACE__
         end
     end
   end
@@ -650,22 +660,20 @@ defmodule DSPEx.Signature.EnhancedParser do
   # Parses choice arrays like ['A','B','C'] or ["a","b","c"]
   @spec parse_choices_value(String.t()) :: [term()] | no_return()
   defp parse_choices_value(value_str) do
-    cond do
+    if String.starts_with?(value_str, "[") and String.ends_with?(value_str, "]") do
       # Array format: ['A','B','C'] or ["a","b","c"]
-      String.starts_with?(value_str, "[") and String.ends_with?(value_str, "]") ->
-        array_content = String.slice(value_str, 1..-2//1) |> String.trim()
+      array_content = String.slice(value_str, 1..-2//1) |> String.trim()
 
-        if array_content == "" do
-          []
-        else
-          array_content
-          |> String.split(",")
-          |> Enum.map(&parse_choice_item/1)
-        end
-
+      if array_content == "" do
+        []
+      else
+        array_content
+        |> String.split(",")
+        |> Enum.map(&parse_choice_item/1)
+      end
+    else
       # Single value (convert to single-item array)
-      true ->
-        [parse_choice_item(value_str)]
+      [parse_choice_item(value_str)]
     end
   end
 

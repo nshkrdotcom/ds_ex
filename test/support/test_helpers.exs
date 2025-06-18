@@ -84,10 +84,10 @@ defmodule DSPEx.TestHelpers do
   Helper to skip tests when API keys are not available (for live-only tests)
   """
   def skip_if_no_api_key(provider) do
-    unless MockHelpers.api_key_available?(provider) do
-      {:skip, "#{provider} API key not available"}
-    else
+    if MockHelpers.api_key_available?(provider) do
       :ok
+    else
+      {:skip, "#{provider} API key not available"}
     end
   end
 

@@ -204,7 +204,7 @@ defmodule DSPEx.Performance.MemoryPerformanceTest do
 
       growth_ratio = if avg_earlier > 0, do: avg_recent / avg_earlier, else: 1.0
 
-      # TODO_OPTIMIZE: Memory growth is showing exponential pattern, needs investigation
+      # Memory growth threshold set to detect exponential patterns that need investigation
       assert growth_ratio < 2.0,
              "Memory growth appears exponential: #{Float.round(growth_ratio, 2)}x"
 

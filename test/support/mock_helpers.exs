@@ -344,9 +344,7 @@ defmodule DSPEx.MockHelpers do
   end
 
   defp format_mock_opts(opts) do
-    opts
-    |> Enum.map(fn {k, v} -> "#{k}: #{inspect(v)}" end)
-    |> Enum.join(", ")
+    Enum.map_join(opts, ", ", fn {k, v} -> "#{k}: #{inspect(v)}" end)
   end
 
   ## Test Utilities

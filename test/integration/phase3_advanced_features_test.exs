@@ -249,10 +249,7 @@ defmodule DSPEx.Integration.Phase3AdvancedFeaturesTest do
       {:ok, relevant_docs} = BasicRetriever.retrieve(retriever, query, top_k: 2)
 
       # Create context from retrieved documents
-      context =
-        relevant_docs
-        |> Enum.map(fn {doc, _score} -> doc end)
-        |> Enum.join(" ")
+      context = Enum.map_join(relevant_docs, " ", fn {doc, _score} -> doc end)
 
       # Use with Chain of Thought for enhanced reasoning
       signature = TestSignatures.AdvancedQA

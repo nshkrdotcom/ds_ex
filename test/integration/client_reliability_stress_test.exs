@@ -462,7 +462,7 @@ defmodule DSPEx.Integration.ClientReliabilityStressTest do
 
       # Latency should be reasonable for BEACON optimization
       assert avg_latency < 5000, "Average latency too high: #{avg_latency}ms"
-      assert max_latency < 10000, "Max latency too high: #{max_latency}ms"
+      assert max_latency < 10_000, "Max latency too high: #{max_latency}ms"
 
       IO.puts(
         "🕒 Latency stats: avg=#{Float.round(avg_latency, 1)}ms, min=#{min_latency}ms, max=#{max_latency}ms"

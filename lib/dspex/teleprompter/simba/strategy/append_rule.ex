@@ -33,7 +33,8 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendRule do
   @spec applicable?(Bucket.t(), map()) :: boolean()
   def applicable?(%Bucket{trajectories: []}, _context), do: false
 
-  def applicable?(%Bucket{trajectories: trajectories}, _context) when length(trajectories) < 2, do: false
+  def applicable?(%Bucket{trajectories: trajectories}, _context) when length(trajectories) < 2,
+    do: false
 
   def applicable?(%Bucket{trajectories: trajectories}, _context) do
     successful_count = Enum.count(trajectories, &Trajectory.successful?/1)
@@ -52,10 +53,11 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendRule do
   def apply(%Bucket{trajectories: trajectories}, source_program, opts) do
     # Build context for the old apply/2 interface
     context = Map.merge(opts, %{current_program: source_program})
+
     with {:ok, trajectory_analysis} <- analyze_trajectories(trajectories),
          {:ok, instruction_advice} <- generate_instruction_advice(trajectory_analysis, context),
-         {:ok, enhanced_program} <- apply_instruction_improvements(context.current_program, instruction_advice) do
-
+         {:ok, enhanced_program} <-
+           apply_instruction_improvements(context.current_program, instruction_advice) do
       Logger.debug("AppendRule strategy successfully enhanced program instruction")
       {:ok, enhanced_program}
     else
@@ -71,19 +73,20 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendRule do
     successful_trajectories = Enum.filter(trajectories, &Trajectory.successful?/1)
     failed_trajectories = Enum.reject(trajectories, &Trajectory.successful?/1)
 
-    if length(successful_trajectories) == 0 || length(failed_trajectories) == 0 do
+    if Enum.empty?(successful_trajectories) || Enum.empty?(failed_trajectories) do
       {:error, "insufficient trajectory variance for rule generation"}
     else
       # Select representative trajectories for analysis
       best_trajectory = Enum.max_by(successful_trajectories, &Trajectory.quality_score/1)
       worst_trajectory = Enum.min_by(failed_trajectories, &Trajectory.quality_score/1)
 
-      {:ok, %{
-        better_trajectory: best_trajectory,
-        worse_trajectory: worst_trajectory,
-        successful_count: length(successful_trajectories),
-        failed_count: length(failed_trajectories)
-      }}
+      {:ok,
+       %{
+         better_trajectory: best_trajectory,
+         worse_trajectory: worst_trajectory,
+         successful_count: length(successful_trajectories),
+         failed_count: length(failed_trajectories)
+       }}
     end
   end
 
@@ -120,14 +123,14 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendRule do
 
     try do
       # Call the LLM with OfferFeedback signature
-      client_fn.(OfferFeedback, inputs, [temperature: 0.3])
+      client_fn.(OfferFeedback, inputs, temperature: 0.3)
     rescue
       error ->
         {:error, "LLM call failed: #{inspect(error)}"}
     end
   end
 
-    defp default_client_call(signature, inputs, options) do
+  defp default_client_call(signature, inputs, options) do
     # Default implementation using DSPEx.Program
     client = Keyword.get(options, :client, :default)
     temperature = Keyword.get(options, :temperature, 0.3)
@@ -136,7 +139,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendRule do
     program = DSPEx.Predict.new(signature, client)
 
     # Execute the prediction - options should be a keyword list
-    case DSPEx.Program.forward(program, inputs, [temperature: temperature]) do
+    case DSPEx.Program.forward(program, inputs, temperature: temperature) do
       {:ok, outputs} -> {:ok, outputs}
       {:error, reason} -> {:error, reason}
     end
@@ -152,6 +155,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendRule do
       {:error, "no meaningful instruction advice generated"}
     end
   end
+
   defp extract_instruction_advice({:ok, response}) do
     {:error, "malformed LLM response: #{inspect(response)}"}
   end
@@ -160,11 +164,12 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendRule do
     current_instruction = program.instruction || ""
 
     # Combine existing instruction with new advice
-    enhanced_instruction = if String.length(current_instruction) > 0 do
-      "#{current_instruction}\n\nAdditional guidance: #{advice}"
-    else
-      "#{advice}"
-    end
+    enhanced_instruction =
+      if String.length(current_instruction) > 0 do
+        "#{current_instruction}\n\nAdditional guidance: #{advice}"
+      else
+        "#{advice}"
+      end
 
     # Create enhanced program with new instruction
     enhanced_program = %{program | instruction: enhanced_instruction}

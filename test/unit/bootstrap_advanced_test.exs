@@ -216,7 +216,7 @@ defmodule DSPEx.Teleprompter.BootstrapAdvancedTest do
         end
 
       # Should have no demos due to quality filtering
-      assert length(demos) == 0
+      assert Enum.empty?(demos)
     end
 
     test "handles metric function errors gracefully", %{
@@ -329,7 +329,7 @@ defmodule DSPEx.Teleprompter.BootstrapAdvancedTest do
             end
 
           # Should have no demos due to impossible threshold
-          assert length(demos) == 0
+          assert Enum.empty?(demos)
 
         {:error, :no_successful_bootstrap_candidates} ->
           # This is also acceptable for impossible threshold

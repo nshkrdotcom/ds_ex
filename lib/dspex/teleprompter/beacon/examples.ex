@@ -20,6 +20,11 @@ defmodule DSPEx.Teleprompter.BEACON.Examples do
 
     # Define signature for question answering
     defmodule QASignature do
+      @moduledoc """
+      Signature for question answering with context.
+
+      Takes context and question as inputs, produces an answer.
+      """
       use DSPEx.Signature, "context, question -> answer"
     end
 
@@ -155,6 +160,11 @@ defmodule DSPEx.Teleprompter.BEACON.Examples do
 
     # Define signature for classification
     defmodule ClassificationSignature do
+      @moduledoc """
+      Signature for text classification with confidence scoring.
+
+      Takes text as input, produces category and confidence level.
+      """
       use DSPEx.Signature, "text -> category, confidence"
     end
 
@@ -271,6 +281,11 @@ defmodule DSPEx.Teleprompter.BEACON.Examples do
 
     # Define signature for chain of thought reasoning
     defmodule ChainOfThoughtSignature do
+      @moduledoc """
+      Signature for chain of thought reasoning problems.
+
+      Takes a problem as input, produces reasoning steps and final answer.
+      """
       use DSPEx.Signature, "problem -> reasoning, answer"
     end
 
@@ -386,6 +401,11 @@ defmodule DSPEx.Teleprompter.BEACON.Examples do
 
     # Define signature for document analysis workflow
     defmodule DocumentAnalysisSignature do
+      @moduledoc """
+      Signature for comprehensive document analysis.
+
+      Takes a document as input, produces summary, key points, sentiment, and action items.
+      """
       use DSPEx.Signature, "document -> summary, key_points, sentiment, action_items"
     end
 

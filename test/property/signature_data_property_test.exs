@@ -39,8 +39,8 @@ defmodule DSPEx.SignatureDataPropertyTest do
 
   def signature_string_generator do
     let {inputs, outputs} <- {field_list_generator(), field_list_generator()} do
-      input_str = inputs |> Enum.map(&Atom.to_string/1) |> Enum.join(", ")
-      output_str = outputs |> Enum.map(&Atom.to_string/1) |> Enum.join(", ")
+      input_str = Enum.map_join(inputs, ", ", &Atom.to_string/1)
+      output_str = Enum.map_join(outputs, ", ", &Atom.to_string/1)
       "#{input_str} -> #{output_str}"
     end
   end
@@ -49,7 +49,7 @@ defmodule DSPEx.SignatureDataPropertyTest do
     oneof([
       # String values
       non_empty(utf8()),
-      # Integer values  
+      # Integer values
       integer(),
       # Float values
       float(),
@@ -398,7 +398,7 @@ defmodule DSPEx.SignatureDataPropertyTest do
         duration_ms = System.convert_time_unit(end_time - start_time, :native, :millisecond)
 
         # Should complete within reasonable time (1ms per field + 10ms base)
-        reasonable_time = size * 1 + 10
+        reasonable_time = size + 10
         assert duration_ms <= reasonable_time
 
         # Verify structure integrity

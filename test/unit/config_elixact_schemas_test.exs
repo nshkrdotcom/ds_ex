@@ -20,7 +20,7 @@ defmodule DSPEx.Config.ElixactSchemasTest do
       # Client configuration
       assert {:ok, _} =
                ClientConfiguration.validate(%{
-                 timeout: 30000,
+                 timeout: 30_000,
                  retry_attempts: 3,
                  backoff_factor: 2.0
                })
@@ -31,14 +31,14 @@ defmodule DSPEx.Config.ElixactSchemasTest do
                  api_key: "test-key",
                  base_url: "https://api.example.com",
                  default_model: "gpt-4",
-                 timeout: 30000,
+                 timeout: 30_000,
                  rate_limit: %{
                    requests_per_minute: 100,
-                   tokens_per_minute: 10000
+                   tokens_per_minute: 10_000
                  },
                  circuit_breaker: %{
                    failure_threshold: 5,
-                   recovery_time: 60000
+                   recovery_time: 60_000
                  }
                })
 
@@ -150,7 +150,7 @@ defmodule DSPEx.Config.ElixactSchemasTest do
   describe "configuration value validation" do
     test "validates simple configuration values" do
       # Client timeout
-      assert :ok = ElixactSchemas.validate_config_value([:dspex, :client, :timeout], 30000)
+      assert :ok = ElixactSchemas.validate_config_value([:dspex, :client, :timeout], 30_000)
 
       assert {:error, _} =
                ElixactSchemas.validate_config_value([:dspex, :client, :timeout], "invalid")
@@ -173,7 +173,7 @@ defmodule DSPEx.Config.ElixactSchemasTest do
       assert {:error, _} =
                ElixactSchemas.validate_config_value(
                  [:dspex, :providers, :gemini, :api_key],
-                 12345
+                 12_345
                )
 
       # Boolean values
@@ -326,7 +326,7 @@ defmodule DSPEx.Config.ElixactSchemasTest do
 
       # Positive integer constraints
       assert :ok = ElixactSchemas.validate_config_value([:dspex, :client, :timeout], 1)
-      assert :ok = ElixactSchemas.validate_config_value([:dspex, :client, :timeout], 30000)
+      assert :ok = ElixactSchemas.validate_config_value([:dspex, :client, :timeout], 30_000)
       assert {:error, _} = ElixactSchemas.validate_config_value([:dspex, :client, :timeout], 0)
 
       # Non-negative integer constraints
@@ -387,7 +387,7 @@ defmodule DSPEx.Config.ElixactSchemasTest do
       temp_schema = prediction_schema["properties"]["default_temperature"]
       assert temp_schema["type"] == "number" or temp_schema["type"] == "float"
 
-      # Provider should have enum constraints  
+      # Provider should have enum constraints
       provider_schema = prediction_schema["properties"]["default_provider"]
       assert provider_schema["type"] == "string"
       # Enum constraints may be included depending on Elixact implementation

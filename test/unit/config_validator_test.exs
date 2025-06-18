@@ -37,7 +37,7 @@ defmodule DSPEx.Config.ValidatorTest do
   describe "schema-based value validation" do
     test "validates client configuration values" do
       # Valid client timeout
-      assert :ok = Validator.validate_value([:dspex, :client, :timeout], 30000)
+      assert :ok = Validator.validate_value([:dspex, :client, :timeout], 30_000)
       assert :ok = Validator.validate_value([:dspex, :client, :timeout], 1)
 
       # Invalid client timeout
@@ -53,7 +53,7 @@ defmodule DSPEx.Config.ValidatorTest do
       assert :ok = Validator.validate_value([:dspex, :client, :retry_attempts], 0)
       assert :ok = Validator.validate_value([:dspex, :client, :retry_attempts], 5)
 
-      # Invalid retry attempts  
+      # Invalid retry attempts
       assert {:error, :invalid_retry_attempts} =
                Validator.validate_value([:dspex, :client, :retry_attempts], -1)
 
@@ -85,7 +85,7 @@ defmodule DSPEx.Config.ValidatorTest do
 
       # Invalid API key
       assert {:error, :invalid_api_key} =
-               Validator.validate_value([:dspex, :providers, :gemini, :api_key], 12345)
+               Validator.validate_value([:dspex, :providers, :gemini, :api_key], 12_345)
 
       assert {:error, :invalid_api_key} =
                Validator.validate_value([:dspex, :providers, :gemini, :api_key], nil)
@@ -97,7 +97,7 @@ defmodule DSPEx.Config.ValidatorTest do
                  "https://api.openai.com"
                )
 
-      # Invalid base URL  
+      # Invalid base URL
       assert {:error, :invalid_base_url} =
                Validator.validate_value([:dspex, :providers, :openai, :base_url], 123)
 
@@ -277,7 +277,7 @@ defmodule DSPEx.Config.ValidatorTest do
     end
 
     test "returns :ok for valid values in detailed validation" do
-      assert :ok = Validator.validate_value_detailed([:dspex, :client, :timeout], 30000)
+      assert :ok = Validator.validate_value_detailed([:dspex, :client, :timeout], 30_000)
 
       assert :ok =
                Validator.validate_value_detailed(
@@ -311,7 +311,7 @@ defmodule DSPEx.Config.ValidatorTest do
   describe "backward compatibility" do
     test "maintains same API as legacy validator" do
       # Ensure the main validate_value function signature is preserved
-      assert :ok = Validator.validate_value([:dspex, :client, :timeout], 30000)
+      assert :ok = Validator.validate_value([:dspex, :client, :timeout], 30_000)
 
       assert {:error, :invalid_timeout} =
                Validator.validate_value([:dspex, :client, :timeout], "invalid")
@@ -331,7 +331,7 @@ defmodule DSPEx.Config.ValidatorTest do
 
     test "legacy validator functions still work" do
       # Ensure legacy functions are still accessible for debugging/comparison
-      assert :ok = Validator.validate_value_legacy([:dspex, :client, :timeout], 30000)
+      assert :ok = Validator.validate_value_legacy([:dspex, :client, :timeout], 30_000)
 
       assert {:error, :invalid_timeout} =
                Validator.validate_value_legacy([:dspex, :client, :timeout], "invalid")
@@ -360,7 +360,7 @@ defmodule DSPEx.Config.ValidatorTest do
                  :requests_per_minute
                ])
 
-      # BEACON configuration  
+      # BEACON configuration
       assert {:ok, BEACONConfiguration, [:optimization, :max_trials]} =
                ElixactSchemas.path_to_schema([
                  :dspex,
@@ -376,7 +376,7 @@ defmodule DSPEx.Config.ValidatorTest do
 
     test "schema validation provides consistent results" do
       # Direct schema validation should match validator results
-      assert :ok = ElixactSchemas.validate_config_value([:dspex, :client, :timeout], 30000)
+      assert :ok = ElixactSchemas.validate_config_value([:dspex, :client, :timeout], 30_000)
 
       assert {:error, _} =
                ElixactSchemas.validate_config_value([:dspex, :client, :timeout], "invalid")
@@ -430,7 +430,7 @@ defmodule DSPEx.Config.ValidatorTest do
 
       # Run 1000 validations
       for _i <- 1..1000 do
-        Validator.validate_value([:dspex, :client, :timeout], 30000)
+        Validator.validate_value([:dspex, :client, :timeout], 30_000)
       end
 
       end_time = System.monotonic_time(:microsecond)
@@ -444,7 +444,7 @@ defmodule DSPEx.Config.ValidatorTest do
     test "path validation remains fast" do
       start_time = System.monotonic_time(:microsecond)
 
-      # Run 1000 path validations  
+      # Run 1000 path validations
       for _i <- 1..1000 do
         Validator.validate_path([:dspex, :client, :timeout])
       end

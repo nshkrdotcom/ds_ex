@@ -438,7 +438,7 @@ defmodule DSPEx.Performance.RegressionBenchmarksTest do
 
       # Should be reasonable (adjust for mock operations which may have different characteristics)
       # Allow negative values for mock operations that might optimize better than expected
-      # TODO_OPTIMIZE: Resource utilization baseline may need adjustment for mock operations
+      # Resource utilization baseline adjusted for mock operations which may show unusual patterns
       assert baselines.resource_utilization >= -5000,
              "Resource utilization should be reasonable for mock operations"
 

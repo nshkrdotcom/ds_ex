@@ -10,6 +10,11 @@ defmodule DSPEx.Teleprompter.BEACON.Benchmark do
   alias DSPEx.Teleprompter.BEACON
 
   defmodule BenchmarkSignature do
+    @moduledoc """
+    Simple signature for BEACON benchmarking tests.
+
+    Provides a basic question -> answer structure for performance testing.
+    """
     use DSPEx.Signature, "question -> answer"
   end
 
@@ -300,7 +305,7 @@ defmodule DSPEx.Teleprompter.BEACON.Benchmark do
     # Calculate efficiency score (higher is better)
     # Factors: speed, memory efficiency, configuration complexity
     # Inverse of time
-    speed_score = 10000 / max(duration_ms, 1)
+    speed_score = 10_000 / max(duration_ms, 1)
     # Inverse of memory
     memory_score = 1_000_000 / max(memory_bytes, 1)
     complexity_penalty = (config.trials + config.candidates) / 100

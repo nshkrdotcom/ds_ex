@@ -327,7 +327,7 @@ defmodule DSPEx.ConcurrentExecutionTest do
             end)
           end
 
-        results = Task.await_many(tasks, 10000)
+        results = Task.await_many(tasks, 10_000)
 
         # All should succeed
         for {:ok, result} <- results do

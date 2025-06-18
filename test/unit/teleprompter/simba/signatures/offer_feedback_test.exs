@@ -109,8 +109,10 @@ defmodule DSPEx.Teleprompter.SIMBA.Signatures.OfferFeedbackTest do
       inputs = %{
         program_code: "def answer(question), do: String.upcase(question)",
         modules_defn: "Simple answering module",
-        better_program_trajectory: "Input: 'What is 2+2?' -> Output: '4' (Score: 1.0, Success: true)",
-        worse_program_trajectory: "Input: 'What is 3+3?' -> Output: 'WHAT IS 3+3?' (Score: 0.0, Success: false)"
+        better_program_trajectory:
+          "Input: 'What is 2+2?' -> Output: '4' (Score: 1.0, Success: true)",
+        worse_program_trajectory:
+          "Input: 'What is 3+3?' -> Output: 'WHAT IS 3+3?' (Score: 0.0, Success: false)"
       }
 
       # Signature should validate these inputs
@@ -135,8 +137,10 @@ defmodule DSPEx.Teleprompter.SIMBA.Signatures.OfferFeedbackTest do
       short_trajectory_inputs = %{
         program_code: "def answer(q), do: q",
         modules_defn: "Test module",
-        better_program_trajectory: "short",  # Too short
-        worse_program_trajectory: "also short"  # Too short
+        # Too short
+        better_program_trajectory: "short",
+        # Too short
+        worse_program_trajectory: "also short"
       }
 
       assert {:error, _reason} = OfferFeedback.validate_inputs(short_trajectory_inputs)

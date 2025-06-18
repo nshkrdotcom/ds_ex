@@ -31,7 +31,7 @@ defmodule BEACONConfiguration do
     field :default_timeout, :integer do
       description("Default timeout for operations in milliseconds")
       gteq(1)
-      example(30000)
+      example(30_000)
       optional()
     end
 

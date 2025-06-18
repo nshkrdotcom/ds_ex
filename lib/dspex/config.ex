@@ -28,6 +28,8 @@ defmodule DSPEx.Config do
 
   """
 
+  alias DSPEx.Config.{Store, Validator}
+
   @type config_path :: [atom()]
   @type config_value :: term()
 
@@ -46,7 +48,7 @@ defmodule DSPEx.Config do
   """
   @spec get(config_path()) :: {:ok, config_value()} | {:error, :not_found}
   def get(path) when is_list(path) do
-    DSPEx.Config.Store.get(path)
+    Store.get(path)
   end
 
   @doc """
@@ -65,9 +67,9 @@ defmodule DSPEx.Config do
   """
   @spec update(config_path(), config_value()) :: :ok | {:error, term()}
   def update(path, value) when is_list(path) do
-    with :ok <- DSPEx.Config.Validator.validate_path(path),
-         :ok <- DSPEx.Config.Validator.validate_value(path, value) do
-      DSPEx.Config.Store.update(path, value)
+    with :ok <- Validator.validate_path(path),
+         :ok <- Validator.validate_value(path, value) do
+      Store.update(path, value)
     end
   end
 
@@ -84,7 +86,7 @@ defmodule DSPEx.Config do
   """
   @spec reset() :: :ok
   def reset() do
-    DSPEx.Config.Store.reset()
+    Store.reset()
   end
 
   @doc """

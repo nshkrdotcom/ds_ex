@@ -313,7 +313,7 @@ defmodule DSPEx.Teleprompter.BEACON.ContinuousOptimizer do
     quality_below_threshold = current_quality < state.quality_threshold
 
     # Check quality trend
-    quality_declining = is_quality_declining?(state.quality_history)
+    quality_declining = quality_declining?(state.quality_history)
 
     # Check time since last optimization
     hours_since_optimization = DateTime.diff(DateTime.utc_now(), state.last_optimization, :hour)
@@ -323,11 +323,11 @@ defmodule DSPEx.Teleprompter.BEACON.ContinuousOptimizer do
     quality_below_threshold or (quality_declining and hours_since_optimization >= 12) or overdue
   end
 
-  defp is_quality_declining?(quality_history) when length(quality_history) < 3 do
+  defp quality_declining?(quality_history) when length(quality_history) < 3 do
     false
   end
 
-  defp is_quality_declining?(quality_history) do
+  defp quality_declining?(quality_history) do
     recent_qualities =
       quality_history
       |> Enum.take(3)

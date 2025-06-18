@@ -40,6 +40,8 @@ defmodule Mix.Tasks.Test.Live do
   """
   use Mix.Task
 
+  alias Mix.Tasks.Test
+
   @shortdoc "Run tests in live API mode only (requires API keys)"
 
   def run(args) do
@@ -70,7 +72,7 @@ defmodule Mix.Tasks.Test.Live do
     end
 
     # Run the actual tests
-    Mix.Tasks.Test.run(args)
+    Test.run(args)
   end
 
   defp check_available_api_keys do
@@ -99,14 +101,11 @@ defmodule Mix.Tasks.Test.Live do
   defp format_available_keys([]), do: "None - tests may fail"
 
   defp format_available_keys(keys) do
-    keys
-    |> Enum.map(&Atom.to_string/1)
-    |> Enum.join(", ")
+    Enum.map_join(keys, ", ", &Atom.to_string/1)
   end
 
   defp format_key_instructions(missing_providers) do
-    missing_providers
-    |> Enum.map(fn provider ->
+    Enum.map_join(missing_providers, "\n", fn provider ->
       env_var =
         case provider do
           :gemini -> "GEMINI_API_KEY"
@@ -116,6 +115,5 @@ defmodule Mix.Tasks.Test.Live do
 
       "       export #{env_var}=your_#{provider}_api_key"
     end)
-    |> Enum.join("\n")
   end
 end

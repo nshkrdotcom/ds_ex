@@ -625,27 +625,7 @@ defmodule DSPEx.ClientManager do
         {:error, :no_api_key}
 
       :ok ->
-        url = build_api_url(provider_config)
-        headers = build_headers(provider_config)
-        timeout = Map.get(provider_config, :timeout, 30_000)
-
-        case Req.post(url, json: body, headers: headers, receive_timeout: timeout) do
-          {:ok, %Req.Response{status: 200} = response} ->
-            {:ok, response}
-
-          {:ok, %Req.Response{status: status}} when status >= 400 ->
-            {:error, :api_error}
-
-          {:error, %{__exception__: true} = exception} ->
-            error_type =
-              case exception do
-                %{reason: :timeout} -> :timeout
-                %{reason: :closed} -> :network_error
-                _ -> :network_error
-              end
-
-            {:error, error_type}
-        end
+        perform_http_request_with_error_handling(body, provider_config)
     end
   rescue
     # Handle test environment where HTTP clients might not be available
@@ -653,6 +633,36 @@ defmodule DSPEx.ClientManager do
     _ -> {:error, :network_error}
   catch
     _ -> {:error, :network_error}
+  end
+
+  # Perform HTTP request with comprehensive error handling
+  defp perform_http_request_with_error_handling(body, provider_config) do
+    url = build_api_url(provider_config)
+    headers = build_headers(provider_config)
+    timeout = Map.get(provider_config, :timeout, 30_000)
+
+    case Req.post(url, json: body, headers: headers, receive_timeout: timeout) do
+      {:ok, %Req.Response{status: 200} = response} ->
+        {:ok, response}
+
+      {:ok, %Req.Response{status: status}} when status >= 400 ->
+        {:error, :api_error}
+
+      {:error, %{__exception__: true} = exception} ->
+        handle_http_exception(exception)
+    end
+  end
+
+  # Handle HTTP exceptions and convert to appropriate error types
+  defp handle_http_exception(exception) do
+    error_type =
+      case exception do
+        %{reason: :timeout} -> :timeout
+        %{reason: :closed} -> :network_error
+        _ -> :network_error
+      end
+
+    {:error, error_type}
   end
 
   # Check if we have a valid API key for the provider

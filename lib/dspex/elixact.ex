@@ -8,6 +8,8 @@ defmodule DSPEx.Elixact do
   Following the TDD Master Reference Phase 2 specifications.
   """
 
+  alias DSPEx.Signature.Elixact, as: SignatureElixact
+
   @doc """
   Converts an Elixact schema definition to a DSPEx signature.
 
@@ -39,7 +41,7 @@ defmodule DSPEx.Elixact do
   @spec generate_json_schema(module()) :: map()
   def generate_json_schema(signature_module) do
     # Use the existing DSPEx Elixact integration which handles output-only schemas properly
-    case DSPEx.Signature.Elixact.to_json_schema(signature_module, field_type: :outputs) do
+    case SignatureElixact.to_json_schema(signature_module, field_type: :outputs) do
       {:ok, schema} ->
         schema
 
@@ -162,8 +164,8 @@ defmodule DSPEx.Elixact do
   end
 
   defp build_signature_string(input_fields, output_fields, _fields) do
-    input_str = input_fields |> Enum.map(&Atom.to_string/1) |> Enum.join(", ")
-    output_str = output_fields |> Enum.map(&Atom.to_string/1) |> Enum.join(", ")
+    input_str = Enum.map_join(input_fields, ", ", &Atom.to_string/1)
+    output_str = Enum.map_join(output_fields, ", ", &Atom.to_string/1)
 
     "#{input_str} -> #{output_str}"
   end
@@ -223,22 +225,34 @@ defmodule DSPEx.Elixact do
   defp map_single_constraint(key, value) do
     case key do
       # Direct mappings
-      :min_length -> {:ok, :min_length, value}
-      :max_length -> {:ok, :max_length, value}
-      :min_items -> {:ok, :min_items, value}
-      :max_items -> {:ok, :max_items, value}
-      :format -> {:ok, :format, value}
-      :choices -> {:ok, :choices, value}
-      :gteq -> {:ok, :gteq, value}
-      :lteq -> {:ok, :lteq, value}
-      :gt -> {:ok, :gt, value}
-      :lt -> {:ok, :lt, value}
+      key
+      when key in [
+             :min_length,
+             :max_length,
+             :min_items,
+             :max_items,
+             :format,
+             :choices,
+             :gteq,
+             :lteq,
+             :gt,
+             :lt
+           ] ->
+        map_direct_constraint(key, value)
+
       # Skip internal DSPEx metadata
-      :default -> {:skip}
-      :optional -> {:skip}
+      key when key in [:default, :optional] ->
+        {:skip}
+
       # Preserve unknown constraints
-      _ -> {:preserve}
+      _ ->
+        {:preserve}
     end
+  end
+
+  # Map constraints that have direct mappings
+  defp map_direct_constraint(key, value) do
+    {:ok, key, value}
   end
 
   defp convert_single_error_to_dspex(error) when is_struct(error) do
@@ -306,21 +320,45 @@ defmodule DSPEx.Elixact do
   defp build_elixact_constraint_calls(constraints) do
     Enum.flat_map(constraints, fn {constraint, value} ->
       case constraint do
-        :min_length -> [quote(do: min_length(unquote(value)))]
-        :max_length -> [quote(do: max_length(unquote(value)))]
-        :min_items -> [quote(do: min_items(unquote(value)))]
-        :max_items -> [quote(do: max_items(unquote(value)))]
-        :gteq -> [quote(do: gteq(unquote(value)))]
-        :lteq -> [quote(do: lteq(unquote(value)))]
-        :gt -> [quote(do: gt(unquote(value)))]
-        :lt -> [quote(do: lt(unquote(value)))]
-        :format -> [quote(do: format(unquote(value)))]
-        :choices -> [quote(do: choices(unquote(value)))]
+        # Length constraints
+        constraint when constraint in [:min_length, :max_length] ->
+          build_length_constraint(constraint, value)
+
+        # Item count constraints
+        constraint when constraint in [:min_items, :max_items] ->
+          build_item_constraint(constraint, value)
+
+        # Numeric comparison constraints
+        constraint when constraint in [:gteq, :lteq, :gt, :lt] ->
+          build_numeric_constraint(constraint, value)
+
+        # Format and choice constraints
+        :format ->
+          [quote(do: format(unquote(value)))]
+
+        :choices ->
+          [quote(do: choices(unquote(value)))]
+
         # Skip unknown constraints
-        _ -> []
+        _ ->
+          []
       end
     end)
   end
+
+  # Build length-related constraints
+  defp build_length_constraint(:min_length, value), do: [quote(do: min_length(unquote(value)))]
+  defp build_length_constraint(:max_length, value), do: [quote(do: max_length(unquote(value)))]
+
+  # Build item count-related constraints
+  defp build_item_constraint(:min_items, value), do: [quote(do: min_items(unquote(value)))]
+  defp build_item_constraint(:max_items, value), do: [quote(do: max_items(unquote(value)))]
+
+  # Build numeric comparison constraints
+  defp build_numeric_constraint(:gteq, value), do: [quote(do: gteq(unquote(value)))]
+  defp build_numeric_constraint(:lteq, value), do: [quote(do: lteq(unquote(value)))]
+  defp build_numeric_constraint(:gt, value), do: [quote(do: gt(unquote(value)))]
+  defp build_numeric_constraint(:lt, value), do: [quote(do: lt(unquote(value)))]
 
   defp extract_fields_from_properties(properties) do
     properties

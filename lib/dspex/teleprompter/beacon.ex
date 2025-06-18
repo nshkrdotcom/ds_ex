@@ -651,13 +651,12 @@ defmodule DSPEx.Teleprompter.BEACON do
   defp format_examples_for_instruction(examples) do
     examples
     |> Enum.with_index(1)
-    |> Enum.map(fn {example, idx} ->
+    |> Enum.map_join("\n\n", fn {example, idx} ->
       inputs = Example.inputs(example)
       outputs = Example.outputs(example)
 
       "Example #{idx}:\n  Inputs: #{inspect(inputs)}\n  Outputs: #{inspect(outputs)}"
     end)
-    |> Enum.join("\n\n")
   end
 
   defp generate_additional_prompts(signature, sample_examples, count) do

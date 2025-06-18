@@ -58,32 +58,32 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
   describe "trajectory success evaluation" do
     test "successful trajectory with positive score" do
       trajectory_data = create_test_trajectory_data(0.8, success: true)
-      assert is_successful?(trajectory_data)
+      assert successful?(trajectory_data)
     end
 
     test "failed trajectory" do
       trajectory_data = create_test_trajectory_data(0.8, success: false)
-      refute is_successful?(trajectory_data)
+      refute successful?(trajectory_data)
     end
 
     test "trajectory with zero score" do
       trajectory_data = create_test_trajectory_data(0.0, success: true)
-      refute is_successful?(trajectory_data)
+      refute successful?(trajectory_data)
     end
 
     test "trajectory with negative score" do
       trajectory_data = create_test_trajectory_data(-0.1, success: true)
-      refute is_successful?(trajectory_data)
+      refute successful?(trajectory_data)
     end
 
     test "trajectory with nil success and positive score" do
       trajectory_data = create_test_trajectory_data(0.7, success: nil)
-      assert is_successful?(trajectory_data)
+      assert successful?(trajectory_data)
     end
 
     test "trajectory with nil success and zero score" do
       trajectory_data = create_test_trajectory_data(0.0, success: nil)
-      refute is_successful?(trajectory_data)
+      refute successful?(trajectory_data)
     end
   end
 
@@ -258,7 +258,7 @@ defmodule DSPEx.Teleprompter.SIMBA.TrajectoryTest do
     }
   end
 
-  defp is_successful?(trajectory_data) do
+  defp successful?(trajectory_data) do
     trajectory_data.success != false and trajectory_data.score > 0.0
   end
 

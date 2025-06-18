@@ -494,31 +494,38 @@ defmodule DSPEx.Evaluate do
       end)
 
     if Enum.empty?(scores) do
-      # No successful evaluations - return success with zero score for now
-      # TODO: Determine when to return error vs zero score based on error types
+      # No successful evaluations - analyze error types to determine response
       total_examples = length(errors)
 
-      # Calculate throughput even for failed operations
-      throughput =
-        if is_number(duration) and duration > 0 do
-          total_examples / (duration / 1000)
-        else
-          total_examples * 1000.0
-        end
+      # Return error if all failures are critical (timeouts, system errors)
+      # Return zero score if failures are data-related (validation, parsing)
+      critical_errors = Enum.count(errors, &critical_error?/1)
 
-      {:ok,
-       %{
-         score: 0.0,
-         stats: %{
-           total_examples: total_examples,
-           successful: 0,
-           failed: length(errors),
-           duration_ms: duration,
-           success_rate: 0.0,
-           throughput: throughput,
-           errors: errors
-         }
-       }}
+      if critical_errors > total_examples * 0.8 do
+        {:error, {:evaluation_failed, "Too many critical errors", errors}}
+      else
+        # Calculate throughput even for failed operations
+        throughput =
+          if is_number(duration) and duration > 0 do
+            total_examples / (duration / 1000)
+          else
+            total_examples * 1000.0
+          end
+
+        {:ok,
+         %{
+           score: 0.0,
+           stats: %{
+             total_examples: total_examples,
+             successful: 0,
+             failed: length(errors),
+             duration_ms: duration,
+             success_rate: 0.0,
+             throughput: throughput,
+             errors: errors
+           }
+         }}
+      end
     else
       total_examples = length(scores) + length(errors)
       average_score = Enum.sum(scores) / length(scores)
@@ -610,4 +617,11 @@ defmodule DSPEx.Evaluate do
       0
     end
   end
+
+  defp critical_error?({:timeout, _}), do: true
+  defp critical_error?({:exit, _}), do: true
+  defp critical_error?({:system_error, _}), do: true
+  defp critical_error?({:network_error, _}), do: true
+  defp critical_error?({:client_error, _}), do: true
+  defp critical_error?(_), do: false
 end

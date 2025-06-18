@@ -55,10 +55,12 @@ defmodule DSPEx.Teleprompter.SIMBA.Signatures.OfferFeedback do
   def validate_module_advice(advice) when is_map(advice) do
     # Must have at least one entry and all values must be strings with meaningful content
     case Map.values(advice) do
-      [] -> false  # Empty advice is not valid
+      # Empty advice is not valid
+      [] -> false
       values -> Enum.all?(values, &(is_binary(&1) && String.length(&1) > 10))
     end
   end
+
   def validate_module_advice(_), do: false
 
   # Custom validation for input fields with trajectory length requirements
@@ -76,7 +78,14 @@ defmodule DSPEx.Teleprompter.SIMBA.Signatures.OfferFeedback do
 
   # Basic field presence validation (same logic as DSPEx.Signature generates)
   defp basic_field_validation(inputs) do
-    required_inputs = MapSet.new([:program_code, :modules_defn, :better_program_trajectory, :worse_program_trajectory])
+    required_inputs =
+      MapSet.new([
+        :program_code,
+        :modules_defn,
+        :better_program_trajectory,
+        :worse_program_trajectory
+      ])
+
     provided_inputs = MapSet.new(Map.keys(inputs))
 
     missing = MapSet.difference(required_inputs, provided_inputs)
@@ -105,5 +114,6 @@ defmodule DSPEx.Teleprompter.SIMBA.Signatures.OfferFeedback do
   end
 
   # Use DSPEx.Signature after defining custom functions to prevent override
-  use DSPEx.Signature, "program_code, modules_defn, better_program_trajectory, worse_program_trajectory -> module_advice"
+  use DSPEx.Signature,
+      "program_code, modules_defn, better_program_trajectory, worse_program_trajectory -> module_advice"
 end

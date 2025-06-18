@@ -37,34 +37,34 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
   describe "applicability analysis" do
     test "applicable for bucket with high quality trajectory" do
       bucket_data = create_test_bucket_data([0.8])
-      assert is_applicable?(bucket_data)
+      assert applicable?(bucket_data)
     end
 
     test "not applicable for bucket with low quality trajectory" do
       bucket_data = create_test_bucket_data([0.5])
-      refute is_applicable?(bucket_data)
+      refute applicable?(bucket_data)
     end
 
     test "not applicable for empty bucket" do
       bucket_data = create_test_bucket_data([])
-      refute is_applicable?(bucket_data)
+      refute applicable?(bucket_data)
     end
 
     test "uses custom quality threshold" do
       bucket_data = create_test_bucket_data([0.6])
 
       # Default threshold is 0.7, so should return false
-      refute is_applicable?(bucket_data)
+      refute applicable?(bucket_data)
 
       # Lower threshold should return true
-      assert is_applicable?(bucket_data, %{quality_threshold: 0.5})
+      assert applicable?(bucket_data, %{quality_threshold: 0.5})
     end
 
     test "picks best trajectory from bucket" do
       bucket_data = create_test_bucket_data([0.5, 0.8, 0.6])
 
       # Should use the best trajectory (0.8) which exceeds threshold
-      assert is_applicable?(bucket_data)
+      assert applicable?(bucket_data)
     end
   end
 
@@ -266,7 +266,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemoTest do
     }
   end
 
-  defp is_applicable?(bucket_data, opts \\ %{}) do
+  defp applicable?(bucket_data, opts \\ %{}) do
     quality_threshold = Map.get(opts, :quality_threshold, 0.7)
 
     case get_best_trajectory(bucket_data) do

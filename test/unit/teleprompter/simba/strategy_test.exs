@@ -23,7 +23,10 @@ defmodule DSPEx.Teleprompter.SIMBA.StrategyTest do
           _ -> {:skip, "Score too low"}
         end
       rescue
-        _error -> raise RuntimeError, "Strategy cannot handle malformed bucket"
+        _error ->
+          reraise RuntimeError,
+                  [message: "Strategy cannot handle malformed bucket"],
+                  __STACKTRACE__
       end
     end
 

@@ -13,7 +13,7 @@ defmodule DSPEx.Predict.ReAct do
       signature = MySignature  # question -> answer
       react = ReAct.new(signature, tools: tools)
       {:ok, result} = DSPEx.Program.forward(react, %{question: "What is the population of Tokyo?"})
-      
+
       # Result will have:
       # result.thought - reasoning about what to do
       # result.action - action taken with tool
@@ -131,11 +131,10 @@ defmodule DSPEx.Predict.ReAct do
   defp build_tool_descriptions(tools) do
     tools
     |> Enum.with_index(1)
-    |> Enum.map(fn {tool, index} ->
+    |> Enum.map_join("\n", fn {tool, index} ->
       tool_name = tool |> Module.split() |> List.last()
       "#{index}. #{tool_name}: #{get_tool_description(tool)}"
     end)
-    |> Enum.join("\n")
   end
 
   # Get tool description (fallback to module name if no description)

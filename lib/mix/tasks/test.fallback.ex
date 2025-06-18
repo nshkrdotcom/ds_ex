@@ -66,8 +66,6 @@ defmodule Mix.Tasks.Test.Fallback do
   defp format_available_keys([]), do: "None (will use mock fallback)"
 
   defp format_available_keys(keys) do
-    keys
-    |> Enum.map(&Atom.to_string/1)
-    |> Enum.join(", ")
+    Enum.map_join(keys, ", ", &Atom.to_string/1)
   end
 end

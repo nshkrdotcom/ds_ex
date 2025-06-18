@@ -1,6 +1,8 @@
 defmodule DSPEx.Client do
   require Logger
 
+  alias DSPEx.Services.ConfigManager
+
   @moduledoc """
   HTTP client for language model API communication with Foundation integration and SIMBA stability enhancements.
 
@@ -98,9 +100,7 @@ defmodule DSPEx.Client do
     else
       # This is a client_id atom - use normal flow with SIMBA stability enhancements
       # Validate messages before proceeding
-      if not valid_messages?(messages) do
-        {:error, :invalid_messages}
-      else
+      if valid_messages?(messages) do
         correlation_id =
           Map.get(options, :correlation_id) || Foundation.Utils.generate_correlation_id()
 
@@ -109,6 +109,8 @@ defmodule DSPEx.Client do
 
         # Execute the request with proper error handling and response normalization
         do_protected_request_with_stability(messages, options, provider, correlation_id)
+      else
+        {:error, :invalid_messages}
       end
     end
   end
@@ -426,7 +428,7 @@ defmodule DSPEx.Client do
 
   @spec get_provider_config(atom()) :: {:ok, map()} | {:error, :provider_not_configured}
   defp get_provider_config(provider) do
-    case DSPEx.Services.ConfigManager.get([:providers, provider]) do
+    case ConfigManager.get([:providers, provider]) do
       {:ok, config} ->
         {:ok, config}
 
@@ -530,69 +532,93 @@ defmodule DSPEx.Client do
       # Log request in live/fallback mode
       log_live_request(body, provider_config, correlation_id)
 
-      case Req.post(url, json: body, headers: headers, receive_timeout: timeout) do
-        {:ok, %Req.Response{status: 200} = response} ->
-          # Log successful response in live/fallback mode
-          log_live_response(response, provider_config, correlation_id)
-          {:ok, response}
-
-        {:ok, %Req.Response{status: status, body: error_body}} when status >= 400 ->
-          # Log API error in live/fallback mode
-          log_live_error(
-            :api_error,
-            %{status: status, body: error_body},
-            provider_config,
-            correlation_id
-          )
-
-          # Foundation v0.1.3 fixed - re-enabled!
-          Foundation.Events.new_event(
-            :api_error,
-            %{
-              status: status,
-              error_body: Foundation.Utils.truncate_if_large(error_body, 500),
-              timestamp: DateTime.utc_now()
-            },
-            correlation_id: correlation_id
-          )
-          |> Foundation.Events.store()
-
-          {:error, :api_error}
-
-        {:error, %{__exception__: true} = exception} ->
-          error_type =
-            case exception do
-              %{reason: :timeout} -> :timeout
-              %{reason: :closed} -> :network_error
-              _ -> :network_error
-            end
-
-          # Log network error in live/fallback mode
-          log_live_error(
-            :network_error,
-            %{type: error_type, exception: exception},
-            provider_config,
-            correlation_id
-          )
-
-          # Foundation v0.1.3 fixed - re-enabled!
-          Foundation.Events.new_event(
-            :network_error,
-            %{
-              error_type: error_type,
-              exception: Exception.format(:error, exception),
-              timestamp: DateTime.utc_now()
-            },
-            correlation_id: correlation_id
-          )
-          |> Foundation.Events.store()
-
-          {:error, error_type}
-      end
+      perform_http_request(url, body, headers, timeout, provider_config, correlation_id)
     else
       {:error, :api_key_not_set} ->
         # Seamless fallback to mock - no API key available
         {:error, :no_api_key}
+    end
+  end
+
+  # Perform the actual HTTP request and handle responses
+  defp perform_http_request(url, body, headers, timeout, provider_config, correlation_id) do
+    case Req.post(url, json: body, headers: headers, receive_timeout: timeout) do
+      {:ok, %Req.Response{status: 200} = response} ->
+        handle_successful_response(response, provider_config, correlation_id)
+
+      {:ok, %Req.Response{status: status, body: error_body}} when status >= 400 ->
+        handle_api_error(status, error_body, provider_config, correlation_id)
+
+      {:error, %{__exception__: true} = exception} ->
+        handle_network_error(exception, provider_config, correlation_id)
+    end
+  end
+
+  # Handle successful HTTP response
+  defp handle_successful_response(response, provider_config, correlation_id) do
+    # Log successful response in live/fallback mode
+    log_live_response(response, provider_config, correlation_id)
+    {:ok, response}
+  end
+
+  # Handle API error responses (4xx, 5xx)
+  defp handle_api_error(status, error_body, provider_config, correlation_id) do
+    # Log API error in live/fallback mode
+    log_live_error(
+      :api_error,
+      %{status: status, body: error_body},
+      provider_config,
+      correlation_id
+    )
+
+    # Foundation v0.1.3 fixed - re-enabled!
+    Foundation.Events.new_event(
+      :api_error,
+      %{
+        status: status,
+        error_body: Foundation.Utils.truncate_if_large(error_body, 500),
+        timestamp: DateTime.utc_now()
+      },
+      correlation_id: correlation_id
+    )
+    |> Foundation.Events.store()
+
+    {:error, :api_error}
+  end
+
+  # Handle network errors and exceptions
+  defp handle_network_error(exception, provider_config, correlation_id) do
+    error_type = determine_error_type(exception)
+
+    # Log network error in live/fallback mode
+    log_live_error(
+      :network_error,
+      %{type: error_type, exception: exception},
+      provider_config,
+      correlation_id
+    )
+
+    # Foundation v0.1.3 fixed - re-enabled!
+    Foundation.Events.new_event(
+      :network_error,
+      %{
+        error_type: error_type,
+        exception: Exception.format(:error, exception),
+        timestamp: DateTime.utc_now()
+      },
+      correlation_id: correlation_id
+    )
+    |> Foundation.Events.store()
+
+    {:error, error_type}
+  end
+
+  # Determine the specific error type from exception
+  defp determine_error_type(exception) do
+    case exception do
+      %{reason: :timeout} -> :timeout
+      %{reason: :closed} -> :network_error
+      _ -> :network_error
     end
   end
 

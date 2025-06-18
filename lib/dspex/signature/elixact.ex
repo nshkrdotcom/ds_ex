@@ -190,19 +190,21 @@ defmodule DSPEx.Signature.Elixact do
   """
   @spec to_json_schema(signature_module(), keyword()) :: {:ok, map()} | {:error, term()}
   def to_json_schema(signature, opts \\ []) when is_atom(signature) do
-    with {:ok, schema_module} <- signature_to_schema(signature) do
-      try do
-        json_schema = JsonSchema.from_schema(schema_module)
+    case signature_to_schema(signature) do
+      {:ok, schema_module} ->
+        try do
+          json_schema = JsonSchema.from_schema(schema_module)
 
-        # Customize the schema based on options
-        customized_schema = customize_json_schema(json_schema, signature, opts)
+          # Customize the schema based on options
+          customized_schema = customize_json_schema(json_schema, signature, opts)
 
-        {:ok, customized_schema}
-      rescue
-        error -> {:error, {:json_schema_generation_failed, error}}
-      end
-    else
-      {:error, reason} -> {:error, reason}
+          {:ok, customized_schema}
+        rescue
+          error -> {:error, {:json_schema_generation_failed, error}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

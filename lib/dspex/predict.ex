@@ -282,15 +282,13 @@ defmodule DSPEx.Predict do
     parts = [original_content | parts]
 
     # Combine parts
-    parts
-    |> Enum.reverse()
-    |> Enum.join("\n\n")
+    Enum.map_join(Enum.reverse(parts), "\n\n", & &1)
   end
 
   defp format_demonstrations(demos) do
     demos
     |> Enum.with_index(1)
-    |> Enum.map(fn {demo, index} ->
+    |> Enum.map_join("\n\n", fn {demo, index} ->
       inputs = DSPEx.Example.inputs(demo)
       outputs = DSPEx.Example.outputs(demo)
 
@@ -305,7 +303,6 @@ defmodule DSPEx.Predict do
 
       "Example #{index}:\nInput: #{input_text}\nOutput: #{output_text}"
     end)
-    |> Enum.join("\n\n")
   end
 
   defp make_request_with_config(program, messages, model_config, opts, correlation_id) do

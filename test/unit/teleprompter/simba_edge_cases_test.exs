@@ -22,11 +22,12 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
 
   describe "empty trajectory handling" do
     test "handles empty trajectory buckets gracefully" do
-      simba = SIMBA.new(
-        strategies: [:append_demo, :append_rule],
-        num_candidates: 5,
-        max_steps: 3
-      )
+      simba =
+        SIMBA.new(
+          strategies: [:append_demo, :append_rule],
+          num_candidates: 5,
+          max_steps: 3
+        )
 
       program = %Predict{
         signature: EdgeCaseSignature,
@@ -46,11 +47,12 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
     end
 
     test "handles single trajectory edge case" do
-      simba = SIMBA.new(
-        strategies: [:append_demo],
-        num_candidates: 3,
-        max_steps: 2
-      )
+      simba =
+        SIMBA.new(
+          strategies: [:append_demo],
+          num_candidates: 3,
+          max_steps: 2
+        )
 
       program = %Predict{
         signature: EdgeCaseSignature,
@@ -82,11 +84,12 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
     end
 
     test "handles all failed trajectories scenario" do
-      simba = SIMBA.new(
-        strategies: [:append_demo],
-        num_candidates: 4,
-        max_steps: 2
-      )
+      simba =
+        SIMBA.new(
+          strategies: [:append_demo],
+          num_candidates: 4,
+          max_steps: 2
+        )
 
       program = %Predict{
         signature: EdgeCaseSignature,
@@ -114,11 +117,13 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
       case result do
         {:ok, optimized} ->
           # If it succeeds, it should have minimal improvements
-          demo_count = case optimized do
-            %{demos: demos} -> length(demos)
-            %{examples: examples} -> length(examples)
-            _ -> 0
-          end
+          demo_count =
+            case optimized do
+              %{demos: demos} -> length(demos)
+              %{examples: examples} -> length(examples)
+              _ -> 0
+            end
+
           assert demo_count == 0 or demo_count <= 1
 
         {:error, reason} ->
@@ -130,11 +135,12 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
 
   describe "malformed LLM response handling" do
     test "recovers from malformed JSON responses" do
-      simba = SIMBA.new(
-        strategies: [:append_rule],
-        num_candidates: 3,
-        max_steps: 2
-      )
+      simba =
+        SIMBA.new(
+          strategies: [:append_rule],
+          num_candidates: 3,
+          max_steps: 2
+        )
 
       program = %Predict{
         signature: EdgeCaseSignature,
@@ -174,6 +180,7 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
     test "handles unparseable instruction generation responses" do
       # Test specific to AppendRule strategy with malformed OfferFeedback responses
       bucket = create_test_bucket_with_variance()
+
       source_program = %Predict{
         signature: EdgeCaseSignature,
         client: :test,
@@ -203,15 +210,24 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
       # Should handle malformed responses gracefully
       assert {:skip, reason} = result
       assert is_binary(reason)
-      assert String.contains?(reason, ["parse", "format", "invalid", "timeout", "network", "malformed"])
+
+      assert String.contains?(reason, [
+               "parse",
+               "format",
+               "invalid",
+               "timeout",
+               "network",
+               "malformed"
+             ])
     end
 
     test "handles network timeouts during trajectory sampling" do
-      simba = SIMBA.new(
-        strategies: [:append_demo],
-        num_candidates: 3,
-        max_steps: 2
-      )
+      simba =
+        SIMBA.new(
+          strategies: [:append_demo],
+          num_candidates: 3,
+          max_steps: 2
+        )
 
       program = %Predict{
         signature: EdgeCaseSignature,
@@ -270,12 +286,13 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
       DSPEx.MockClientManager.set_mock_responses(:test, [%{content: "Response"}])
 
       Enum.each(edge_temperatures, fn temp ->
-        simba = SIMBA.new(
-          strategies: [:append_demo],
-          num_candidates: 2,
-          max_steps: 1,
-          temperature: temp
-        )
+        simba =
+          SIMBA.new(
+            strategies: [:append_demo],
+            num_candidates: 2,
+            max_steps: 1,
+            temperature: temp
+          )
 
         result = SIMBA.compile(simba, program, training_data, metric_fn)
 
@@ -283,6 +300,7 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
         case result do
           {:ok, _optimized} ->
             :ok
+
           {:error, _reason} ->
             # Some extreme temperatures might cause failures - that's acceptable
             :ok
@@ -344,11 +362,12 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
 
   describe "concurrent task failure recovery" do
     test "recovers from metric function failures" do
-      simba = SIMBA.new(
-        strategies: [:append_demo],
-        num_candidates: 3,
-        max_steps: 2
-      )
+      simba =
+        SIMBA.new(
+          strategies: [:append_demo],
+          num_candidates: 3,
+          max_steps: 2
+        )
 
       program = %Predict{
         signature: EdgeCaseSignature,
@@ -367,8 +386,10 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
         case :rand.uniform(4) do
           1 -> raise "Random metric failure"
           2 -> {:error, "Metric error"}
-          3 -> nil  # Invalid return type
-          4 -> 0.8  # Success case
+          # Invalid return type
+          3 -> nil
+          # Success case
+          4 -> 0.8
         end
       end
 
@@ -393,11 +414,13 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
     end
 
     test "manages concurrent task failures gracefully" do
-      simba = SIMBA.new(
-        strategies: [:append_demo],
-        num_candidates: 10,  # High concurrency to test task failures
-        max_steps: 2
-      )
+      simba =
+        SIMBA.new(
+          strategies: [:append_demo],
+          # High concurrency to test task failures
+          num_candidates: 10,
+          max_steps: 2
+        )
 
       program = %Predict{
         signature: EdgeCaseSignature,
@@ -406,22 +429,25 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
       }
 
       # Large training set to encourage concurrent execution
-      training_data = Enum.map(1..20, fn i ->
-        %{inputs: %{question: "Concurrent test #{i}"}, outputs: %{answer: "Answer #{i}"}}
-      end)
+      training_data =
+        Enum.map(1..20, fn i ->
+          %{inputs: %{question: "Concurrent test #{i}"}, outputs: %{answer: "Answer #{i}"}}
+        end)
 
       metric_fn = fn _example, _prediction -> 0.6 end
 
       # Mix of successful and failing responses to simulate partial task failures
-      mixed_responses = [
-        %{content: "Success 1"},
-        {:error, :task_failed},
-        %{content: "Success 2"},
-        {:error, :process_crashed},
-        %{content: "Success 3"},
-        nil,  # Simulate null response
-        %{content: "Success 4"}
-      ] ++ Enum.map(1..15, fn i -> %{content: "Response #{i}"} end)
+      mixed_responses =
+        [
+          %{content: "Success 1"},
+          {:error, :task_failed},
+          %{content: "Success 2"},
+          {:error, :process_crashed},
+          %{content: "Success 3"},
+          # Simulate null response
+          nil,
+          %{content: "Success 4"}
+        ] ++ Enum.map(1..15, fn i -> %{content: "Response #{i}"} end)
 
       DSPEx.MockClientManager.set_mock_responses(:test, mixed_responses)
 
@@ -442,11 +468,12 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
 
   describe "memory pressure and resource limits" do
     test "handles memory pressure during large optimizations" do
-      simba = SIMBA.new(
-        strategies: [:append_demo],
-        num_candidates: 5,
-        max_steps: 2
-      )
+      simba =
+        SIMBA.new(
+          strategies: [:append_demo],
+          num_candidates: 5,
+          max_steps: 2
+        )
 
       program = %Predict{
         signature: EdgeCaseSignature,
@@ -455,20 +482,21 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
       }
 
       # Create memory pressure with large training data
-      large_training_data = Enum.map(1..1000, fn i ->
-        large_question = String.duplicate("Memory pressure test question #{i} ", 100)
-        large_answer = String.duplicate("Answer #{i} ", 50)
+      large_training_data =
+        Enum.map(1..1000, fn i ->
+          large_question = String.duplicate("Memory pressure test question #{i} ", 100)
+          large_answer = String.duplicate("Answer #{i} ", 50)
 
-        %{
-          inputs: %{question: large_question},
-          outputs: %{answer: large_answer},
-          metadata: %{
-            id: i,
-            timestamp: System.monotonic_time(),
-            large_field: String.duplicate("x", 1000)
+          %{
+            inputs: %{question: large_question},
+            outputs: %{answer: large_answer},
+            metadata: %{
+              id: i,
+              timestamp: System.monotonic_time(),
+              large_field: String.duplicate("x", 1000)
+            }
           }
-        }
-      end)
+        end)
 
       metric_fn = fn _example, _prediction -> 0.7 end
 
@@ -484,7 +512,8 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
       memory_growth_mb = (final_memory - initial_memory) / (1024 * 1024)
 
       # Should handle large datasets without excessive memory growth
-      assert memory_growth_mb < 200, "Memory growth too high: #{Float.round(memory_growth_mb, 2)}MB"
+      assert memory_growth_mb < 200,
+             "Memory growth too high: #{Float.round(memory_growth_mb, 2)}MB"
 
       case result do
         {:ok, optimized} ->
@@ -499,11 +528,13 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
 
     test "handles resource exhaustion gracefully" do
       # Test behavior when approaching system resource limits
-      simba = SIMBA.new(
-        strategies: [:append_demo, :append_rule],
-        num_candidates: 50,  # Very high to stress resources
-        max_steps: 5
-      )
+      simba =
+        SIMBA.new(
+          strategies: [:append_demo, :append_rule],
+          # Very high to stress resources
+          num_candidates: 50,
+          max_steps: 5
+        )
 
       program = %Predict{
         signature: EdgeCaseSignature,
@@ -511,9 +542,10 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
         instruction: "Test resource exhaustion."
       }
 
-      training_data = Enum.map(1..100, fn i ->
-        %{inputs: %{question: "Resource test #{i}"}, outputs: %{answer: "Answer #{i}"}}
-      end)
+      training_data =
+        Enum.map(1..100, fn i ->
+          %{inputs: %{question: "Resource test #{i}"}, outputs: %{answer: "Answer #{i}"}}
+        end)
 
       metric_fn = fn _example, _prediction -> 0.5 end
 
@@ -561,11 +593,12 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
       optimized = DSPEx.OptimizedProgram.new(program, [demo])
 
       # Try to optimize the already optimized program (potential circular reference)
-      simba = SIMBA.new(
-        strategies: [:append_demo],
-        num_candidates: 2,
-        max_steps: 1
-      )
+      simba =
+        SIMBA.new(
+          strategies: [:append_demo],
+          num_candidates: 2,
+          max_steps: 1
+        )
 
       training_data = [%{inputs: %{question: "Circular test"}, outputs: %{answer: "Response"}}]
       metric_fn = fn _example, _prediction -> 0.8 end
@@ -588,11 +621,12 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
 
     test "handles incompatible signature combinations" do
       # Test SIMBA with mismatched signatures
-      simba = SIMBA.new(
-        strategies: [:append_demo],
-        num_candidates: 2,
-        max_steps: 1
-      )
+      simba =
+        SIMBA.new(
+          strategies: [:append_demo],
+          num_candidates: 2,
+          max_steps: 1
+        )
 
       program = %Predict{
         signature: EdgeCaseSignature,
@@ -623,7 +657,12 @@ defmodule DSPEx.Teleprompter.SIMBA.EdgeCasesTest do
 
         {:error, reason} ->
           # Signature mismatches might cause failure - that's acceptable
-          assert String.contains?(inspect(reason), ["signature", "compatible", "field", "mismatch"])
+          assert String.contains?(inspect(reason), [
+                   "signature",
+                   "compatible",
+                   "field",
+                   "mismatch"
+                 ])
       end
     end
   end

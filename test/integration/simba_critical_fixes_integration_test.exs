@@ -10,7 +10,7 @@ defmodule DSPEx.Teleprompter.SimbaCriticalFixesIntegrationTest do
     test "end-to-end SIMBA optimization with fixed program selection algorithm" do
       # Define a simple QA signature
       defmodule TestQASignature do
-        use Signature, "question -> answer"
+        use DSPEx.Signature, "question -> answer"
       end
 
       # Create teacher and student programs
@@ -147,7 +147,7 @@ defmodule DSPEx.Teleprompter.SimbaCriticalFixesIntegrationTest do
       # The previous implementation had issues with candidate evaluation
 
       defmodule SimpleSignature do
-        use Signature, "input -> output"
+        use DSPEx.Signature, "input -> output"
       end
 
       program = Predict.new(SimpleSignature, :gpt3_5)

@@ -19,11 +19,15 @@ defmodule DSPEx.Integration.SimbaElixactTest do
       metric_fn = &validated_answer_exact_match/2
 
       # Use both demo and rule strategies with Elixact signatures
-      simba = SIMBA.new(
-        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo, DSPEx.Teleprompter.SIMBA.Strategy.AppendRule],
-        num_candidates: 6,
-        max_steps: 4
-      )
+      simba =
+        SIMBA.new(
+          strategies: [
+            DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo,
+            DSPEx.Teleprompter.SIMBA.Strategy.AppendRule
+          ],
+          num_candidates: 6,
+          max_steps: 4
+        )
 
       result = SIMBA.compile(simba, program, program, training_data, metric_fn, [])
 
@@ -31,12 +35,12 @@ defmodule DSPEx.Integration.SimbaElixactTest do
       assert {:error, reason} = result
       assert String.contains?(reason, ["strategy", "append_rule"]) |> Enum.any?()
 
-      # TODO: Once implemented, should verify:
-      # assert {:ok, optimized} = result
-      # assert optimized.performance.average_score > program.performance.average_score
-      # assert validate_elixact_schema_compliance(optimized)
-      # assert length(optimized.examples) > 0  # Demo strategy worked
-      # assert optimized.instruction != program.instruction  # Rule strategy worked
+      # Once AppendRule strategy is implemented, this test should verify:
+      # - {:ok, optimized} = result
+      # - optimized.performance.average_score > program.performance.average_score
+      # - validate_elixact_schema_compliance(optimized)
+      # - length(optimized.examples) > 0  # Demo strategy worked
+      # - optimized.instruction != program.instruction  # Rule strategy worked
     end
 
     test "handles schema validation errors during rule-based optimization" do
@@ -62,11 +66,12 @@ defmodule DSPEx.Integration.SimbaElixactTest do
         if validate_structured_output(prediction.result), do: 1.0, else: 0.0
       end
 
-      simba = SIMBA.new(
-        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendRule],
-        num_candidates: 3,
-        max_steps: 2
-      )
+      simba =
+        SIMBA.new(
+          strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendRule],
+          num_candidates: 3,
+          max_steps: 2
+        )
 
       result = SIMBA.compile(simba, program, program, training_data, metric_fn, [])
 
@@ -109,11 +114,15 @@ defmodule DSPEx.Integration.SimbaElixactTest do
         if validate_nested_response(prediction.response), do: 1.0, else: 0.0
       end
 
-      simba = SIMBA.new(
-        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo, DSPEx.Teleprompter.SIMBA.Strategy.AppendRule],
-        num_candidates: 4,
-        max_steps: 2
-      )
+      simba =
+        SIMBA.new(
+          strategies: [
+            DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo,
+            DSPEx.Teleprompter.SIMBA.Strategy.AppendRule
+          ],
+          num_candidates: 4,
+          max_steps: 2
+        )
 
       result = SIMBA.compile(simba, program, program, training_data, metric_fn, [])
 
@@ -133,11 +142,12 @@ defmodule DSPEx.Integration.SimbaElixactTest do
         if type_safe_validation(example, prediction), do: 1.0, else: 0.0
       end
 
-      simba = SIMBA.new(
-        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendRule],
-        num_candidates: 3,
-        max_steps: 2
-      )
+      simba =
+        SIMBA.new(
+          strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendRule],
+          num_candidates: 3,
+          max_steps: 2
+        )
 
       result = SIMBA.compile(simba, program, program, training_data, metric_fn, [])
 
@@ -170,17 +180,20 @@ defmodule DSPEx.Integration.SimbaElixactTest do
         }
       ]
 
-            metric_fn = fn _example, prediction ->
+      metric_fn = fn _example, prediction ->
         # Metric that would benefit from instruction improvements
         if String.length(prediction.analysis) > 50 &&
-           String.contains?(prediction.analysis, "analysis"), do: 1.0, else: 0.0
+             String.contains?(prediction.analysis, "analysis"),
+           do: 1.0,
+           else: 0.0
       end
 
-      simba = SIMBA.new(
-        strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendRule],
-        num_candidates: 3,
-        max_steps: 1
-      )
+      simba =
+        SIMBA.new(
+          strategies: [DSPEx.Teleprompter.SIMBA.Strategy.AppendRule],
+          num_candidates: 3,
+          max_steps: 1
+        )
 
       result = SIMBA.compile(simba, program, program, training_data, metric_fn, [])
 
@@ -213,27 +226,29 @@ defmodule DSPEx.Integration.SimbaElixactTest do
   defp validated_answer_exact_match(example, prediction) do
     # Validate both correctness and Elixact schema compliance
     if example.outputs.analysis == prediction.analysis &&
-       validate_analysis_schema(prediction.analysis), do: 1.0, else: 0.0
+         validate_analysis_schema(prediction.analysis),
+       do: 1.0,
+       else: 0.0
   end
-
-
 
   defp validate_structured_output(result) when is_map(result) do
     Map.has_key?(result, :category) &&
-    Map.has_key?(result, :confidence) &&
-    Map.has_key?(result, :details) &&
-    is_number(result.confidence) &&
-    is_list(result.details)
+      Map.has_key?(result, :confidence) &&
+      Map.has_key?(result, :details) &&
+      is_number(result.confidence) &&
+      is_list(result.details)
   end
+
   defp validate_structured_output(_), do: false
 
   defp validate_nested_response(response) when is_map(response) do
     Map.has_key?(response, :status) &&
-    Map.has_key?(response, :data) &&
-    is_map(response.data) &&
-    Map.has_key?(response.data, :results) &&
-    is_list(response.data.results)
+      Map.has_key?(response, :data) &&
+      is_map(response.data) &&
+      Map.has_key?(response.data, :results) &&
+      is_list(response.data.results)
   end
+
   defp validate_nested_response(_), do: false
 
   defp create_type_safe_examples do
@@ -248,27 +263,30 @@ defmodule DSPEx.Integration.SimbaElixactTest do
   defp type_safe_validation(example, prediction) do
     # Strict type checking
     is_number(prediction.result) &&
-    is_binary(prediction.operation_type) &&
-    is_map(prediction.metadata) &&
-    prediction.result == example.outputs.result
+      is_binary(prediction.operation_type) &&
+      is_map(prediction.metadata) &&
+      prediction.result == example.outputs.result
   end
 
   defp validate_analysis_schema(analysis) when is_map(analysis) do
     Map.has_key?(analysis, :sentiment_score) &&
-    Map.has_key?(analysis, :confidence) &&
-    Map.has_key?(analysis, :key_themes) &&
-    Map.has_key?(analysis, :recommendation) &&
-    is_number(analysis.sentiment_score) &&
-    is_number(analysis.confidence) &&
-    is_list(analysis.key_themes) &&
-    is_binary(analysis.recommendation)
+      Map.has_key?(analysis, :confidence) &&
+      Map.has_key?(analysis, :key_themes) &&
+      Map.has_key?(analysis, :recommendation) &&
+      is_number(analysis.sentiment_score) &&
+      is_number(analysis.confidence) &&
+      is_list(analysis.key_themes) &&
+      is_binary(analysis.recommendation)
   end
+
   defp validate_analysis_schema(_), do: false
 
   # Complex Elixact signature examples (these will fail to compile initially)
   defmodule ComplexElixactSignatures.DataAnalysis do
     # This will fail until proper Elixact integration exists
-    use DSPEx.Signature, "data_source:string, analysis_type:string, parameters:map -> analysis:map"
+    use DSPEx.Signature,
+        "data_source:string, analysis_type:string, parameters:map -> analysis:map"
+
     use DSPEx.TypedSignature
   end
 
@@ -283,7 +301,9 @@ defmodule DSPEx.Integration.SimbaElixactTest do
   end
 
   defmodule ComplexElixactSignatures.TypeSafeOperation do
-    use DSPEx.Signature, "operation:string, values:any -> result:integer, operation_type:string, metadata:map"
+    use DSPEx.Signature,
+        "operation:string, values:any -> result:integer, operation_type:string, metadata:map"
+
     use DSPEx.TypedSignature
   end
 

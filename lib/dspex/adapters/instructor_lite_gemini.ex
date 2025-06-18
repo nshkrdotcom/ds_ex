@@ -12,11 +12,11 @@ defmodule DSPEx.Adapters.InstructorLiteGemini do
       defmodule QASignature do
         use DSPEx.Signature, "question -> answer, reasoning, confidence"
       end
-      
+
       # Create a predict program using InstructorLite adapter
-      program = DSPEx.Predict.new(QASignature, :gemini, 
+      program = DSPEx.Predict.new(QASignature, :gemini,
         adapter: DSPEx.Adapters.InstructorLiteGemini)
-      
+
       # Get structured response
       {:ok, result} = DSPEx.Program.forward(program, %{question: "What is 2+2?"})
       # result => %{answer: "4", reasoning: "Basic arithmetic", confidence: "high"}
@@ -119,18 +119,14 @@ defmodule DSPEx.Adapters.InstructorLiteGemini do
   defp format_inputs(signature, inputs) do
     input_fields = signature.input_fields()
 
-    input_fields
-    |> Enum.map(fn field ->
+    Enum.map_join(input_fields, "\n", fn field ->
       value = Map.get(inputs, field) || Map.get(inputs, to_string(field))
       "#{field}: #{value}"
     end)
-    |> Enum.join("\n")
   end
 
   defp format_demos(signature, demos) when is_list(demos) do
-    demos
-    |> Enum.map(&format_single_demo(signature, &1))
-    |> Enum.join("\n\n")
+    Enum.map_join(demos, "\n\n", &format_single_demo(signature, &1))
   end
 
   defp format_demos(_, _), do: ""
@@ -145,12 +141,10 @@ defmodule DSPEx.Adapters.InstructorLiteGemini do
   defp format_outputs(signature, outputs) do
     output_fields = signature.output_fields()
 
-    output_fields
-    |> Enum.map(fn field ->
+    Enum.map_join(output_fields, "\n", fn field ->
       value = Map.get(outputs, field) || Map.get(outputs, to_string(field))
       "#{field}: #{value}"
     end)
-    |> Enum.join("\n")
   end
 
   defp build_response_model(signature) do

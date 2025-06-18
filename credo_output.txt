@@ -1,0 +1,102 @@
+[F] → lib/dspex/client.ex:469:8 Function is too complex (cyclomatic complexity is 10, max is 9).
+[F] → lib/dspex/client.ex:480:13 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/client_manager.ex:572:8 Function is too complex (cyclomatic complexity is 10, max is 9).
+[F] → lib/dspex/client_manager.ex:583:13 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/client_manager.ex:641:15 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/config/elixact_schemas.ex:121:7 Function is too complex (cyclomatic complexity is 11, max is 9).
+[W] → lib/dspex/config/elixact_schemas.ex:180:31 Struct %Elixact.Error{} found in `@spec`.
+[W] → lib/dspex/config/elixact_schemas.ex:180:51 Struct %Elixact.Error{} found in `@spec`.
+[F] → lib/dspex/config/elixact_schemas.ex:220:8 Function is too complex (cyclomatic complexity is 30, max is 9).
+[F] → lib/dspex/config/elixact_schemas.ex:273:8 Function is too complex (cyclomatic complexity is 17, max is 9).
+[F] → lib/dspex/config/validator.ex:556:8 Function is too complex (cyclomatic complexity is 14, max is 9).
+[F] → lib/dspex/elixact.ex:225:8 Function is too complex (cyclomatic complexity is 14, max is 9).
+[F] → lib/dspex/elixact.ex:308:8 Function is too complex (cyclomatic complexity is 12, max is 9).
+[F] → lib/dspex/evaluate.ex:508:11 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/mock_client_manager.ex:305:8 Function is too complex (cyclomatic complexity is 19, max is 9).
+[F] → lib/dspex/mock_client_manager.ex:375:8 Function is too complex (cyclomatic complexity is 12, max is 9).
+[F] → lib/dspex/signature.ex:201:8 Function is too complex (cyclomatic complexity is 12, max is 9).
+[F] → lib/dspex/signature.ex:291:12 Function is too complex (cyclomatic complexity is 27, max is 9).
+[F] ↗ lib/dspex/signature.ex:716:7 Unless conditions should avoid having an `else` block.
+[F] ↗ lib/dspex/signature.ex:722:9 Unless conditions should avoid having an `else` block.
+[F] ↗ lib/dspex/signature.ex:739:11 Unless conditions should avoid having an `else` block.
+[F] ↗ lib/dspex/signature.ex:743:13 Last clause in `with` is redundant.
+[F] → lib/dspex/signature.ex:791:8 Function is too complex (cyclomatic complexity is 14, max is 9).
+[R] → lib/dspex/signature/elixact.ex:193:5 `with` contains only one <- clause and an `else` branch, consider using `case` instead
+[F] → lib/dspex/signature/elixact.ex:344:8 Function is too complex (cyclomatic complexity is 14, max is 9).
+[F] → lib/dspex/signature/elixact.ex:437:8 Function is too complex (cyclomatic complexity is 10, max is 9).
+[F] → lib/dspex/signature/elixact.ex:584:8 Function is too complex (cyclomatic complexity is 12, max is 9).
+[F] → lib/dspex/signature/enhanced_parser.ex:406:5 Cond statements should contain at least two conditions besides `true`, consider using `if` instead.
+[F] → lib/dspex/signature/enhanced_parser.ex:508:8 Function is too complex (cyclomatic complexity is 18, max is 9).
+[F] → lib/dspex/signature/enhanced_parser.ex:577:13 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/signature/enhanced_parser.ex:588:8 Function is too complex (cyclomatic complexity is 11, max is 9).
+[W] → lib/dspex/signature/enhanced_parser.ex:598:13 Use `reraise` inside a rescue block to preserve the original stacktrace.
+[W] → lib/dspex/signature/enhanced_parser.ex:612:13 Use `reraise` inside a rescue block to preserve the original stacktrace.
+[W] → lib/dspex/signature/enhanced_parser.ex:625:13 Use `reraise` inside a rescue block to preserve the original stacktrace.
+[W] → lib/dspex/signature/enhanced_parser.ex:637:13 Use `reraise` inside a rescue block to preserve the original stacktrace.
+[F] → lib/dspex/signature/enhanced_parser.ex:653:5 Cond statements should contain at least two conditions besides `true`, consider using `if` instead.
+[F] → lib/dspex/signature/enhanced_parser.ex:674:8 Function is too complex (cyclomatic complexity is 10, max is 9).
+[F] → lib/dspex/signature/enhanced_parser.ex:692:13 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/signature/enhanced_parser.ex:703:8 Function is too complex (cyclomatic complexity is 13, max is 9).
+[F] → lib/dspex/signature/enhanced_parser.ex:730:13 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/teleprompter.ex:122:11 Function body is nested too deep (max depth is 2, was 4).
+[F] → lib/dspex/teleprompter/beacon/bayesian_optimizer.ex:302:17 Function body is nested too deep (max depth is 2, was 4).
+[F] → lib/dspex/teleprompter/beacon/bayesian_optimizer.ex:416:11 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/teleprompter/beacon/bayesian_optimizer.ex:523:22 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/teleprompter/beacon/bayesian_optimizer.ex:551:22 Function body is nested too deep (max depth is 2, was 3).
+[R] → lib/dspex/teleprompter/beacon/benchmark.ex:12:13 Modules should have a @moduledoc tag.
+[F] → lib/dspex/teleprompter/beacon/continuous_optimizer.ex:367:11 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/teleprompter/beacon/examples.ex:18:7 Function is too complex (cyclomatic complexity is 10, max is 9).
+[R] → lib/dspex/teleprompter/beacon/examples.ex:22:15 Modules should have a @moduledoc tag.
+[F] → lib/dspex/teleprompter/beacon/examples.ex:115:13 Function body is nested too deep (max depth is 2, was 3).
+[R] → lib/dspex/teleprompter/beacon/examples.ex:157:15 Modules should have a @moduledoc tag.
+[F] → lib/dspex/teleprompter/beacon/examples.ex:246:11 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/teleprompter/beacon/examples.ex:269:7 Function is too complex (cyclomatic complexity is 12, max is 9).
+[R] → lib/dspex/teleprompter/beacon/examples.ex:273:15 Modules should have a @moduledoc tag.
+[R] → lib/dspex/teleprompter/beacon/examples.ex:388:15 Modules should have a @moduledoc tag.
+[F] → lib/dspex/teleprompter/beacon/integration.ex:200:13 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/teleprompter/beacon/integration.ex:246:9 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/teleprompter/beacon/integration.ex:292:11 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/teleprompter/beacon/integration.ex:478:11 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/teleprompter/beacon/utils.ex:113:13 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/teleprompter/simba.ex:316:8 Function is too complex (cyclomatic complexity is 10, max is 9).
+[F] → lib/dspex/teleprompter/simba.ex:522:13 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/teleprompter/simba.ex:749:9 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/teleprompter/simba.ex:819:7 Function is too complex (cyclomatic complexity is 10, max is 9).
+[F] → lib/dspex/teleprompter/simba.ex:893:8 Function is too complex (cyclomatic complexity is 13, max is 9).
+[F] → lib/dspex/teleprompter/simba.ex:925:17 Function body is nested too deep (max depth is 2, was 4).
+[F] → lib/dspex/teleprompter/simba.ex:1073:9 Function body is nested too deep (max depth is 2, was 3).
+[F] → lib/dspex/teleprompter/simba/strategy.ex:138:13 Function body is nested too deep (max depth is 2, was 4).
+[F] → lib/dspex/teleprompter/simba/strategy/append_demo.ex:87:25 Function body is nested too deep (max depth is 2, was 3).
+[W] ↗ lib/dspex/teleprompter/simba/strategy/append_rule.ex:74:8 length is expensive, prefer `Enum.empty?/1` or `list == []`.
+[W] ↗ lib/dspex/teleprompter/simba/strategy/append_rule.ex:74:48 length is expensive, prefer `Enum.empty?/1` or `list == []`.
+[F] → test/concurrent/teleprompter_stress_test.exs:39:9 Function is too complex (cyclomatic complexity is 10, max is 9).
+[F] → test/integration/error_recovery_test.exs:34:15 Function body is nested too deep (max depth is 2, was 3).
+[F] → test/integration/error_recovery_test.exs:52:10 Function is too complex (cyclomatic complexity is 12, max is 9).
+[F] → test/integration/error_recovery_test.exs:75:9 Function is too complex (cyclomatic complexity is 14, max is 9).
+[F] → test/integration/error_recovery_test.exs:113:9 Function is too complex (cyclomatic complexity is 10, max is 9).
+[F] ↗ test/integration/phase3_advanced_features_test.exs:255:9 `Enum.map_join/3` is more efficient than `Enum.map/2 |> Enum.join/2`.
+[R] → test/performance/elixact_vs_baseline_test.exs:450:15 `with` contains only one <- clause and an `else` branch, consider using `case` instead
+[R] → test/performance/elixact_vs_baseline_test.exs:460:15 `with` contains only one <- clause and an `else` branch, consider using `case` instead
+[F] → test/performance/memory_performance_test.exs:442:8 Function is too complex (cyclomatic complexity is 10, max is 9).
+[F] → test/performance/memory_performance_test.exs:460:11 Function body is nested too deep (max depth is 2, was 3).
+[F] → test/performance/optimization_benchmarks_test.exs:539:8 Function is too complex (cyclomatic complexity is 10, max is 9).
+[F] → test/performance/optimization_benchmarks_test.exs:558:11 Function body is nested too deep (max depth is 2, was 3).
+[F] → test/performance/simba_scaling_test.exs:572:8 Function is too complex (cyclomatic complexity is 10, max is 9).
+[F] ↗ test/property/signature_data_property_test.exs:42:26 `Enum.map_join/3` is more efficient than `Enum.map/2 |> Enum.join/2`.
+[F] ↗ test/property/signature_data_property_test.exs:43:28 `Enum.map_join/3` is more efficient than `Enum.map/2 |> Enum.join/2`.
+[W] ↗ test/property/signature_data_property_test.exs:401:32 Operation will always return the left side of the expression.
+[F] → test/support/migration_test_helper.ex:51:11 Function body is nested too deep (max depth is 2, was 3).
+[F] ↗ test/support/mock_helpers.exs:349:5 `Enum.map_join/3` is more efficient than `Enum.map/2 |> Enum.join/2`.
+[F] ↗ test/support/test_helpers.exs:87:5 Unless conditions should avoid having an `else` block.
+[F] → test/teleprompter/beacon/unit/integration_test.exs:557:11 Function body is nested too deep (max depth is 2, was 3).
+[W] ↗ test/unit/bootstrap_advanced_test.exs:219:14 length is expensive, prefer `Enum.empty?/1` or `list == []`.
+[W] ↗ test/unit/bootstrap_advanced_test.exs:332:18 length is expensive, prefer `Enum.empty?/1` or `list == []`.
+[R] ↗ test/unit/config_elixact_schemas_test.exs:329:86 Numbers larger than 9999 should be written with underscores: 30_000
+[R] ↗ test/unit/config_validator_test.exs:280:83 Numbers larger than 9999 should be written with underscores: 30_000
+[R] ↗ test/unit/config_validator_test.exs:314:74 Numbers larger than 9999 should be written with underscores: 30_000
+[R] ↗ test/unit/config_validator_test.exs:334:81 Numbers larger than 9999 should be written with underscores: 30_000
+[R] ↗ test/unit/config_validator_test.exs:379:86 Numbers larger than 9999 should be written with underscores: 30_000
+[R] ↗ test/unit/config_validator_test.exs:433:63 Numbers larger than 9999 should be written with underscores: 30_000
+[F] → test/unit/evaluate_test.exs:18:9 Function is too complex (cyclomatic complexity is 10, max is 9).
+[F] → test/unit/evaluate_test.exs:33:13 Function body is nested too deep (max depth is 2, was 3).
+[W] → test/unit/teleprompter/simba/strategy_test.exs:26:19 Use `reraise` inside a rescue block to preserve the original stacktrace.

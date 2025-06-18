@@ -11,7 +11,7 @@ defmodule ClientConfiguration do
     field :timeout, :integer do
       description("Request timeout in milliseconds")
       gteq(1)
-      example(30000)
+      example(30_000)
       optional()
     end
 
