@@ -505,12 +505,7 @@ defmodule DSPEx.Evaluate do
         {:error, {:evaluation_failed, "Too many critical errors", errors}}
       else
         # Calculate throughput even for failed operations
-        throughput =
-          if is_number(duration) and duration > 0 do
-            total_examples / (duration / 1000)
-          else
-            total_examples * 1000.0
-          end
+        throughput = calculate_throughput(total_examples, duration)
 
         {:ok,
          %{
@@ -532,15 +527,7 @@ defmodule DSPEx.Evaluate do
       success_rate = length(scores) / total_examples
 
       # Calculate throughput (examples per second), handle very fast operations
-      throughput =
-        if is_number(duration) and duration > 0 do
-          # examples per second
-          total_examples / (duration / 1000)
-        else
-          # For very fast operations (< 1ms), estimate based on total examples
-          # assume 1ms duration for throughput calculation
-          total_examples * 1000.0
-        end
+      throughput = calculate_throughput(total_examples, duration)
 
       {:ok,
        %{
@@ -615,6 +602,17 @@ defmodule DSPEx.Evaluate do
       max(overhead_percentage, 0)
     else
       0
+    end
+  end
+
+  defp calculate_throughput(total_examples, duration) do
+    if is_number(duration) and duration > 0 do
+      # examples per second
+      total_examples / (duration / 1000)
+    else
+      # For very fast operations (< 1ms), estimate based on total examples
+      # assume 1ms duration for throughput calculation
+      total_examples * 1000.0
     end
   end
 

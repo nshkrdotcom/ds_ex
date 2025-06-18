@@ -104,20 +104,8 @@ defmodule DSPEx.Teleprompter.BEACON.Utils do
   """
   def extract_number(text) when is_binary(text) do
     case Regex.run(~r/\d+(?:\.\d+)?/, text) do
-      [number_str] ->
-        case Float.parse(number_str) do
-          {number, _} ->
-            number
-
-          :error ->
-            case Integer.parse(number_str) do
-              {number, _} -> number
-              :error -> nil
-            end
-        end
-
-      nil ->
-        nil
+      [number_str] -> parse_number_string(number_str)
+      nil -> nil
     end
   end
 
@@ -200,6 +188,19 @@ defmodule DSPEx.Teleprompter.BEACON.Utils do
   end
 
   # Private helper functions
+
+  defp parse_number_string(number_str) do
+    case Float.parse(number_str) do
+      {number, _} ->
+        number
+
+      :error ->
+        case Integer.parse(number_str) do
+          {number, _} -> number
+          :error -> nil
+        end
+    end
+  end
 
   defp extract_reasoning_keywords(text) when is_binary(text) do
     text

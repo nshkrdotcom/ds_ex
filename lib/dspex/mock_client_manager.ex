@@ -365,31 +365,27 @@ defmodule DSPEx.MockClientManager do
   end
 
   defp generate_qa_response(content) do
-    cond do
-      String.contains?(content, "2+2") ->
-        "4"
+    get_qa_responses()
+    |> Enum.find_value(fn {pattern, response} ->
+      if pattern_matches?(content, pattern), do: response
+    end) || "This is a mock answer for testing."
+  end
 
-      String.contains?(content, "3+3") ->
-        "6"
+  defp get_qa_responses do
+    [
+      {["2+2"], "4"},
+      {["3+3"], "6"},
+      {["capital of France"], "Paris"},
+      {["apples", "reasoning"],
+       "Starting with 15 apples. After selling 7: 15 - 7 = 8 apples. After getting 8 more: 8 + 8 = 16 apples.\n16"},
+      {["apples"], "16"},
+      {["rectangle", "area"], "Area of rectangle = length × width. Area = 8 × 5 = 40.\n40"},
+      {["books", "cost"], "3 books cost $15 total. Cost per book = $15 ÷ 3 = $5.\n$5"}
+    ]
+  end
 
-      String.contains?(content, "capital of France") ->
-        "Paris"
-
-      String.contains?(content, "apples") and String.contains?(content, "reasoning") ->
-        "Starting with 15 apples. After selling 7: 15 - 7 = 8 apples. After getting 8 more: 8 + 8 = 16 apples.\n16"
-
-      String.contains?(content, "apples") ->
-        "16"
-
-      String.contains?(content, "rectangle") and String.contains?(content, "area") ->
-        "Area of rectangle = length × width. Area = 8 × 5 = 40.\n40"
-
-      String.contains?(content, "books") and String.contains?(content, "cost") ->
-        "3 books cost $15 total. Cost per book = $15 ÷ 3 = $5.\n$5"
-
-      true ->
-        "This is a mock answer for testing."
-    end
+  defp pattern_matches?(content, patterns) do
+    Enum.all?(patterns, &String.contains?(content, &1))
   end
 
   defp generate_cot_response(content) do

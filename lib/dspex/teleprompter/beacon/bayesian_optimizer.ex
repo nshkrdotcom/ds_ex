@@ -274,46 +274,16 @@ defmodule DSPEx.Teleprompter.BEACON.BayesianOptimizer do
               )
 
             # Evaluate the selected configuration
-            case evaluate_configuration(next_config, objective_function) do
-              {:ok, new_observation} ->
-                updated_observations = [new_observation | current_observations]
-
-                # Check for improvement
-                {new_best, new_conv_counter} =
-                  if new_observation.score > current_best.score do
-                    # Reset convergence counter
-                    {new_observation, 0}
-                  else
-                    # Increment convergence counter
-                    {current_best, conv_counter + 1}
-                  end
-
-                emit_telemetry(
-                  [:dspex, :beacon, :bayesian_optimizer, :iteration, :stop],
-                  %{
-                    iteration: iteration,
-                    score: new_observation.score,
-                    improved: new_observation.score > current_best.score
-                  },
-                  %{correlation_id: correlation_id}
-                )
-
-                # Check convergence
-                if new_conv_counter >= optimizer.convergence_patience do
-                  {:halt, {:converged, updated_observations, new_best, iteration}}
-                else
-                  {:cont, {updated_observations, new_best, new_conv_counter}}
-                end
-
-              {:error, reason} ->
-                emit_telemetry(
-                  [:dspex, :beacon, :bayesian_optimizer, :iteration, :error],
-                  %{iteration: iteration},
-                  %{correlation_id: correlation_id, error: reason}
-                )
-
-                {:cont, {current_observations, current_best, conv_counter + 1}}
-            end
+            handle_configuration_evaluation(
+              next_config,
+              objective_function,
+              current_observations,
+              current_best,
+              conv_counter,
+              optimizer,
+              iteration,
+              correlation_id
+            )
           end
         )
 
@@ -412,20 +382,25 @@ defmodule DSPEx.Teleprompter.BEACON.BayesianOptimizer do
     else
       # Evaluate acquisition function for each candidate
       best_candidate =
-        Enum.max_by(candidates, fn candidate ->
-          case optimizer.acquisition_function do
-            :expected_improvement ->
-              expected_improvement(candidate, gp_model, current_observations)
-
-            :upper_confidence_bound ->
-              upper_confidence_bound(candidate, gp_model, optimizer.exploration_weight)
-
-            :probability_improvement ->
-              probability_improvement(candidate, gp_model, current_observations)
-          end
-        end)
+        Enum.max_by(
+          candidates,
+          &evaluate_acquisition_function(&1, optimizer, gp_model, current_observations)
+        )
 
       best_candidate
+    end
+  end
+
+  defp evaluate_acquisition_function(candidate, optimizer, gp_model, current_observations) do
+    case optimizer.acquisition_function do
+      :expected_improvement ->
+        expected_improvement(candidate, gp_model, current_observations)
+
+      :upper_confidence_bound ->
+        upper_confidence_bound(candidate, gp_model, optimizer.exploration_weight)
+
+      :probability_improvement ->
+        probability_improvement(candidate, gp_model, current_observations)
     end
   end
 
@@ -517,19 +492,7 @@ defmodule DSPEx.Teleprompter.BEACON.BayesianOptimizer do
 
       # Generate more candidates to account for duplicates
       1..(num_candidates * 3)
-      |> Enum.map(fn _ ->
-        instruction = Enum.random(instructions)
-        max_demos = min(4, length(demos))
-        demo_count = if max_demos > 0, do: Enum.random(1..max_demos), else: 0
-        demo_subset = Enum.take_random(demos, demo_count)
-
-        %{
-          instruction_id: instruction.id,
-          demo_ids: Enum.map(demo_subset, & &1.id),
-          # Will be computed as needed
-          features: []
-        }
-      end)
+      |> Enum.map(fn _ -> generate_random_config_candidate(instructions, demos) end)
       |> Enum.reject(&MapSet.member?(evaluated_configs, &1))
       |> Enum.uniq()
       |> Enum.take(num_candidates)
@@ -545,19 +508,21 @@ defmodule DSPEx.Teleprompter.BEACON.BayesianOptimizer do
       []
     else
       1..num_samples
-      |> Enum.map(fn _ ->
-        instruction = Enum.random(instructions)
-        max_demos = min(4, length(demos))
-        demo_count = if max_demos > 0, do: Enum.random(1..max_demos), else: 0
-        demo_subset = Enum.take_random(demos, demo_count)
-
-        %{
-          instruction_id: instruction.id,
-          demo_ids: Enum.map(demo_subset, & &1.id),
-          features: []
-        }
-      end)
+      |> Enum.map(fn _ -> generate_random_config_candidate(instructions, demos) end)
     end
+  end
+
+  defp generate_random_config_candidate(instructions, demos) do
+    instruction = Enum.random(instructions)
+    max_demos = min(4, length(demos))
+    demo_count = if max_demos > 0, do: Enum.random(1..max_demos), else: 0
+    demo_subset = Enum.take_random(demos, demo_count)
+
+    %{
+      instruction_id: instruction.id,
+      demo_ids: Enum.map(demo_subset, & &1.id),
+      features: []
+    }
   end
 
   defp evaluate_configuration(config, objective_function) do
@@ -637,5 +602,75 @@ defmodule DSPEx.Teleprompter.BEACON.BayesianOptimizer do
     y = 1.0 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * :math.exp(-x * x)
 
     sign * y
+  end
+
+  defp handle_configuration_evaluation(
+         next_config,
+         objective_function,
+         current_observations,
+         current_best,
+         conv_counter,
+         optimizer,
+         iteration,
+         correlation_id
+       ) do
+    case evaluate_configuration(next_config, objective_function) do
+      {:ok, new_observation} ->
+        handle_successful_evaluation(
+          new_observation,
+          current_observations,
+          current_best,
+          conv_counter,
+          optimizer,
+          iteration,
+          correlation_id
+        )
+
+      {:error, reason} ->
+        emit_telemetry(
+          [:dspex, :beacon, :bayesian_optimizer, :iteration, :error],
+          %{iteration: iteration},
+          %{correlation_id: correlation_id, error: reason}
+        )
+
+        {:cont, {current_observations, current_best, conv_counter + 1}}
+    end
+  end
+
+  defp handle_successful_evaluation(
+         new_observation,
+         current_observations,
+         current_best,
+         conv_counter,
+         optimizer,
+         iteration,
+         correlation_id
+       ) do
+    updated_observations = [new_observation | current_observations]
+
+    # Check for improvement
+    {new_best, new_conv_counter} =
+      if new_observation.score > current_best.score do
+        {new_observation, 0}
+      else
+        {current_best, conv_counter + 1}
+      end
+
+    emit_telemetry(
+      [:dspex, :beacon, :bayesian_optimizer, :iteration, :stop],
+      %{
+        iteration: iteration,
+        score: new_observation.score,
+        improved: new_observation.score > current_best.score
+      },
+      %{correlation_id: correlation_id}
+    )
+
+    # Check convergence
+    if new_conv_counter >= optimizer.convergence_patience do
+      {:halt, {:converged, updated_observations, new_best, iteration}}
+    else
+      {:cont, {updated_observations, new_best, new_conv_counter}}
+    end
   end
 end

@@ -653,9 +653,9 @@ defmodule DSPEx.Signature do
 
           if Enum.empty?(missing_functions) do
             # Validate function return types and consistency
-            with :ok <- validate_field_lists(module),
-                 :ok <- validate_instructions(module) do
-              :ok
+            case validate_field_lists(module) do
+              :ok -> validate_instructions(module)
+              error -> error
             end
           else
             {:error, "Missing required functions: #{inspect(missing_functions)}"}

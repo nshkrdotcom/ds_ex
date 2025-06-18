@@ -511,30 +511,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
     |> Enum.with_index()
     |> Task.async_stream(
       fn {candidate, idx} ->
-        scores =
-          batch
-          |> Enum.map(fn example ->
-            # Handle both Example structs and raw maps
-            inputs =
-              case example do
-                %DSPEx.Example{} -> Example.inputs(example)
-                %{inputs: inputs} -> inputs
-                _ -> %{}
-              end
-
-            case Program.forward(candidate, inputs) do
-              {:ok, outputs} ->
-                try do
-                  metric_fn.(example, outputs)
-                rescue
-                  _ -> 0.0
-                end
-
-              {:error, _} ->
-                0.0
-            end
-          end)
-
+        scores = evaluate_candidate_on_batch(candidate, batch, metric_fn)
         avg_score = if Enum.empty?(scores), do: 0.0, else: Enum.sum(scores) / length(scores)
         {idx, avg_score}
       end,
@@ -544,6 +521,36 @@ defmodule DSPEx.Teleprompter.SIMBA do
     |> Stream.filter(&match?({:ok, _}, &1))
     |> Stream.map(fn {:ok, result} -> result end)
     |> Enum.to_list()
+  end
+
+  defp evaluate_candidate_on_batch(candidate, batch, metric_fn) do
+    batch
+    |> Enum.map(fn example ->
+      inputs = extract_example_inputs(example)
+      evaluate_single_example(candidate, inputs, example, metric_fn)
+    end)
+  end
+
+  defp extract_example_inputs(example) do
+    case example do
+      %DSPEx.Example{} -> Example.inputs(example)
+      %{inputs: inputs} -> inputs
+      _ -> %{}
+    end
+  end
+
+  defp evaluate_single_example(candidate, inputs, example, metric_fn) do
+    case Program.forward(candidate, inputs) do
+      {:ok, outputs} ->
+        try do
+          metric_fn.(example, outputs)
+        rescue
+          _ -> 0.0
+        end
+
+      {:error, _} ->
+        0.0
+    end
   end
 
   # Select best candidate from evaluation results
@@ -754,19 +761,14 @@ defmodule DSPEx.Teleprompter.SIMBA do
       ) do
     # Try each strategy until one is applicable
     Enum.reduce_while(strategies, {:skip, "No applicable strategies"}, fn strategy, _acc ->
-      if strategy.applicable?(bucket, %{config: config}) do
-        case strategy.apply(bucket, source_program, %{
-               predictor2name: predictor2name,
-               name2predictor: name2predictor,
-               config: config
-             }) do
-          {:ok, new_program} -> {:halt, {:ok, new_program}}
-          {:skip, reason} -> {:cont, {:skip, reason}}
-          {:error, reason} -> {:cont, {:skip, "Strategy error: #{reason}"}}
-        end
-      else
-        {:cont, {:skip, "Strategy #{strategy} not applicable"}}
-      end
+      apply_strategy_fixed(
+        strategy,
+        bucket,
+        source_program,
+        predictor2name,
+        name2predictor,
+        config
+      )
     end)
   end
 
@@ -923,29 +925,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
             sample_size = min(50, length(trainset))
             sample = Enum.take_random(trainset, sample_size)
 
-            scores =
-              sample
-              |> Enum.map(fn example ->
-                # Handle both Example structs and raw maps
-                inputs =
-                  case example do
-                    %DSPEx.Example{} -> Example.inputs(example)
-                    %{inputs: inputs} -> inputs
-                    _ -> %{}
-                  end
-
-                case Program.forward(program, inputs) do
-                  {:ok, outputs} ->
-                    try do
-                      metric_fn.(example, outputs)
-                    rescue
-                      _ -> 0.0
-                    end
-
-                  {:error, _} ->
-                    0.0
-                end
-              end)
+            scores = evaluate_program_on_sample(program, sample, metric_fn)
 
             avg_score = if Enum.empty?(scores), do: 0.0, else: Enum.sum(scores) / length(scores)
             {program, avg_score}
@@ -967,6 +947,28 @@ defmodule DSPEx.Teleprompter.SIMBA do
   end
 
   # Helper functions
+
+  defp evaluate_program_on_sample(program, sample, metric_fn) do
+    sample
+    |> Enum.map(fn example ->
+      inputs = extract_example_inputs(example)
+      evaluate_program_forward(program, inputs, example, metric_fn)
+    end)
+  end
+
+  defp evaluate_program_forward(program, inputs, example, metric_fn) do
+    case Program.forward(program, inputs) do
+      {:ok, outputs} ->
+        try do
+          metric_fn.(example, outputs)
+        rescue
+          _ -> 0.0
+        end
+
+      {:error, _} ->
+        0.0
+    end
+  end
 
   defp validate_inputs(student, teacher, trainset, metric_fn) do
     cond do
@@ -1081,15 +1083,42 @@ defmodule DSPEx.Teleprompter.SIMBA do
 
     strategies
     |> Enum.reduce_while({:skip, "No strategies provided"}, fn strategy_module, _acc ->
-      if apply(strategy_module, :applicable?, [bucket, opts]) do
-        case apply(strategy_module, :apply, [bucket, source_program, opts]) do
-          {:ok, new_program} -> {:halt, {:ok, new_program}}
-          {:skip, reason} -> {:cont, {:skip, reason}}
-        end
-      else
-        {:cont, {:skip, "Strategy not applicable"}}
-      end
+      apply_strategy_if_applicable(strategy_module, bucket, source_program, opts)
     end)
+  end
+
+  defp apply_strategy_fixed(
+         strategy,
+         bucket,
+         source_program,
+         predictor2name,
+         name2predictor,
+         config
+       ) do
+    if strategy.applicable?(bucket, %{config: config}) do
+      case strategy.apply(bucket, source_program, %{
+             predictor2name: predictor2name,
+             name2predictor: name2predictor,
+             config: config
+           }) do
+        {:ok, new_program} -> {:halt, {:ok, new_program}}
+        {:skip, reason} -> {:cont, {:skip, reason}}
+        {:error, reason} -> {:cont, {:skip, "Strategy error: #{reason}"}}
+      end
+    else
+      {:cont, {:skip, "Strategy #{strategy} not applicable"}}
+    end
+  end
+
+  defp apply_strategy_if_applicable(strategy_module, bucket, source_program, opts) do
+    if strategy_module.applicable?(bucket, opts) do
+      case strategy_module.apply(bucket, source_program, opts) do
+        {:ok, new_program} -> {:halt, {:ok, new_program}}
+        {:skip, reason} -> {:cont, {:skip, reason}}
+      end
+    else
+      {:cont, {:skip, "Strategy not applicable"}}
+    end
   end
 
   # Test helper functions for TDD

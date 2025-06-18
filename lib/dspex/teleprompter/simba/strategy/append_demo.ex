@@ -63,37 +63,44 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy.AppendDemo do
   defp drop_random_demos(program, max_demos) do
     case program do
       %{demos: existing_demos} when is_list(existing_demos) and length(existing_demos) > 0 ->
-        num_demos = length(existing_demos)
-        max_demos_tmp = if max_demos > 0, do: max_demos, else: 3
-
-        lambda = num_demos / max_demos_tmp
-
-        num_demos_to_drop =
-          max(poisson_sample(lambda), if(num_demos >= max_demos_tmp, do: 1, else: 0))
-
-        num_demos_to_drop = min(num_demos_to_drop, num_demos)
-
-        if num_demos_to_drop > 0 do
-          demos_to_drop_indices =
-            0..(num_demos - 1)
-            |> Enum.to_list()
-            |> Enum.take_random(num_demos_to_drop)
-            |> MapSet.new()
-
-          remaining_demos =
-            existing_demos
-            |> Enum.with_index()
-            |> Enum.reject(fn {_demo, idx} -> MapSet.member?(demos_to_drop_indices, idx) end)
-            |> Enum.map(fn {demo, _idx} -> demo end)
-
-          %{program | demos: remaining_demos}
-        else
-          program
-        end
+        perform_demo_dropping(program, existing_demos, max_demos)
 
       _ ->
         program
     end
+  end
+
+  defp perform_demo_dropping(program, existing_demos, max_demos) do
+    num_demos = length(existing_demos)
+    max_demos_tmp = if max_demos > 0, do: max_demos, else: 3
+    lambda = num_demos / max_demos_tmp
+
+    num_demos_to_drop =
+      max(poisson_sample(lambda), if(num_demos >= max_demos_tmp, do: 1, else: 0))
+
+    num_demos_to_drop = min(num_demos_to_drop, num_demos)
+
+    if num_demos_to_drop > 0 do
+      drop_demos_by_indices(program, existing_demos, num_demos_to_drop, num_demos)
+    else
+      program
+    end
+  end
+
+  defp drop_demos_by_indices(program, existing_demos, num_demos_to_drop, num_demos) do
+    demos_to_drop_indices =
+      0..(num_demos - 1)
+      |> Enum.to_list()
+      |> Enum.take_random(num_demos_to_drop)
+      |> MapSet.new()
+
+    remaining_demos =
+      existing_demos
+      |> Enum.with_index()
+      |> Enum.reject(fn {_demo, idx} -> MapSet.member?(demos_to_drop_indices, idx) end)
+      |> Enum.map(fn {demo, _idx} -> demo end)
+
+    %{program | demos: remaining_demos}
   end
 
   defp poisson_sample(lambda) do

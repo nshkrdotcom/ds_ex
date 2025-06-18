@@ -189,26 +189,13 @@ defmodule DSPEx.Teleprompter.BEACON.Integration do
 
         refined_teleprompter = BEACON.new(Map.to_list(refined_config))
 
-        case BEACON.compile(refined_teleprompter, student, teacher, trainset, metric_fn, []) do
-          {:ok, final_result} ->
-            final_score = evaluate_program_quality(final_result, trainset, metric_fn)
-
-            IO.puts("   Stage 2 completed: Score #{Float.round(final_score, 3)}")
-
-            improvement = final_score - exploratory_score
-
-            if improvement > 0.05 do
-              IO.puts("✅ Adaptive optimization successful (+#{Float.round(improvement, 3)})")
-              {:ok, final_result}
-            else
-              IO.puts("🔄 Using exploratory result (refinement didn't improve significantly)")
-              {:ok, exploratory_result}
-            end
-
-          {:error, reason} ->
-            IO.puts("⚠️  Refinement failed, using exploratory result: #{inspect(reason)}")
-            {:ok, exploratory_result}
-        end
+        handle_refinement_result(
+          BEACON.compile(refined_teleprompter, student, teacher, trainset, metric_fn, []),
+          exploratory_result,
+          exploratory_score,
+          trainset,
+          metric_fn
+        )
 
       {:error, reason} ->
         IO.puts("❌ Exploratory optimization failed: #{inspect(reason)}")
@@ -516,5 +503,34 @@ defmodule DSPEx.Teleprompter.BEACON.Integration do
     IO.puts("🧹 Cleaning up monitoring for #{correlation_id}")
     # In a real implementation, you might clean up ETS tables, stop processes, etc.
     :ok
+  end
+
+  defp handle_refinement_result(
+         compilation_result,
+         exploratory_result,
+         exploratory_score,
+         trainset,
+         metric_fn
+       ) do
+    case compilation_result do
+      {:ok, final_result} ->
+        final_score = evaluate_program_quality(final_result, trainset, metric_fn)
+
+        IO.puts("   Stage 2 completed: Score #{Float.round(final_score, 3)}")
+
+        improvement = final_score - exploratory_score
+
+        if improvement > 0.05 do
+          IO.puts("✅ Adaptive optimization successful (+#{Float.round(improvement, 3)})")
+          {:ok, final_result}
+        else
+          IO.puts("🔄 Using exploratory result (refinement didn't improve significantly)")
+          {:ok, exploratory_result}
+        end
+
+      {:error, reason} ->
+        IO.puts("⚠️  Refinement failed, using exploratory result: #{inspect(reason)}")
+        {:ok, exploratory_result}
+    end
   end
 end

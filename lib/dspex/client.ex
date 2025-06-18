@@ -476,13 +476,7 @@ defmodule DSPEx.Client do
 
         multiple_messages ->
           # Multi-turn conversation - include roles
-          Enum.map(multiple_messages, fn message ->
-            case convert_gemini_role(message.role) do
-              "user" -> %{parts: [%{text: message.content}], role: "user"}
-              "model" -> %{parts: [%{text: message.content}], role: "model"}
-              _ -> %{parts: [%{text: message.content}]}
-            end
-          end)
+          Enum.map(multiple_messages, &convert_message_to_gemini_format/1)
       end
 
     body = %{
@@ -507,6 +501,14 @@ defmodule DSPEx.Client do
     }
 
     {:ok, body}
+  end
+
+  defp convert_message_to_gemini_format(message) do
+    case convert_gemini_role(message.role) do
+      "user" -> %{parts: [%{text: message.content}], role: "user"}
+      "model" -> %{parts: [%{text: message.content}], role: "model"}
+      _ -> %{parts: [%{text: message.content}]}
+    end
   end
 
   defp convert_gemini_role("user"), do: "user"

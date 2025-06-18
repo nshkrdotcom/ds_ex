@@ -252,22 +252,24 @@ defmodule DSPEx.Teleprompter.BEACON.Examples do
 
         IO.puts("\nTesting optimized classifier:")
 
-        Enum.each(test_cases, fn text ->
-          case DSPEx.Program.forward(optimized, %{text: text}) do
-            {:ok, result} ->
-              IO.puts("Text: \"#{text}\"")
-              IO.puts("Category: #{result.category}, Confidence: #{result.confidence}\n")
-
-            {:error, reason} ->
-              IO.puts("Classification error: #{inspect(reason)}")
-          end
-        end)
+        Enum.each(test_cases, &test_classification(&1, optimized))
 
       {:error, reason} ->
         IO.puts("✗ Classification optimization failed: #{inspect(reason)}")
     end
 
     IO.puts(String.duplicate("=", 60) <> "\n")
+  end
+
+  defp test_classification(text, optimized_program) do
+    case DSPEx.Program.forward(optimized_program, %{text: text}) do
+      {:ok, result} ->
+        IO.puts("Text: \"#{text}\"")
+        IO.puts("Category: #{result.category}, Confidence: #{result.confidence}\n")
+
+      {:error, reason} ->
+        IO.puts("Classification error: #{inspect(reason)}")
+    end
   end
 
   @doc """

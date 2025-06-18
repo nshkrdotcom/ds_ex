@@ -363,25 +363,29 @@ defmodule DSPEx.Teleprompter.BEACON.ContinuousOptimizer do
              optimization_opts
            ) do
         {:ok, optimized_program} ->
-          # Validate improvement
-          case Integration.validate_optimization_result(
-                 state.program,
-                 optimized_program,
-                 state.trainset,
-                 state.metric_fn
-               ) do
-            {:ok, metrics} ->
-              {:ok, optimized_program, metrics}
-
-            {:error, reason} ->
-              # If no improvement, return original program
-              IO.puts("⚠️  No significant improvement detected: #{inspect(reason)}")
-              {:ok, state.program, %{improvement_percentage: 0.0}}
-          end
+          validate_and_return_optimization_result(state, optimized_program)
 
         {:error, reason} ->
           {:error, reason}
       end
+    end
+  end
+
+  defp validate_and_return_optimization_result(state, optimized_program) do
+    # Validate improvement
+    case Integration.validate_optimization_result(
+           state.program,
+           optimized_program,
+           state.trainset,
+           state.metric_fn
+         ) do
+      {:ok, metrics} ->
+        {:ok, optimized_program, metrics}
+
+      {:error, reason} ->
+        # If no improvement, return original program
+        IO.puts("⚠️  No significant improvement detected: #{inspect(reason)}")
+        {:ok, state.program, %{improvement_percentage: 0.0}}
     end
   end
 

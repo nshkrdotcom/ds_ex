@@ -129,28 +129,40 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy do
   def apply_first_applicable(strategies, bucket, source_program, opts \\ %{}) do
     strategies
     |> Enum.reduce_while({:skip, "No strategies provided"}, fn strategy_module, _acc ->
-      cond do
-        not implements_strategy?(strategy_module) ->
-          {:cont, {:skip, "#{strategy_module} does not implement Strategy behavior"}}
-
-        function_exported?(strategy_module, :applicable?, 2) ->
-          if strategy_module.applicable?(bucket, opts) do
-            case strategy_module.apply(bucket, source_program, opts) do
-              {:ok, new_program} -> {:halt, {:ok, new_program}}
-              {:skip, reason} -> {:cont, {:skip, reason}}
-            end
-          else
-            {:cont, {:skip, "Strategy #{strategy_module} not applicable"}}
-          end
-
-        true ->
-          # Strategy doesn't implement applicable?/2, so always try to apply
-          case strategy_module.apply(bucket, source_program, opts) do
-            {:ok, new_program} -> {:halt, {:ok, new_program}}
-            {:skip, reason} -> {:cont, {:skip, reason}}
-          end
-      end
+      try_apply_strategy(strategy_module, bucket, source_program, opts)
     end)
+  end
+
+  defp try_apply_strategy(strategy_module, bucket, source_program, opts) do
+    cond do
+      not implements_strategy?(strategy_module) ->
+        {:cont, {:skip, "#{strategy_module} does not implement Strategy behavior"}}
+
+      function_exported?(strategy_module, :applicable?, 2) ->
+        try_apply_with_applicability_check(strategy_module, bucket, source_program, opts)
+
+      true ->
+        try_apply_without_applicability_check(strategy_module, bucket, source_program, opts)
+    end
+  end
+
+  defp try_apply_with_applicability_check(strategy_module, bucket, source_program, opts) do
+    if strategy_module.applicable?(bucket, opts) do
+      apply_strategy_and_handle_result(strategy_module, bucket, source_program, opts)
+    else
+      {:cont, {:skip, "Strategy #{strategy_module} not applicable"}}
+    end
+  end
+
+  defp try_apply_without_applicability_check(strategy_module, bucket, source_program, opts) do
+    apply_strategy_and_handle_result(strategy_module, bucket, source_program, opts)
+  end
+
+  defp apply_strategy_and_handle_result(strategy_module, bucket, source_program, opts) do
+    case strategy_module.apply(bucket, source_program, opts) do
+      {:ok, new_program} -> {:halt, {:ok, new_program}}
+      {:skip, reason} -> {:cont, {:skip, reason}}
+    end
   end
 
   @doc """

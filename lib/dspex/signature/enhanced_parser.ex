@@ -699,16 +699,20 @@ defmodule DSPEx.Signature.EnhancedParser do
 
       # Number
       true ->
-        case Integer.parse(item_str) do
-          {int_value, ""} ->
-            int_value
+        parse_numeric_choice_item(item_str)
+    end
+  end
 
-          _ ->
-            case Float.parse(item_str) do
-              {float_value, ""} -> float_value
-              # Keep as unquoted string
-              _ -> item_str
-            end
+  defp parse_numeric_choice_item(item_str) do
+    case Integer.parse(item_str) do
+      {int_value, ""} ->
+        int_value
+
+      _ ->
+        case Float.parse(item_str) do
+          {float_value, ""} -> float_value
+          # Keep as unquoted string
+          _ -> item_str
         end
     end
   end
@@ -717,37 +721,45 @@ defmodule DSPEx.Signature.EnhancedParser do
   @spec parse_default_value(String.t()) :: term()
   defp parse_default_value(value_str) do
     cond do
-      # Quoted string
-      String.starts_with?(value_str, "'") and String.ends_with?(value_str, "'") ->
-        String.slice(value_str, 1..-2//1)
+      quoted_string?(value_str) -> extract_quoted_string(value_str)
+      boolean_string?(value_str) -> parse_boolean_string(value_str)
+      null_string?(value_str) -> nil
+      true -> parse_numeric_or_string(value_str)
+    end
+  end
 
-      String.starts_with?(value_str, "\"") and String.ends_with?(value_str, "\"") ->
-        String.slice(value_str, 1..-2//1)
+  defp quoted_string?(value_str) do
+    (String.starts_with?(value_str, "'") and String.ends_with?(value_str, "'")) or
+      (String.starts_with?(value_str, "\"") and String.ends_with?(value_str, "\""))
+  end
 
-      # Boolean
-      String.downcase(value_str) == "true" ->
-        true
+  defp extract_quoted_string(value_str) do
+    String.slice(value_str, 1..-2//1)
+  end
 
-      String.downcase(value_str) == "false" ->
-        false
+  defp boolean_string?(value_str) do
+    String.downcase(value_str) in ["true", "false"]
+  end
 
-      # Null/nil
-      String.downcase(value_str) in ["null", "nil"] ->
-        nil
+  defp parse_boolean_string(value_str) do
+    String.downcase(value_str) == "true"
+  end
 
-      # Number
-      true ->
-        case Integer.parse(value_str) do
-          {int_value, ""} ->
-            int_value
+  defp null_string?(value_str) do
+    String.downcase(value_str) in ["null", "nil"]
+  end
 
-          _ ->
-            case Float.parse(value_str) do
-              {float_value, ""} -> float_value
-              # Keep as string
-              _ -> value_str
-            end
-        end
+  defp parse_numeric_or_string(value_str) do
+    case Integer.parse(value_str) do
+      {int_value, ""} -> int_value
+      _ -> parse_float_or_string(value_str)
+    end
+  end
+
+  defp parse_float_or_string(value_str) do
+    case Float.parse(value_str) do
+      {float_value, ""} -> float_value
+      _ -> value_str
     end
   end
 
