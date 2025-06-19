@@ -14,5 +14,9 @@
   {"lib/dspex/config/schemas/prediction_configuration.ex", :pattern_match},
   {"lib/dspex/config/schemas/provider_configuration.ex", :pattern_match},
   {"lib/dspex/config/schemas/telemetry_configuration.ex", :pattern_match},
-  {"lib/dspex/config/schemas/teleprompter_configuration.ex", :pattern_match}
+  {"lib/dspex/config/schemas/teleprompter_configuration.ex", :pattern_match},
+  # Ignore Sinter integration warnings during development
+  {"lib/dspex/config/sinter_schemas.ex", :call},
+  {"lib/dspex/config/sinter_schemas.ex", :unused_fun},
+  {"lib/dspex/config/sinter_schemas.ex", :pattern_match}
 ]

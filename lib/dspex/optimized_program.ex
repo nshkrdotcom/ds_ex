@@ -116,14 +116,7 @@ defmodule DSPEx.OptimizedProgram do
 
       # Program doesn't have native demo/instruction support
       _ ->
-        # Pass demos and instruction in options
-        enhanced_opts =
-          opts
-          |> Keyword.put(:demos, demos)
-          |> then(fn opts ->
-            if instruction, do: Keyword.put(opts, :instruction, instruction), else: opts
-          end)
-
+        enhanced_opts = build_enhanced_options(opts, demos, instruction)
         DSPEx.Program.forward(program, inputs, enhanced_opts)
     end
   end
@@ -437,4 +430,14 @@ defmodule DSPEx.OptimizedProgram do
       end
     end)
   end
+
+  # Extract the options building logic to reduce nesting
+  defp build_enhanced_options(opts, demos, instruction) do
+    opts
+    |> Keyword.put(:demos, demos)
+    |> maybe_add_instruction(instruction)
+  end
+
+  defp maybe_add_instruction(opts, nil), do: opts
+  defp maybe_add_instruction(opts, instruction), do: Keyword.put(opts, :instruction, instruction)
 end
