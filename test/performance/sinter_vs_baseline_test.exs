@@ -24,7 +24,8 @@ defmodule DSPEx.Performance.SinterVsBaselineTest do
 
       # Sinter schema validation
       defmodule SinterBenchmarkSchema do
-        use DSPEx.Signature, "name:string[min_length=2,max_length=50], email:string, age:integer[gteq=18,lteq=100], tags:any, score:float[gteq=0.0,lteq=1.0] -> status:string, result:string"
+        use DSPEx.Signature,
+            "name:string[min_length=2,max_length=50], email:string, age:integer[gteq=18,lteq=100], tags:any, score:float[gteq=0.0,lteq=1.0] -> status:string, result:string"
       end
 
       # Manual validation function (baseline)
@@ -48,7 +49,10 @@ defmodule DSPEx.Performance.SinterVsBaselineTest do
 
       # Warmup both approaches
       for _i <- 1..100 do
-        DSPEx.Signature.Sinter.validate_with_sinter(SinterBenchmarkSchema, test_data, field_type: :inputs)
+        DSPEx.Signature.Sinter.validate_with_sinter(SinterBenchmarkSchema, test_data,
+          field_type: :inputs
+        )
+
         manual_validate.(test_data)
       end
 
@@ -56,7 +60,9 @@ defmodule DSPEx.Performance.SinterVsBaselineTest do
       sinter_start = System.monotonic_time()
 
       for _i <- 1..1000 do
-        DSPEx.Signature.Sinter.validate_with_sinter(SinterBenchmarkSchema, test_data, field_type: :inputs)
+        DSPEx.Signature.Sinter.validate_with_sinter(SinterBenchmarkSchema, test_data,
+          field_type: :inputs
+        )
       end
 
       sinter_duration = System.monotonic_time() - sinter_start
@@ -100,7 +106,8 @@ defmodule DSPEx.Performance.SinterVsBaselineTest do
           module_def =
             quote do
               defmodule unquote(module_name) do
-                use DSPEx.Signature, "field1:string[min_length=1,max_length=50], field2:integer[gteq=0,lteq=1000] -> result:string"
+                use DSPEx.Signature,
+                    "field1:string[min_length=1,max_length=50], field2:integer[gteq=0,lteq=1000] -> result:string"
               end
             end
 
@@ -165,7 +172,8 @@ defmodule DSPEx.Performance.SinterVsBaselineTest do
     test "compares JSON schema generation performance" do
       # Sinter JSON schema generation via DSPEx signature
       defmodule SinterJsonSchema do
-        use DSPEx.Signature, "name:string, age:integer, tags:any, active:boolean, description:string -> result:string"
+        use DSPEx.Signature,
+            "name:string, age:integer, tags:any, active:boolean, description:string -> result:string"
       end
 
       # Manual JSON schema generation (baseline)
@@ -232,7 +240,8 @@ defmodule DSPEx.Performance.SinterVsBaselineTest do
     test "evaluates constraint expressiveness compared to manual validation" do
       # Test complex constraints that would be difficult to implement manually
       defmodule ComplexConstraintSchema do
-        use DSPEx.Signature, "email:string[min_length=5,max_length=100], tags:any, score:float[gteq=0.0,lteq=1.0] -> category:string, result:string"
+        use DSPEx.Signature,
+            "email:string[min_length=5,max_length=100], tags:any, score:float[gteq=0.0,lteq=1.0] -> category:string, result:string"
       end
 
       test_data = %{
@@ -243,7 +252,11 @@ defmodule DSPEx.Performance.SinterVsBaselineTest do
       }
 
       # Test valid data
-      {:ok, validated} = DSPEx.Signature.Sinter.validate_with_sinter(ComplexConstraintSchema, test_data, field_type: :inputs)
+      {:ok, validated} =
+        DSPEx.Signature.Sinter.validate_with_sinter(ComplexConstraintSchema, test_data,
+          field_type: :inputs
+        )
+
       assert validated.email == "user@example.com"
       assert length(validated.tags) == 2
 
@@ -258,7 +271,11 @@ defmodule DSPEx.Performance.SinterVsBaselineTest do
         category: "test"
       }
 
-      {:error, errors} = DSPEx.Signature.Sinter.validate_with_sinter(ComplexConstraintSchema, invalid_data, field_type: :inputs)
+      {:error, errors} =
+        DSPEx.Signature.Sinter.validate_with_sinter(ComplexConstraintSchema, invalid_data,
+          field_type: :inputs
+        )
+
       error_list = if is_list(errors), do: errors, else: [errors]
 
       # Should have at least one validation error (multiple would be ideal)
@@ -270,7 +287,8 @@ defmodule DSPEx.Performance.SinterVsBaselineTest do
 
     test "evaluates nested schema support for complex DSPEx signatures" do
       defmodule AddressSchema do
-        use DSPEx.Signature, "street:string[min_length=5,max_length=100], city:string[min_length=2,max_length=50], postal_code:string -> valid:boolean"
+        use DSPEx.Signature,
+            "street:string[min_length=5,max_length=100], city:string[min_length=2,max_length=50], postal_code:string -> valid:boolean"
       end
 
       defmodule PersonSchema do
@@ -281,7 +299,9 @@ defmodule DSPEx.Performance.SinterVsBaselineTest do
         name: "John Doe"
       }
 
-      {:ok, validated} = DSPEx.Signature.Sinter.validate_with_sinter(PersonSchema, test_data, field_type: :inputs)
+      {:ok, validated} =
+        DSPEx.Signature.Sinter.validate_with_sinter(PersonSchema, test_data, field_type: :inputs)
+
       assert validated.name == "John Doe"
 
       # This level of nested validation would be very complex to implement manually
@@ -307,7 +327,10 @@ defmodule DSPEx.Performance.SinterVsBaselineTest do
 
           # Test the schema works
           test_data = %{query: "test"}
-          DSPEx.Signature.Sinter.validate_with_sinter(QuickSinterSignature, test_data, field_type: :inputs)
+
+          DSPEx.Signature.Sinter.validate_with_sinter(QuickSinterSignature, test_data,
+            field_type: :inputs
+          )
         end)
 
       # Time to implement manually (simulated)
