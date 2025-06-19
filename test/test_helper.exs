@@ -18,6 +18,7 @@ Application.ensure_all_started(:propcheck)
 # Test configuration
 ExUnit.configure(
   exclude: [
+    :slow,
     :group_1,
     :group_2,
     :live_api,
