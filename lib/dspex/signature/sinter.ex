@@ -227,33 +227,43 @@ defmodule DSPEx.Signature.Sinter do
         []
       end
 
-    # Convert to unified field definition format
-    all_fields = input_fields ++ output_fields
-    field_map = Enum.into(enhanced_fields, %{}, fn field -> {field.name, field} end)
+    # Check if we have enhanced signature parsing available
+    if function_exported?(signature, :__signature_string__, 0) and
+         DSPEx.Signature.EnhancedParser.enhanced_signature?(signature.__signature_string__()) do
+      # Use enhanced parser for better constraint handling
+      {parsed_inputs, parsed_outputs} =
+        DSPEx.Signature.EnhancedParser.parse(signature.__signature_string__())
 
-    Enum.map(all_fields, fn field_name ->
-      case Map.get(field_map, field_name) do
-        nil ->
-          # Basic field without constraints
-          %{
-            name: field_name,
-            type: :string,
-            constraints: %{},
-            required: field_name in input_fields,
-            default: nil
-          }
+      parsed_inputs ++ parsed_outputs
+    else
+      # Fallback to manual field definition mapping
+      all_fields = input_fields ++ output_fields
+      field_map = Enum.into(enhanced_fields, %{}, fn field -> {field.name, field} end)
 
-        enhanced_field ->
-          # Enhanced field with constraints
-          %{
-            name: enhanced_field.name,
-            type: enhanced_field.type || :string,
-            constraints: enhanced_field.constraints || %{},
-            required: field_name in input_fields,
-            default: Map.get(enhanced_field, :default)
-          }
-      end
-    end)
+      Enum.map(all_fields, fn field_name ->
+        case Map.get(field_map, field_name) do
+          nil ->
+            # Basic field without constraints
+            %{
+              name: field_name,
+              type: :string,
+              constraints: %{},
+              required: field_name in input_fields,
+              default: nil
+            }
+
+          enhanced_field ->
+            # Enhanced field with constraints
+            %{
+              name: enhanced_field.name,
+              type: enhanced_field.type || :string,
+              constraints: enhanced_field.constraints || %{},
+              required: field_name in input_fields,
+              default: Map.get(enhanced_field, :default)
+            }
+        end
+      end)
+    end
   end
 
   defp generate_sinter_schema(signature, field_definitions) do

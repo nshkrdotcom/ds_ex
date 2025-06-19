@@ -32,7 +32,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy do
 
   """
 
-  alias DSPEx.Teleprompter.SIMBA.Bucket
+  alias DSPEx.Teleprompter.SIMBA.{Bucket, SinterSchemas}
 
   @doc """
   Apply the strategy to a bucket to create a new program variant.
@@ -125,10 +125,16 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy do
   @spec apply_first_applicable([module()], Bucket.t(), struct(), map()) ::
           {:ok, struct()} | {:skip, String.t()}
   def apply_first_applicable(strategies, bucket, source_program, opts \\ %{}) do
-    strategies
-    |> Enum.reduce_while({:skip, "No strategies provided"}, fn strategy_module, _acc ->
-      try_apply_strategy(strategy_module, bucket, source_program, opts)
-    end)
+    # Validate bucket data before applying strategies
+    with :ok <- validate_bucket_for_strategy_application(bucket),
+         :ok <- validate_strategy_configuration(opts) do
+      strategies
+      |> Enum.reduce_while({:skip, "No strategies provided"}, fn strategy_module, _acc ->
+        try_apply_strategy(strategy_module, bucket, source_program, opts)
+      end)
+    else
+      {:error, reason} -> {:skip, "Validation failed: #{reason}"}
+    end
   end
 
   defp try_apply_strategy(strategy_module, bucket, source_program, opts) do
@@ -217,5 +223,60 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy do
     end
   rescue
     _ -> "No description available"
+  end
+
+  # Sinter validation functions for strategy application
+
+  defp validate_bucket_for_strategy_application(bucket) do
+    # Convert bucket to format expected by Sinter schema
+    bucket_data = %{
+      trajectories:
+        Enum.map(bucket.trajectories, fn trajectory ->
+          %{score: trajectory.score, success: trajectory.success}
+        end),
+      max_score: bucket.max_score || 0.0,
+      min_score: bucket.min_score || 0.0,
+      avg_score: bucket.avg_score || 0.0,
+      max_to_min_gap: bucket.max_to_min_gap || 0.0,
+      max_to_avg_gap: bucket.max_to_avg_gap || 0.0,
+      metadata: bucket.metadata || %{}
+    }
+
+    case SinterSchemas.validate_bucket(bucket_data) do
+      {:ok, _validated} ->
+        :ok
+
+      {:error, errors} ->
+        {:error, "Bucket validation failed: #{format_validation_errors(errors)}"}
+    end
+  end
+
+  defp validate_strategy_configuration(opts) when is_map(opts) do
+    # Create a minimal strategy config for validation
+    strategy_config =
+      Map.merge(
+        %{
+          strategy_name: "strategy_validation",
+          enabled: true
+        },
+        opts
+      )
+
+    case SinterSchemas.validate_strategy_config(strategy_config) do
+      {:ok, _validated} ->
+        :ok
+
+      {:error, errors} ->
+        {:error, "Strategy configuration validation failed: #{format_validation_errors(errors)}"}
+    end
+  end
+
+  defp validate_strategy_configuration(_opts), do: :ok
+
+  defp format_validation_errors(errors) when is_list(errors) do
+    Enum.map(errors, fn error ->
+      "#{Enum.join(error.path, ".")}: #{error.message}"
+    end)
+    |> Enum.join(", ")
   end
 end

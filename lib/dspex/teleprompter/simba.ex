@@ -24,7 +24,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
   @behaviour DSPEx.Teleprompter
 
   alias DSPEx.{Example, Program}
-  alias DSPEx.Teleprompter.SIMBA.{Bucket, Trajectory}
+  alias DSPEx.Teleprompter.SIMBA.{Bucket, Trajectory, SinterSchemas}
 
   @enforce_keys []
   defstruct bsize: 32,
@@ -367,17 +367,46 @@ defmodule DSPEx.Teleprompter.SIMBA do
          model_config,
          exec_id
        ) do
-    %Trajectory{
-      program: program,
-      example: example,
+    trajectory_data = %{
       inputs: inputs,
       outputs: outputs,
       score: score,
+      success: true,
       duration: System.monotonic_time() - start_time,
       model_config: model_config,
-      success: true,
       metadata: %{exec_id: exec_id}
     }
+
+    # Validate trajectory data with Sinter before creating struct
+    case SinterSchemas.validate_trajectory(trajectory_data) do
+      {:ok, validated_data} ->
+        %Trajectory{
+          program: program,
+          example: example,
+          inputs: validated_data.inputs,
+          outputs: validated_data.outputs,
+          score: validated_data.score,
+          duration: validated_data.duration,
+          model_config: validated_data.model_config,
+          success: validated_data.success,
+          metadata: validated_data.metadata
+        }
+
+      {:error, _errors} ->
+        # Fallback to original trajectory on validation failure
+        # This ensures backward compatibility during transition
+        %Trajectory{
+          program: program,
+          example: example,
+          inputs: inputs,
+          outputs: outputs,
+          score: score,
+          duration: System.monotonic_time() - start_time,
+          model_config: model_config,
+          success: true,
+          metadata: %{exec_id: exec_id, validation_failed: true}
+        }
+    end
   end
 
   defp build_simple_error_trajectory(
@@ -389,18 +418,49 @@ defmodule DSPEx.Teleprompter.SIMBA do
          model_config,
          exec_id
        ) do
-    %Trajectory{
-      program: program,
-      example: example,
+    trajectory_data = %{
       inputs: inputs,
       outputs: %{},
       score: 0.0,
+      success: false,
       duration: System.monotonic_time() - start_time,
       model_config: model_config,
-      success: false,
-      error: reason,
+      error: to_string(reason),
       metadata: %{exec_id: exec_id}
     }
+
+    # Validate error trajectory data with Sinter
+    case SinterSchemas.validate_trajectory(trajectory_data) do
+      {:ok, validated_data} ->
+        %Trajectory{
+          program: program,
+          example: example,
+          inputs: validated_data.inputs,
+          outputs: validated_data.outputs,
+          score: validated_data.score,
+          duration: validated_data.duration,
+          model_config: validated_data.model_config,
+          success: validated_data.success,
+          # Keep original error term
+          error: reason,
+          metadata: validated_data.metadata
+        }
+
+      {:error, _errors} ->
+        # Fallback to original trajectory on validation failure
+        %Trajectory{
+          program: program,
+          example: example,
+          inputs: inputs,
+          outputs: %{},
+          score: 0.0,
+          duration: System.monotonic_time() - start_time,
+          model_config: model_config,
+          success: false,
+          error: reason,
+          metadata: %{exec_id: exec_id, validation_failed: true}
+        }
+    end
   end
 
   defp build_simple_exception_trajectory(
@@ -1085,8 +1145,52 @@ defmodule DSPEx.Teleprompter.SIMBA do
         {:error, :invalid_metric_function}
 
       true ->
-        :ok
+        # Enhanced validation: check training data format with Sinter
+        validate_training_data(trainset)
     end
+  end
+
+  defp validate_training_data(trainset) do
+    # Convert examples to maps for Sinter validation
+    training_data =
+      Enum.map(trainset, fn example ->
+        # Handle both Example structs and raw maps
+        {inputs, outputs} =
+          case example do
+            %Example{} = ex ->
+              {Example.inputs(ex), Example.outputs(ex)}
+
+            %{inputs: inputs, outputs: outputs} ->
+              {inputs, outputs}
+
+            map when is_map(map) ->
+              # For invalid data that doesn't match expected structure
+              {%{}, %{}}
+          end
+
+        %{
+          inputs: inputs || %{},
+          outputs: outputs || %{},
+          metadata: %{
+            source: "training_set",
+            validated: true
+          }
+        }
+      end)
+
+    case SinterSchemas.validate_training_examples(training_data) do
+      {:ok, _validated} ->
+        :ok
+
+      {:error, errors} ->
+        {:error, {:invalid_training_data, format_validation_errors(errors)}}
+    end
+  end
+
+  defp format_validation_errors(errors) when is_list(errors) do
+    Enum.map(errors, fn error ->
+      "#{Enum.join(error.path, ".")}: #{error.message}"
+    end)
   end
 
   defp generate_correlation_id do

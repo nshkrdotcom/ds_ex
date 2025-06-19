@@ -1,6 +1,6 @@
 defmodule DSPEx.Signature.EnhancedParser do
   @moduledoc """
-  Enhanced parser for DSPEx signatures that supports Elixact-style field definitions with constraints.
+  Enhanced parser for DSPEx signatures that supports Sinter-compatible field definitions with constraints.
 
   This parser extends the basic signature format to support advanced field definitions including:
   - Type specifications
@@ -159,6 +159,69 @@ defmodule DSPEx.Signature.EnhancedParser do
 
     has_types or has_constraints
   end
+
+  @doc """
+  Converts enhanced field definitions to Sinter-compatible format.
+
+  Takes the output from parse/1 and converts it to the format expected
+  by Sinter for schema definition.
+
+  ## Parameters
+  - `enhanced_signature` - Result from parse/1
+
+  ## Returns
+  - A list of Sinter field tuples: `{name, type, constraints}`
+
+  ## Examples
+
+      iex> enhanced = DSPEx.Signature.EnhancedParser.parse("name:string[min_length=2] -> greeting:string")
+      iex> sinter_fields = DSPEx.Signature.EnhancedParser.to_sinter_format(enhanced)
+      iex> {name, type, constraints} = hd(sinter_fields)
+      iex> {name, type, Keyword.get(constraints, :required), Keyword.get(constraints, :min_length)}
+      {:name, :string, true, 2}
+  """
+  @spec to_sinter_format(enhanced_parsed_signature()) :: [tuple()]
+  def to_sinter_format({input_fields, output_fields}) do
+    all_fields = input_fields ++ output_fields
+
+    Enum.map(all_fields, fn field ->
+      {field.name, field.type, build_sinter_constraints(field)}
+    end)
+  end
+
+  # Private helper to build Sinter constraint list from enhanced field
+  defp build_sinter_constraints(field) do
+    base_constraints = if field.required, do: [required: true], else: [optional: true]
+
+    constraint_list =
+      field.constraints
+      |> Enum.reduce(base_constraints, fn {key, value}, acc ->
+        case map_constraint_to_sinter(key, value) do
+          {sinter_key, sinter_value} -> Keyword.put(acc, sinter_key, sinter_value)
+          nil -> acc
+        end
+      end)
+
+    # Add default if present  
+    if field.default do
+      Keyword.put(constraint_list, :default, field.default)
+    else
+      constraint_list
+    end
+  end
+
+  # Map DSPEx constraint names to Sinter constraint names
+  defp map_constraint_to_sinter(:min_length, value), do: {:min_length, value}
+  defp map_constraint_to_sinter(:max_length, value), do: {:max_length, value}
+  defp map_constraint_to_sinter(:min_items, value), do: {:min_items, value}
+  defp map_constraint_to_sinter(:max_items, value), do: {:max_items, value}
+  defp map_constraint_to_sinter(:gteq, value), do: {:gteq, value}
+  defp map_constraint_to_sinter(:lteq, value), do: {:lteq, value}
+  defp map_constraint_to_sinter(:gt, value), do: {:gt, value}
+  defp map_constraint_to_sinter(:lt, value), do: {:lt, value}
+  defp map_constraint_to_sinter(:format, value), do: {:format, value}
+  defp map_constraint_to_sinter(:choices, value), do: {:choices, value}
+  defp map_constraint_to_sinter(_key, _value), do: nil
 
   # Private implementation
 
