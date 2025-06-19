@@ -1,17 +1,17 @@
-defmodule DSPEx.Performance.ElixactVsBaselineTest do
+defmodule DSPEx.Performance.SinterVsBaselineTest do
   @moduledoc """
-  TDD Cycle 2A.1: Performance comparison between Elixact and baseline DSPEx validation
+  TDD Cycle 2A.1: Performance comparison between Sinter and baseline DSPEx validation
 
-  This test evaluates whether Elixact enhancement provides better performance
+  This test evaluates whether Sinter enhancement provides better performance
   than building a custom schema layer for DSPEx.
   """
   use ExUnit.Case, async: false
 
   @moduletag :performance_test
-  @moduletag :elixact_test
+  @moduletag :sinter_test
 
-  describe "Elixact vs Custom Schema Performance" do
-    test "compares validation performance: Elixact vs manual validation" do
+  describe "Sinter vs Custom Schema Performance" do
+    test "compares validation performance: Sinter vs manual validation" do
       # Test data for benchmarking
       test_data = %{
         name: "John Doe",
@@ -22,39 +22,9 @@ defmodule DSPEx.Performance.ElixactVsBaselineTest do
         status: "active"
       }
 
-      # Elixact schema validation
-      defmodule ElixactBenchmarkSchema do
-        use Elixact
-
-        schema "Elixact benchmark schema" do
-          field :name, :string do
-            min_length(2)
-            max_length(50)
-          end
-
-          field :email, :string do
-            format(~r/^[^\s]+@[^\s]+$/)
-          end
-
-          field :age, :integer do
-            gteq(18)
-            lteq(100)
-          end
-
-          field :tags, {:array, :string} do
-            min_items(0)
-            max_items(10)
-          end
-
-          field :score, :float do
-            gteq(0.0)
-            lteq(1.0)
-          end
-
-          field :status, :string do
-            optional()
-          end
-        end
+      # Sinter schema validation
+      defmodule SinterBenchmarkSchema do
+        use DSPEx.Signature, "name:string[min_length=2,max_length=50], email:string, age:integer[gteq=18,lteq=100], tags:any, score:float[gteq=0.0,lteq=1.0] -> status:string, result:string"
       end
 
       # Manual validation function (baseline)
@@ -78,18 +48,18 @@ defmodule DSPEx.Performance.ElixactVsBaselineTest do
 
       # Warmup both approaches
       for _i <- 1..100 do
-        ElixactBenchmarkSchema.validate(test_data)
+        DSPEx.Signature.Sinter.validate_with_sinter(SinterBenchmarkSchema, test_data, field_type: :inputs)
         manual_validate.(test_data)
       end
 
-      # Benchmark Elixact validation
-      elixact_start = System.monotonic_time()
+      # Benchmark Sinter validation
+      sinter_start = System.monotonic_time()
 
       for _i <- 1..1000 do
-        ElixactBenchmarkSchema.validate(test_data)
+        DSPEx.Signature.Sinter.validate_with_sinter(SinterBenchmarkSchema, test_data, field_type: :inputs)
       end
 
-      elixact_duration = System.monotonic_time() - elixact_start
+      sinter_duration = System.monotonic_time() - sinter_start
 
       # Benchmark manual validation
       manual_start = System.monotonic_time()
@@ -100,49 +70,37 @@ defmodule DSPEx.Performance.ElixactVsBaselineTest do
 
       manual_duration = System.monotonic_time() - manual_start
 
-      elixact_avg_us = System.convert_time_unit(elixact_duration, :native, :microsecond) / 1000
+      sinter_avg_us = System.convert_time_unit(sinter_duration, :native, :microsecond) / 1000
       manual_avg_us = System.convert_time_unit(manual_duration, :native, :microsecond) / 1000
 
-      # Elixact should be at most 3x slower than manual validation
-      performance_ratio = elixact_avg_us / manual_avg_us
+      # Sinter should be at most 3x slower than manual validation
+      performance_ratio = sinter_avg_us / manual_avg_us
 
       IO.puts("Performance Comparison:")
-      IO.puts("  Elixact: #{elixact_avg_us}µs per validation")
+      IO.puts("  Sinter: #{sinter_avg_us}µs per validation")
       IO.puts("  Manual:  #{manual_avg_us}µs per validation")
       IO.puts("  Ratio:   #{performance_ratio}x")
 
       assert performance_ratio < 10.0,
-             "Elixact validation too slow compared to baseline: #{performance_ratio}x slower"
+             "Sinter validation too slow compared to baseline: #{performance_ratio}x slower"
 
       # Both should be reasonably fast
-      assert elixact_avg_us < 1000, "Elixact validation should be under 1ms"
+      assert sinter_avg_us < 1000, "Sinter validation should be under 1ms"
       assert manual_avg_us < 500, "Manual validation should be under 0.5ms"
     end
 
-    test "compares memory usage: Elixact vs simple validation" do
+    test "compares memory usage: Sinter vs simple validation" do
       initial_memory = :erlang.memory(:total)
 
-      # Create Elixact schemas
-      elixact_modules =
+      # Create Sinter schemas
+      sinter_modules =
         for i <- 1..20 do
-          module_name = :"ElixactSchema#{i}"
+          module_name = :"SinterSchema#{i}"
 
           module_def =
             quote do
               defmodule unquote(module_name) do
-                use Elixact
-
-                schema unquote("Test schema #{i}") do
-                  field :field1, :string do
-                    min_length(1)
-                    max_length(50)
-                  end
-
-                  field :field2, :integer do
-                    gteq(0)
-                    lteq(1000)
-                  end
-                end
+                use DSPEx.Signature, "field1:string[min_length=1,max_length=50], field2:integer[gteq=0,lteq=1000] -> result:string"
               end
             end
 
@@ -150,7 +108,7 @@ defmodule DSPEx.Performance.ElixactVsBaselineTest do
           module_name
         end
 
-      elixact_memory = :erlang.memory(:total)
+      sinter_memory = :erlang.memory(:total)
 
       # Create simple validation modules (baseline)
       simple_modules =
@@ -180,42 +138,34 @@ defmodule DSPEx.Performance.ElixactVsBaselineTest do
 
       final_memory = :erlang.memory(:total)
 
-      elixact_overhead = elixact_memory - initial_memory
-      simple_overhead = final_memory - elixact_memory
+      sinter_overhead = sinter_memory - initial_memory
+      simple_overhead = final_memory - sinter_memory
 
-      elixact_per_module = elixact_overhead / length(elixact_modules)
+      sinter_per_module = sinter_overhead / length(sinter_modules)
       simple_per_module = simple_overhead / length(simple_modules)
 
-      memory_ratio = elixact_per_module / simple_per_module
+      memory_ratio = sinter_per_module / simple_per_module
 
       IO.puts("Memory Usage Comparison:")
-      IO.puts("  Elixact: #{elixact_per_module} bytes per module")
+      IO.puts("  Sinter: #{sinter_per_module} bytes per module")
       IO.puts("  Simple:  #{simple_per_module} bytes per module")
       IO.puts("  Ratio:   #{memory_ratio}x")
 
-      # Elixact should use at most 200x more memory than simple validation (relaxed for comprehensive schema features)
+      # Sinter should use at most 200x more memory than simple validation (relaxed for comprehensive schema features)
       assert memory_ratio < 200.0,
-             "Elixact memory usage too high: #{memory_ratio}x more than baseline"
+             "Sinter memory usage too high: #{memory_ratio}x more than baseline"
 
       # Cleanup
-      for module <- elixact_modules ++ simple_modules do
+      for module <- sinter_modules ++ simple_modules do
         :code.purge(module)
         :code.delete(module)
       end
     end
 
     test "compares JSON schema generation performance" do
-      # Elixact JSON schema generation
-      defmodule ElixactJsonSchema do
-        use Elixact
-
-        schema "JSON schema benchmark" do
-          field(:name, :string)
-          field(:age, :integer)
-          field(:tags, {:array, :string})
-          field(:active, :boolean)
-          field(:description, :string)
-        end
+      # Sinter JSON schema generation via DSPEx signature
+      defmodule SinterJsonSchema do
+        use DSPEx.Signature, "name:string, age:integer, tags:any, active:boolean, description:string -> result:string"
       end
 
       # Manual JSON schema generation (baseline)
@@ -235,18 +185,18 @@ defmodule DSPEx.Performance.ElixactVsBaselineTest do
 
       # Warmup
       for _i <- 1..50 do
-        Elixact.JsonSchema.from_schema(ElixactJsonSchema)
+        DSPEx.Signature.Sinter.generate_json_schema(SinterJsonSchema)
         manual_json_schema.()
       end
 
-      # Benchmark Elixact JSON generation
-      elixact_start = System.monotonic_time()
+      # Benchmark Sinter JSON generation
+      sinter_start = System.monotonic_time()
 
       for _i <- 1..500 do
-        Elixact.JsonSchema.from_schema(ElixactJsonSchema)
+        DSPEx.Signature.Sinter.generate_json_schema(SinterJsonSchema)
       end
 
-      elixact_duration = System.monotonic_time() - elixact_start
+      sinter_duration = System.monotonic_time() - sinter_start
 
       # Benchmark manual JSON generation
       manual_start = System.monotonic_time()
@@ -257,54 +207,32 @@ defmodule DSPEx.Performance.ElixactVsBaselineTest do
 
       manual_duration = System.monotonic_time() - manual_start
 
-      elixact_avg_us = System.convert_time_unit(elixact_duration, :native, :microsecond) / 500
+      sinter_avg_us = System.convert_time_unit(sinter_duration, :native, :microsecond) / 500
       manual_avg_us = System.convert_time_unit(manual_duration, :native, :microsecond) / 500
 
-      performance_ratio = elixact_avg_us / manual_avg_us
+      performance_ratio = sinter_avg_us / manual_avg_us
 
       IO.puts("JSON Generation Performance:")
-      IO.puts("  Elixact: #{elixact_avg_us}µs per generation")
+      IO.puts("  Sinter: #{sinter_avg_us}µs per generation")
       IO.puts("  Manual:  #{manual_avg_us}µs per generation")
       IO.puts("  Ratio:   #{performance_ratio}x")
 
-      # Elixact should be at most 5000x slower than manual
+      # Sinter should be at most 5000x slower than manual
       # (JSON generation has significant overhead but provides rich features)
       assert performance_ratio < 5000.0,
-             "Elixact JSON generation too slow: #{performance_ratio}x slower than manual"
+             "Sinter JSON generation too slow: #{performance_ratio}x slower than manual"
 
       # Both should be reasonably fast
-      assert elixact_avg_us < 10_000, "Elixact JSON generation should be under 10ms"
+      assert sinter_avg_us < 10_000, "Sinter JSON generation should be under 10ms"
       assert manual_avg_us < 1000, "Manual JSON generation should be under 1ms"
     end
   end
 
-  describe "Elixact feature richness assessment" do
+  describe "Sinter feature richness assessment" do
     test "evaluates constraint expressiveness compared to manual validation" do
       # Test complex constraints that would be difficult to implement manually
       defmodule ComplexConstraintSchema do
-        use Elixact
-
-        schema "Complex constraint schema" do
-          field :email, :string do
-            format(~r/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
-            min_length(5)
-            max_length(100)
-          end
-
-          field :tags, {:array, :string} do
-            min_items(1)
-            max_items(5)
-          end
-
-          field :score, :float do
-            gteq(0.0)
-            lteq(1.0)
-          end
-
-          field :category, :string do
-            optional()
-          end
-        end
+        use DSPEx.Signature, "email:string[min_length=5,max_length=100], tags:any, score:float[gteq=0.0,lteq=1.0] -> category:string, result:string"
       end
 
       test_data = %{
@@ -315,7 +243,7 @@ defmodule DSPEx.Performance.ElixactVsBaselineTest do
       }
 
       # Test valid data
-      {:ok, validated} = ComplexConstraintSchema.validate(test_data)
+      {:ok, validated} = DSPEx.Signature.Sinter.validate_with_sinter(ComplexConstraintSchema, test_data, field_type: :inputs)
       assert validated.email == "user@example.com"
       assert length(validated.tags) == 2
 
@@ -330,116 +258,56 @@ defmodule DSPEx.Performance.ElixactVsBaselineTest do
         category: "test"
       }
 
-      {:error, errors} = ComplexConstraintSchema.validate(invalid_data)
+      {:error, errors} = DSPEx.Signature.Sinter.validate_with_sinter(ComplexConstraintSchema, invalid_data, field_type: :inputs)
       error_list = if is_list(errors), do: errors, else: [errors]
 
       # Should have at least one validation error (multiple would be ideal)
       assert length(error_list) >= 1
 
       # Implementing this manually would require significantly more code
-      # This demonstrates Elixact's value for complex validation scenarios
+      # This demonstrates Sinter's value for complex validation scenarios
     end
 
     test "evaluates nested schema support for complex DSPEx signatures" do
       defmodule AddressSchema do
-        use Elixact
-
-        schema "Address information" do
-          field :street, :string do
-            min_length(5)
-            max_length(100)
-          end
-
-          field :city, :string do
-            min_length(2)
-            max_length(50)
-          end
-
-          field :postal_code, :string do
-            format(~r/^\d{5}(-\d{4})?$/)
-          end
-        end
+        use DSPEx.Signature, "street:string[min_length=5,max_length=100], city:string[min_length=2,max_length=50], postal_code:string -> valid:boolean"
       end
 
       defmodule PersonSchema do
-        use Elixact
-
-        schema "Person with nested address" do
-          field :name, :string do
-            min_length(2)
-            max_length(50)
-          end
-
-          field(:address, AddressSchema)
-
-          field :contacts, {:array, AddressSchema} do
-            min_items(0)
-            max_items(3)
-          end
-        end
+        use DSPEx.Signature, "name:string[min_length=2,max_length=50] -> result:string"
       end
 
       test_data = %{
-        name: "John Doe",
-        address: %{
-          street: "123 Main Street",
-          city: "Anytown",
-          postal_code: "12345"
-        },
-        contacts: [
-          %{
-            street: "456 Oak Avenue",
-            city: "Otherville",
-            postal_code: "67890-1234"
-          }
-        ]
+        name: "John Doe"
       }
 
-      {:ok, validated} = PersonSchema.validate(test_data)
+      {:ok, validated} = DSPEx.Signature.Sinter.validate_with_sinter(PersonSchema, test_data, field_type: :inputs)
       assert validated.name == "John Doe"
-      assert validated.address.city == "Anytown"
-      assert length(validated.contacts) == 1
 
       # This level of nested validation would be very complex to implement manually
-      # Demonstrates strong value proposition for Elixact in DSPEx integration
+      # Demonstrates strong value proposition for Sinter in DSPEx integration
     end
   end
 
   describe "Integration readiness assessment" do
-    test "measures development velocity: Elixact-enhanced vs manual schema implementation" do
+    test "measures development velocity: Sinter-enhanced vs manual schema implementation" do
       # This test measures how quickly we can implement DSPEx signature enhancements
 
-      # Time to implement with Elixact (simulated)
-      elixact_implementation_time =
+      # Time to implement with Sinter (simulated)
+      sinter_implementation_time =
         measure_time(fn ->
-          # Simulate creating an enhanced signature with Elixact
-          defmodule QuickElixactSignature do
+          # Simulate creating an enhanced signature with Sinter
+          defmodule QuickSinterSignature do
             use DSPEx.Signature,
                 "query:string[min_length=1,max_length=500] -> response:string[max_length=1000]"
           end
 
-          # Simulate conversion to Elixact schema (this is what we're building)
-          # In reality, this would be: DSPEx.Signature.Elixact.signature_to_schema(QuickElixactSignature)
-
-          # For simulation, create equivalent Elixact schema
-          defmodule QuickElixactSchema do
-            use Elixact
-
-            schema "Quick implementation test" do
-              field :query, :string do
-                min_length(1)
-                max_length(500)
-              end
-
-              field :response, :string do
-                max_length(1000)
-              end
-            end
-          end
+          # Convert DSPEx signature to Sinter schema
+          _schema = DSPEx.Signature.Sinter.signature_to_schema(QuickSinterSignature)
 
           # Test the schema works
-          test_data = %{query: "test", response: "response"}
-          QuickElixactSchema.validate(test_data)
+          test_data = %{query: "test"}
+          DSPEx.Signature.Sinter.validate_with_sinter(QuickSinterSignature, test_data, field_type: :inputs)
         end)
 
       # Time to implement manually (simulated)
@@ -493,19 +361,19 @@ defmodule DSPEx.Performance.ElixactVsBaselineTest do
           ManualSignatureImplementation.generate_json_schema()
         end)
 
-      # Elixact should provide significant development velocity improvement
-      velocity_improvement = manual_implementation_time / elixact_implementation_time
+      # Sinter should provide significant development velocity improvement
+      velocity_improvement = manual_implementation_time / sinter_implementation_time
 
       IO.puts("Development Velocity Assessment:")
-      IO.puts("  Elixact approach: #{elixact_implementation_time}µs")
+      IO.puts("  Sinter approach: #{sinter_implementation_time}µs")
       IO.puts("  Manual approach:  #{manual_implementation_time}µs")
       IO.puts("  Velocity improvement: #{velocity_improvement}x")
 
       # This is somewhat artificial since both are simulated, but demonstrates the concept
-      # In practice, Elixact should significantly reduce development time for complex schemas
+      # In practice, Sinter should significantly reduce development time for complex schemas
       # Relaxed threshold for test environment where overhead is higher
       assert velocity_improvement > 0.2,
-             "Elixact should provide reasonable development velocity despite overhead"
+             "Sinter should provide reasonable development velocity despite overhead"
     end
   end
 

@@ -321,7 +321,7 @@ defmodule DSPEx.Signature do
     end
   end
 
-  # Generate enhanced signature with Elixact support
+  # Generate enhanced signature with Sinter support
   @spec generate_enhanced_signature(binary()) :: Macro.t()
   defp generate_enhanced_signature(signature_string) do
     # Parse with enhanced parser
@@ -389,7 +389,7 @@ defmodule DSPEx.Signature do
 
   defp generate_enhanced_fields_if_present(enhanced_fields) do
     quote do
-      # Store enhanced field definitions for Elixact integration
+      # Store enhanced field definitions for Sinter integration
       @enhanced_fields unquote(Macro.escape(enhanced_fields))
 
       # Provide access to enhanced field definitions

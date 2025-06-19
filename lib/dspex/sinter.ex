@@ -2,10 +2,10 @@ defmodule DSPEx.Sinter do
   @moduledoc """
   Enhanced Sinter integration for DSPEx - Phase 1 Sinter Migration
 
-  This module provides the Sinter replacement for Elixact functionality,
+  This module provides native Sinter functionality,
   enabling bidirectional conversion between DSPEx signatures and Sinter schemas.
 
-  Key improvements over Elixact:
+  Key features:
   - No dynamic module compilation overhead
   - Purpose-built DSPEx integration
   - Enhanced error handling with LLM context
@@ -83,7 +83,7 @@ defmodule DSPEx.Sinter do
   @doc """
   Creates a dynamic Sinter schema from DSPEx signature definition.
 
-  Unlike Elixact, this doesn't create runtime modules but uses Sinter's data structures.
+  This doesn't create runtime modules but uses Sinter's data structures.
   """
   @spec create_dynamic_schema(map(), String.t()) :: map()
   def create_dynamic_schema(signature_definition, schema_name) do

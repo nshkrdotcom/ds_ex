@@ -1,7 +1,7 @@
 defmodule DSPEx.Config.ValidatorTest do
   use ExUnit.Case, async: true
 
-  alias DSPEx.Config.ElixactSchemas
+  alias DSPEx.Config.SinterSchemas
   alias DSPEx.Config.Validator
 
   doctest DSPEx.Config.Validator
@@ -338,21 +338,21 @@ defmodule DSPEx.Config.ValidatorTest do
     end
   end
 
-  describe "ElixactSchemas integration" do
+  describe "SinterSchemas integration" do
     test "path to schema mapping works correctly" do
       # Client configuration
-      assert {:ok, ClientConfiguration, [:timeout]} =
-               ElixactSchemas.path_to_schema([:dspex, :client, :timeout])
+      assert {:ok, %Sinter.Schema{}, [:timeout]} =
+               SinterSchemas.path_to_schema([:dspex, :client, :timeout])
 
-      assert {:ok, ClientConfiguration, [:retry_attempts]} =
-               ElixactSchemas.path_to_schema([:dspex, :client, :retry_attempts])
+      assert {:ok, %Sinter.Schema{}, [:retry_attempts]} =
+               SinterSchemas.path_to_schema([:dspex, :client, :retry_attempts])
 
       # Provider configuration with wildcard
-      assert {:ok, ProviderConfiguration, [:api_key]} =
-               ElixactSchemas.path_to_schema([:dspex, :providers, :gemini, :api_key])
+      assert {:ok, %Sinter.Schema{}, [:api_key]} =
+               SinterSchemas.path_to_schema([:dspex, :providers, :gemini, :api_key])
 
-      assert {:ok, ProviderConfiguration, [:rate_limit, :requests_per_minute]} =
-               ElixactSchemas.path_to_schema([
+      assert {:ok, %Sinter.Schema{}, [:requests_per_minute]} =
+               SinterSchemas.path_to_schema([
                  :dspex,
                  :providers,
                  :openai,
@@ -361,8 +361,8 @@ defmodule DSPEx.Config.ValidatorTest do
                ])
 
       # BEACON configuration
-      assert {:ok, BEACONConfiguration, [:optimization, :max_trials]} =
-               ElixactSchemas.path_to_schema([
+      assert {:ok, %Sinter.Schema{}, [:max_trials]} =
+               SinterSchemas.path_to_schema([
                  :dspex,
                  :teleprompters,
                  :beacon,
@@ -371,28 +371,28 @@ defmodule DSPEx.Config.ValidatorTest do
                ])
 
       # Unknown path
-      assert {:error, :unknown_path} = ElixactSchemas.path_to_schema([:invalid, :path])
+      assert {:error, :unknown_path} = SinterSchemas.path_to_schema([:invalid, :path])
     end
 
     test "schema validation provides consistent results" do
       # Direct schema validation should match validator results
-      assert :ok = ElixactSchemas.validate_config_value([:dspex, :client, :timeout], 30_000)
+      assert :ok = SinterSchemas.validate_config_value([:dspex, :client, :timeout], 30_000)
 
       assert {:error, _} =
-               ElixactSchemas.validate_config_value([:dspex, :client, :timeout], "invalid")
+               SinterSchemas.validate_config_value([:dspex, :client, :timeout], "invalid")
 
       # Error format should be suitable for validator processing
       {:error, error} =
-        ElixactSchemas.validate_config_value([:dspex, :client, :timeout], "invalid")
+        SinterSchemas.validate_config_value([:dspex, :client, :timeout], "invalid")
 
       assert is_tuple(error) or is_atom(error) or is_map(error)
     end
 
     test "all configuration domains have JSON schema export" do
-      domains = ElixactSchemas.list_domains()
+      domains = SinterSchemas.list_domains()
 
       Enum.each(domains, fn domain ->
-        {:ok, json_schema} = ElixactSchemas.export_json_schema(domain)
+        {:ok, json_schema} = SinterSchemas.export_json_schema(domain)
 
         # Verify JSON schema structure
         assert is_map(json_schema)

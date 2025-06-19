@@ -50,7 +50,6 @@ defmodule Dspex.MixProject do
 
       # Structured outputs
       {:instructor_lite, "~> 0.3.0"},
-      {:elixact, github: "nshkrdotcom/elixact"},
       {:sinter, github: "nshkrdotcom/sinter"},
 
       # Testing & Development

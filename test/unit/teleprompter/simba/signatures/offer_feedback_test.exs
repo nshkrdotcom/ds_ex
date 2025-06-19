@@ -3,7 +3,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Signatures.OfferFeedbackTest do
   alias DSPEx.Teleprompter.SIMBA.Signatures.OfferFeedback
 
   describe "OfferFeedback signature" do
-    test "signature module exists and follows Elixact patterns" do
+    test "signature module exists and follows Sinter patterns" do
       # This test will fail until OfferFeedback signature is implemented
       assert Code.ensure_loaded?(OfferFeedback)
       assert function_exported?(OfferFeedback, :signature_definition, 0)

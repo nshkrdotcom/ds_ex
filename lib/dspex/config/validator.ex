@@ -2,7 +2,7 @@ defmodule DSPEx.Config.Validator do
   @moduledoc """
   Validation rules for DSPEx configuration.
 
-  Enhanced with Elixact schema-based validation for improved type safety,
+  Enhanced with Sinter schema-based validation for improved type safety,
   detailed error reporting, and maintainable validation logic.
 
   This module provides validation for all supported DSPEx configuration
@@ -18,7 +18,7 @@ defmodule DSPEx.Config.Validator do
 
   ## Enhanced Features
 
-  - Schema-based validation with Elixact integration
+  - Schema-based validation with Sinter integration
   - Field-level error reporting with detailed messages
   - JSON schema export for documentation
   - Automatic constraint validation
