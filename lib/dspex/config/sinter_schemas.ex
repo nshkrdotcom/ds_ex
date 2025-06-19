@@ -139,7 +139,7 @@ defmodule DSPEx.Config.SinterSchemas do
   def client_configuration_schema do
     Sinter.Schema.define(
       [
-        {:timeout, :integer, [required: true, gteq: 1000, lteq: 300_000]},
+        {:timeout, :integer, [required: true, gteq: 1, lteq: 300_000]},
         {:retry_attempts, :integer, [required: true, gteq: 0, lteq: 10]},
         {:backoff_factor, :float, [required: true, gteq: 1.0, lteq: 10.0]}
       ],
@@ -157,7 +157,7 @@ defmodule DSPEx.Config.SinterSchemas do
         {:api_key, {:union, [:string, {:tuple, [:atom, :string]}]}, [required: true]},
         {:base_url, :string, [required: true, format: ~r/^https?:\/\/.+/]},
         {:default_model, :string, [required: true, min_length: 1]},
-        {:timeout, :integer, [required: true, gteq: 1000, lteq: 300_000]},
+        {:timeout, :integer, [required: true, gteq: 1, lteq: 300_000]},
         {:rate_limit, :map, [required: true]},
         {:circuit_breaker, :map, [required: true]}
       ],
@@ -172,8 +172,7 @@ defmodule DSPEx.Config.SinterSchemas do
   def prediction_configuration_schema do
     Sinter.Schema.define(
       [
-        {:default_provider, :string,
-         [required: true, choices: ["openai", "anthropic", "gemini"]]},
+        {:default_provider, :atom, [required: true, choices: [:openai, :anthropic, :gemini]]},
         {:default_temperature, :float, [required: true, gteq: 0.0, lteq: 2.0]},
         {:default_max_tokens, :integer, [required: true, gteq: 1, lteq: 32_000]},
         {:cache_enabled, :boolean, [required: true]},
@@ -236,7 +235,21 @@ defmodule DSPEx.Config.SinterSchemas do
   def logging_configuration_schema do
     Sinter.Schema.define(
       [
-        {:level, :string, [required: true, choices: ["debug", "info", "warn", "error"]]},
+        {:level, :atom,
+         [
+           required: true,
+           choices: [
+             :debug,
+             :info,
+             :warn,
+             :error,
+             :warning,
+             :critical,
+             :emergency,
+             :alert,
+             :notice
+           ]
+         ]},
         {:correlation_enabled, :boolean, [required: true]}
       ],
       title: "Logging Configuration Schema"
@@ -308,8 +321,23 @@ defmodule DSPEx.Config.SinterSchemas do
   def bayesian_optimization_schema do
     Sinter.Schema.define(
       [
-        {:acquisition_function, :string, [required: true, choices: ["ei", "ucb", "pi"]]},
-        {:surrogate_model, :string, [required: true, choices: ["gp", "rf", "et"]]},
+        {:acquisition_function, {:union, [:string, :atom]},
+         [
+           required: true,
+           choices: [
+             "ei",
+             "ucb",
+             "pi",
+             :expected_improvement,
+             :probability_of_improvement,
+             :upper_confidence_bound
+           ]
+         ]},
+        {:surrogate_model, {:union, [:string, :atom]},
+         [
+           required: true,
+           choices: ["gp", "rf", "et", :gaussian_process, :random_forest, :extra_trees]
+         ]},
         {:exploration_exploitation_tradeoff, :float, [required: true, gteq: 0.0, lteq: 1.0]}
       ],
       title: "Bayesian Optimization Schema"
@@ -423,15 +451,15 @@ defmodule DSPEx.Config.SinterSchemas do
   defp field_to_error_atom(:default_provider), do: :invalid_provider
   defp field_to_error_atom(:default_temperature), do: :invalid_temperature
   defp field_to_error_atom(:default_max_tokens), do: :invalid_max_tokens
-  defp field_to_error_atom(:cache_enabled), do: :invalid_cache_setting
+  defp field_to_error_atom(:cache_enabled), do: :invalid_boolean
   defp field_to_error_atom(:cache_ttl), do: :invalid_cache_ttl
   defp field_to_error_atom(:batch_size), do: :invalid_batch_size
   defp field_to_error_atom(:parallel_limit), do: :invalid_parallel_limit
   defp field_to_error_atom(:bootstrap_examples), do: :invalid_bootstrap_examples
   defp field_to_error_atom(:validation_threshold), do: :invalid_validation_threshold
   defp field_to_error_atom(:level), do: :invalid_log_level
-  defp field_to_error_atom(:correlation_enabled), do: :invalid_correlation_setting
-  defp field_to_error_atom(:enabled), do: :invalid_enabled_setting
+  defp field_to_error_atom(:correlation_enabled), do: :invalid_boolean
+  defp field_to_error_atom(:enabled), do: :invalid_boolean
   defp field_to_error_atom(:detailed_logging), do: :invalid_detailed_logging
   defp field_to_error_atom(:performance_tracking), do: :invalid_performance_tracking
   defp field_to_error_atom(:requests_per_minute), do: :invalid_rate_limit

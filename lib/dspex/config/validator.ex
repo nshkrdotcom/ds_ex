@@ -25,7 +25,7 @@ defmodule DSPEx.Config.Validator do
   - Improved maintainability through declarative schemas
   """
 
-  alias DSPEx.Config.ElixactSchemas
+  alias DSPEx.Config.SinterSchemas
 
   # Valid configuration paths - comprehensive list based on ConfigManager analysis
   @valid_paths [
@@ -159,7 +159,7 @@ defmodule DSPEx.Config.Validator do
   """
   @spec validate_value(list(atom()), term()) :: :ok | {:error, term()}
   def validate_value(path, value) do
-    case ElixactSchemas.validate_config_value(path, value) do
+    case SinterSchemas.validate_config_value(path, value) do
       :ok -> :ok
       {:error, {:unknown_path, path}} -> {:error, {:unknown_path, path}}
       {:error, {error_atom, _message}} when is_atom(error_atom) -> {:error, error_atom}
@@ -176,7 +176,7 @@ defmodule DSPEx.Config.Validator do
 
       iex> DSPEx.Config.Validator.validate_value_detailed([:dspex, :client, :timeout], "invalid")
       {:error, %{
-        message: "expected integer, got \\\"invalid\\\"",
+        message: "expected integer, got string",
         path: [:dspex, :client, :timeout],
         field: :timeout,
         provided: "invalid",
@@ -187,7 +187,7 @@ defmodule DSPEx.Config.Validator do
   @spec validate_value_detailed(list(atom()), term()) ::
           :ok | {:error, map()}
   def validate_value_detailed(path, value) do
-    case ElixactSchemas.validate_config_value(path, value) do
+    case SinterSchemas.validate_config_value(path, value) do
       :ok ->
         :ok
 
@@ -218,7 +218,7 @@ defmodule DSPEx.Config.Validator do
   """
   @spec export_schema(atom()) :: {:ok, map()} | {:error, term()}
   def export_schema(domain) do
-    ElixactSchemas.export_json_schema(domain)
+    SinterSchemas.export_json_schema(domain)
   end
 
   @doc """
@@ -226,7 +226,7 @@ defmodule DSPEx.Config.Validator do
   """
   @spec list_domains() :: [atom()]
   def list_domains do
-    ElixactSchemas.list_domains()
+    SinterSchemas.list_domains()
   end
 
   @doc """

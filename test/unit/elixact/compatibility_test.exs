@@ -173,6 +173,7 @@ defmodule DSPEx.Elixact.CompatibilityTest do
              "Elixact validation too slow for DSPEx: #{avg_duration_us}µs per validation"
     end
 
+    @tag :slow
     test "JSON schema generation performance is acceptable" do
       # Use DSPEx signature instead of Elixact schema to avoid :map compatibility issues
       defmodule JsonBenchmarkSignature do
@@ -201,6 +202,7 @@ defmodule DSPEx.Elixact.CompatibilityTest do
     end
   end
 
+  @tag :slow
   describe "Elixact memory usage assessment" do
     test "schema compilation memory overhead is reasonable" do
       initial_memory = :erlang.memory(:total)

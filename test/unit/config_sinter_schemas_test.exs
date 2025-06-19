@@ -110,7 +110,7 @@ defmodule DSPEx.Config.SinterSchemasTest do
 
       # Invalid timeout (too low)
       assert {:error, {:invalid_timeout, _}} =
-               SinterSchemas.validate_config_value([:dspex, :client, :timeout], 500)
+               SinterSchemas.validate_config_value([:dspex, :client, :timeout], 0)
 
       # Invalid timeout (too high)
       assert {:error, {:invalid_timeout, _}} =
@@ -194,7 +194,7 @@ defmodule DSPEx.Config.SinterSchemasTest do
       assert :ok =
                SinterSchemas.validate_config_value(
                  [:dspex, :prediction, :default_provider],
-                 "openai"
+                 :openai
                )
 
       # Invalid provider (not in choices)
@@ -287,7 +287,7 @@ defmodule DSPEx.Config.SinterSchemasTest do
 
     test "validates logging configuration values" do
       # Valid log level
-      assert :ok = SinterSchemas.validate_config_value([:dspex, :logging, :level], "info")
+      assert :ok = SinterSchemas.validate_config_value([:dspex, :logging, :level], :info)
 
       # Invalid log level
       assert {:error, {:invalid_log_level, _}} =
@@ -440,7 +440,7 @@ defmodule DSPEx.Config.SinterSchemasTest do
   describe "error formatting" do
     test "formats errors consistently" do
       {:error, {error_atom, message}} =
-        SinterSchemas.validate_config_value([:dspex, :client, :timeout], 100)
+        SinterSchemas.validate_config_value([:dspex, :client, :timeout], 0)
 
       assert is_atom(error_atom)
       assert is_binary(message)
@@ -450,7 +450,7 @@ defmodule DSPEx.Config.SinterSchemasTest do
     test "maps field names to appropriate error atoms" do
       # Test various field mappings
       {:error, {:invalid_timeout, _}} =
-        SinterSchemas.validate_config_value([:dspex, :client, :timeout], 100)
+        SinterSchemas.validate_config_value([:dspex, :client, :timeout], 0)
 
       {:error, {:invalid_provider, _}} =
         SinterSchemas.validate_config_value([:dspex, :prediction, :default_provider], "invalid")
@@ -518,10 +518,13 @@ defmodule DSPEx.Config.SinterSchemasTest do
       assert :ok = SinterSchemas.validate_config_value([:dspex, :client, :timeout], 300_000)
 
       # Test boundary violations
-      # below minimum
-      {:error, {_, _}} = SinterSchemas.validate_config_value([:dspex, :client, :timeout], 999)
+      # below minimum (0 or negative)
+      {:error, {_, _}} = SinterSchemas.validate_config_value([:dspex, :client, :timeout], 0)
       # above maximum
       {:error, {_, _}} = SinterSchemas.validate_config_value([:dspex, :client, :timeout], 300_001)
+      # valid boundary values
+      :ok = SinterSchemas.validate_config_value([:dspex, :client, :timeout], 1)
+      :ok = SinterSchemas.validate_config_value([:dspex, :client, :timeout], 999)
     end
 
     test "handles complex data structures" do
