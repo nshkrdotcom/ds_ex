@@ -274,9 +274,8 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy do
   defp validate_strategy_configuration(_opts), do: :ok
 
   defp format_validation_errors(errors) when is_list(errors) do
-    Enum.map(errors, fn error ->
+    Enum.map_join(errors, ", ", fn error ->
       "#{Enum.join(error.path, ".")}: #{error.message}"
     end)
-    |> Enum.join(", ")
   end
 end

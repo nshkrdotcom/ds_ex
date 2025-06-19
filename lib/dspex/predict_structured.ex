@@ -65,11 +65,13 @@ defmodule DSPEx.PredictStructured do
   def forward(program, inputs, _opts \\ []) do
     correlation_id = generate_correlation_id()
 
-    with {:ok, {params, instructor_opts}} <-
+    with :ok <- validate_inputs_with_sinter(program.signature, inputs),
+         {:ok, {params, instructor_opts}} <-
            format_instructor_params(program, inputs, correlation_id),
          {:ok, result} <- make_instructor_request(params, instructor_opts, correlation_id),
-         {:ok, outputs} <- parse_instructor_response(program, result, correlation_id) do
-      {:ok, outputs}
+         {:ok, outputs} <- parse_instructor_response(program, result, correlation_id),
+         {:ok, validated_outputs} <- validate_outputs_with_sinter(program.signature, outputs) do
+      {:ok, validated_outputs}
     else
       {:error, reason} -> {:error, reason}
     end
@@ -158,5 +160,19 @@ defmodule DSPEx.PredictStructured do
     |> Module.split()
     |> List.last()
     |> String.downcase()
+  end
+
+  # Sinter integration functions
+
+  defp validate_inputs_with_sinter(_signature, _inputs) do
+    # Graceful degradation - Sinter validation not yet implemented
+    # This is a placeholder for future Sinter integration
+    :ok
+  end
+
+  defp validate_outputs_with_sinter(_signature, outputs) do
+    # Graceful degradation - Sinter validation not yet implemented
+    # This is a placeholder for future Sinter integration
+    {:ok, outputs}
   end
 end

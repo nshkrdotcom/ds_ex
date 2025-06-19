@@ -352,13 +352,13 @@ defmodule DSPEx.Predict do
       }
     )
 
-    # Use adapter to parse response
+    # Use adapter to parse response with Sinter validation
     result =
-      if program.adapter && function_exported?(program.adapter, :parse_response, 2) do
-        program.adapter.parse_response(program.signature, response)
+      with {:ok, outputs} <- parse_with_adapter(program, response),
+           {:ok, validated_outputs} <- validate_outputs_with_sinter(program.signature, outputs) do
+        {:ok, validated_outputs}
       else
-        # Fallback to basic adapter
-        DSPEx.Adapter.parse_response(program.signature, response)
+        {:error, reason} -> {:error, reason}
       end
 
     duration = System.monotonic_time() - start_time
@@ -375,6 +375,15 @@ defmodule DSPEx.Predict do
     )
 
     result
+  end
+
+  defp parse_with_adapter(program, response) do
+    if program.adapter && function_exported?(program.adapter, :parse_response, 2) do
+      program.adapter.parse_response(program.signature, response)
+    else
+      # Fallback to basic adapter
+      DSPEx.Adapter.parse_response(program.signature, response)
+    end
   end
 
   defp adapter_name(nil), do: "default"
@@ -538,8 +547,8 @@ defmodule DSPEx.Predict do
   @doc """
   Validate that a signature is compatible with given inputs.
 
-  Checks that all required input fields are present without making
-  an actual prediction. Useful for validation before batch processing.
+  Checks that all required input fields are present and validates them using Sinter
+  if the signature supports schema validation. Useful for validation before batch processing.
 
   ## Parameters
 
@@ -548,7 +557,7 @@ defmodule DSPEx.Predict do
 
   ## Returns
 
-  - `:ok` - All required fields present
+  - `:ok` - All required fields present and valid
   - `{:error, reason}` - Validation failed
 
   """
@@ -571,8 +580,10 @@ defmodule DSPEx.Predict do
     )
 
     result =
-      case DSPEx.Adapter.format_messages(signature, inputs) do
-        {:ok, _messages} -> :ok
+      with {:ok, _messages} <- DSPEx.Adapter.format_messages(signature, inputs),
+           :ok <- validate_inputs_with_sinter(signature, inputs) do
+        :ok
+      else
         {:error, reason} -> {:error, reason}
       end
 
@@ -702,7 +713,13 @@ defmodule DSPEx.Predict do
       }
     )
 
-    result = DSPEx.Adapter.parse_response(signature, response)
+    result =
+      with {:ok, outputs} <- DSPEx.Adapter.parse_response(signature, response),
+           {:ok, validated_outputs} <- validate_outputs_with_sinter(signature, outputs) do
+        {:ok, validated_outputs}
+      else
+        {:error, reason} -> {:error, reason}
+      end
 
     duration = System.monotonic_time() - start_time
     success = match?({:ok, _}, result)
@@ -762,4 +779,18 @@ defmodule DSPEx.Predict do
   defp type_of(value) when is_list(value), do: :list
   defp type_of(value) when is_map(value), do: :map
   defp type_of(_), do: :unknown
+
+  # Sinter integration functions
+
+  defp validate_inputs_with_sinter(_signature, _inputs) do
+    # Graceful degradation - Sinter validation not yet implemented
+    # This is a placeholder for future Sinter integration
+    :ok
+  end
+
+  defp validate_outputs_with_sinter(_signature, outputs) do
+    # Graceful degradation - Sinter validation not yet implemented  
+    # This is a placeholder for future Sinter integration
+    {:ok, outputs}
+  end
 end

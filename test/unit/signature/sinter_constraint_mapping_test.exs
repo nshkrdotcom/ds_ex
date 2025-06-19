@@ -403,7 +403,7 @@ defmodule DSPEx.Signature.SinterConstraintMappingTest do
 
       # Should complete within reasonable time (less than 10ms for this simple case)
       # microseconds
-      assert parse_time < 10000
+      assert parse_time < 10_000
 
       # Measure Sinter conversion time
       {input_fields, output_fields} = EnhancedParser.parse(signature_string)
@@ -415,7 +415,7 @@ defmodule DSPEx.Signature.SinterConstraintMappingTest do
 
       # Should complete within reasonable time
       # microseconds
-      assert convert_time < 10000
+      assert convert_time < 10_000
     end
   end
 end

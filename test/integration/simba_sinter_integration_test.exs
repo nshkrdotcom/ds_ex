@@ -156,7 +156,7 @@ defmodule DSPEx.Teleprompter.SIMBA.SinterIntegrationTest do
         strategies_applied: ["append_demo"],
         total_trajectories: 50,
         successful_trajectories: 42,
-        duration_ms: 15000
+        duration_ms: 15_000
       }
 
       assert {:ok, validated} = SinterSchemas.validate_optimization_result(valid_result)

@@ -646,43 +646,56 @@ defmodule DSPEx.Signature do
   """
   @spec validate_signature_implementation(module()) :: :ok | {:error, String.t()}
   def validate_signature_implementation(module) when is_atom(module) do
-    # Check if module exists and is loaded
-    if Code.ensure_loaded?(module) do
-      # Check if module implements the behavior
-      behaviors = module.module_info(:attributes) |> Keyword.get(:behaviour, [])
-
-      if DSPEx.Signature in behaviors do
-        # Check required functions exist
-        required_functions = [
-          {:instructions, 0},
-          {:input_fields, 0},
-          {:output_fields, 0},
-          {:fields, 0}
-        ]
-
-        missing_functions =
-          required_functions
-          |> Enum.reject(fn {func, arity} ->
-            function_exported?(module, func, arity)
-          end)
-
-        if Enum.empty?(missing_functions) do
-          # Validate function return types and consistency
-          case validate_field_lists(module) do
-            :ok -> validate_instructions(module)
-            error -> error
-          end
-        else
-          {:error, "Missing required functions: #{inspect(missing_functions)}"}
-        end
-      else
-        {:error, "Module does not implement DSPEx.Signature behavior"}
-      end
+    with :ok <- validate_module_loadable(module),
+         :ok <- validate_module_behavior(module),
+         :ok <- validate_required_functions(module),
+         :ok <- validate_field_lists(module),
+         :ok <- validate_instructions(module) do
+      :ok
     else
-      {:error, "Module #{inspect(module)} cannot be loaded"}
+      error -> error
     end
   rescue
     error -> {:error, "Validation failed: #{inspect(error)}"}
+  end
+
+  defp validate_module_loadable(module) do
+    if Code.ensure_loaded?(module) do
+      :ok
+    else
+      {:error, "Module #{inspect(module)} cannot be loaded"}
+    end
+  end
+
+  defp validate_module_behavior(module) do
+    behaviors = module.module_info(:attributes) |> Keyword.get(:behaviour, [])
+
+    if DSPEx.Signature in behaviors do
+      :ok
+    else
+      {:error, "Module does not implement DSPEx.Signature behavior"}
+    end
+  end
+
+  defp validate_required_functions(module) do
+    required_functions = [
+      {:instructions, 0},
+      {:input_fields, 0},
+      {:output_fields, 0},
+      {:fields, 0}
+    ]
+
+    missing_functions =
+      required_functions
+      |> Enum.reject(fn {func, arity} ->
+        function_exported?(module, func, arity)
+      end)
+
+    if Enum.empty?(missing_functions) do
+      :ok
+    else
+      {:error, "Missing required functions: #{inspect(missing_functions)}"}
+    end
   end
 
   @doc """

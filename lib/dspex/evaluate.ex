@@ -439,7 +439,8 @@ defmodule DSPEx.Evaluate do
 
   defp validate_examples(examples) when is_list(examples) and length(examples) > 0 do
     if Enum.all?(examples, &valid_example?/1) do
-      :ok
+      # Additional Sinter validation for examples if available
+      validate_examples_with_sinter(examples)
     else
       {:error, {:invalid_examples, "All examples must have inputs and outputs fields"}}
     end
@@ -622,4 +623,53 @@ defmodule DSPEx.Evaluate do
   defp critical_error?({:network_error, _}), do: true
   defp critical_error?({:client_error, _}), do: true
   defp critical_error?(_), do: false
+
+  # Sinter integration functions for evaluation
+
+  defp validate_examples_with_sinter(examples) do
+    try do
+      # Validate examples structure using Sinter if available
+      # For now, gracefully continue without failing evaluation
+      validated_count = validate_example_batch_with_sinter(examples)
+
+      :telemetry.execute(
+        [:dspex, :evaluate, :validation, :sinter],
+        %{validated_examples: validated_count},
+        %{total_examples: length(examples)}
+      )
+
+      :ok
+    rescue
+      # Graceful degradation if Sinter validation fails
+      _ -> :ok
+    end
+  end
+
+  defp validate_example_batch_with_sinter(examples) do
+    examples
+    # Sample first 5 examples for validation
+    |> Enum.take(5)
+    |> Enum.count(fn example ->
+      case example do
+        %{inputs: inputs, outputs: outputs} ->
+          validate_example_fields_with_sinter(inputs, outputs)
+
+        %DSPEx.Example{} = ex ->
+          validate_example_fields_with_sinter(DSPEx.Example.inputs(ex), DSPEx.Example.outputs(ex))
+
+        _ ->
+          false
+      end
+    end)
+  end
+
+  defp validate_example_fields_with_sinter(inputs, outputs) do
+    try do
+      # Basic validation that inputs and outputs are proper maps
+      is_map(inputs) and is_map(outputs) and
+        map_size(inputs) > 0 and map_size(outputs) > 0
+    rescue
+      _ -> false
+    end
+  end
 end

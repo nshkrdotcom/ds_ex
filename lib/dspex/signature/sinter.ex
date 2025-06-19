@@ -220,50 +220,68 @@ defmodule DSPEx.Signature.Sinter do
     input_fields = signature.input_fields()
     output_fields = signature.output_fields()
 
-    enhanced_fields =
-      if function_exported?(signature, :__enhanced_fields__, 0) do
-        signature.__enhanced_fields__()
-      else
-        []
-      end
+    enhanced_fields = get_enhanced_fields(signature)
 
-    # Check if we have enhanced signature parsing available
-    if function_exported?(signature, :__signature_string__, 0) and
-         DSPEx.Signature.EnhancedParser.enhanced_signature?(signature.__signature_string__()) do
-      # Use enhanced parser for better constraint handling
-      {parsed_inputs, parsed_outputs} =
-        DSPEx.Signature.EnhancedParser.parse(signature.__signature_string__())
-
-      parsed_inputs ++ parsed_outputs
-    else
-      # Fallback to manual field definition mapping
-      all_fields = input_fields ++ output_fields
-      field_map = Enum.into(enhanced_fields, %{}, fn field -> {field.name, field} end)
-
-      Enum.map(all_fields, fn field_name ->
-        case Map.get(field_map, field_name) do
-          nil ->
-            # Basic field without constraints
-            %{
-              name: field_name,
-              type: :string,
-              constraints: %{},
-              required: field_name in input_fields,
-              default: nil
-            }
-
-          enhanced_field ->
-            # Enhanced field with constraints
-            %{
-              name: enhanced_field.name,
-              type: enhanced_field.type || :string,
-              constraints: enhanced_field.constraints || %{},
-              required: field_name in input_fields,
-              default: Map.get(enhanced_field, :default)
-            }
-        end
-      end)
+    case enhanced_signature_available?(signature) do
+      true -> extract_from_enhanced_parser(signature)
+      false -> extract_from_field_mapping(signature, input_fields, output_fields, enhanced_fields)
     end
+  end
+
+  defp get_enhanced_fields(signature) do
+    if function_exported?(signature, :__enhanced_fields__, 0) do
+      signature.__enhanced_fields__()
+    else
+      []
+    end
+  end
+
+  defp enhanced_signature_available?(signature) do
+    function_exported?(signature, :__signature_string__, 0) and
+      DSPEx.Signature.EnhancedParser.enhanced_signature?(signature.__signature_string__())
+  end
+
+  defp extract_from_enhanced_parser(signature) do
+    {parsed_inputs, parsed_outputs} =
+      DSPEx.Signature.EnhancedParser.parse(signature.__signature_string__())
+
+    parsed_inputs ++ parsed_outputs
+  end
+
+  defp extract_from_field_mapping(_signature, input_fields, output_fields, enhanced_fields) do
+    all_fields = input_fields ++ output_fields
+    field_map = Enum.into(enhanced_fields, %{}, fn field -> {field.name, field} end)
+
+    Enum.map(all_fields, fn field_name ->
+      build_field_definition(field_name, field_map, input_fields)
+    end)
+  end
+
+  defp build_field_definition(field_name, field_map, input_fields) do
+    case Map.get(field_map, field_name) do
+      nil -> build_basic_field(field_name, input_fields)
+      enhanced_field -> build_enhanced_field(enhanced_field, input_fields)
+    end
+  end
+
+  defp build_basic_field(field_name, input_fields) do
+    %{
+      name: field_name,
+      type: :string,
+      constraints: %{},
+      required: field_name in input_fields,
+      default: nil
+    }
+  end
+
+  defp build_enhanced_field(enhanced_field, input_fields) do
+    %{
+      name: enhanced_field.name,
+      type: enhanced_field.type || :string,
+      constraints: enhanced_field.constraints || %{},
+      required: enhanced_field.name in input_fields,
+      default: Map.get(enhanced_field, :default)
+    }
   end
 
   defp generate_sinter_schema(signature, field_definitions) do

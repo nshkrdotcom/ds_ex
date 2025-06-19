@@ -271,7 +271,7 @@ defmodule DSPEx.Teleprompter.SIMBA.SinterSchemasTest do
         strategies_applied: ["append_demo", "append_rule"],
         total_trajectories: 150,
         successful_trajectories: 128,
-        duration_ms: 45000,
+        duration_ms: 45_000,
         convergence_step: 3,
         correlation_id: "opt_12345",
         metadata: %{model: "gpt-4"}
@@ -294,7 +294,7 @@ defmodule DSPEx.Teleprompter.SIMBA.SinterSchemasTest do
         strategies_applied: ["append_demo"],
         total_trajectories: 50,
         successful_trajectories: 30,
-        duration_ms: 15000
+        duration_ms: 15_000
       }
 
       assert {:error, errors} = SinterSchemas.validate_optimization_result(invalid_result)
