@@ -351,8 +351,7 @@ defmodule DSPEx.Config.ElixirMLSchemas do
          :upper_confidence_bound
        ]},
       {:surrogate_model, :atom,
-       required: true,
-       choices: [:gaussian_process, :random_forest, :extra_trees]},
+       required: true, choices: [:gaussian_process, :random_forest, :extra_trees]},
       # Use float with probability-like constraints for exploration/exploitation tradeoff
       {:exploration_exploitation_tradeoff, :float, required: true, gteq: 0.0, lteq: 1.0}
     ]
@@ -445,9 +444,13 @@ defmodule DSPEx.Config.ElixirMLSchemas do
 
   # Format ElixirML errors to match legacy error format
   @spec format_elixir_ml_error([map()] | map(), list(atom())) :: term()
-  defp format_elixir_ml_error([error | _], field_path), do: format_elixir_ml_error(error, field_path)
+  defp format_elixir_ml_error([error | _], field_path),
+    do: format_elixir_ml_error(error, field_path)
 
-  defp format_elixir_ml_error(%ElixirML.Schema.ValidationError{path: path, message: message}, field_path) do
+  defp format_elixir_ml_error(
+         %ElixirML.Schema.ValidationError{path: path, message: message},
+         field_path
+       ) do
     # Use the provided field_path if ElixirML path is empty or unclear
     field =
       case path do
