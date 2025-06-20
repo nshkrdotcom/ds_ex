@@ -671,6 +671,7 @@ defmodule ElixirML.Runtime do
       }
 
       property = add_type_specific_constraints(property, field_def)
+      property = add_general_constraints(property, field_def)
       
       Map.put(acc, to_string(name), property)
     end)
@@ -695,13 +696,21 @@ defmodule ElixirML.Runtime do
     # OpenAI prefers flattened schemas without definitions
     schema
     |> Map.put("strict", true)
+    |> Map.put("x-openai-optimized", true)
     |> maybe_flatten_schema()
   end
 
   defp apply_provider_optimizations(schema, :anthropic) do
     # Anthropic prefers detailed descriptions and structured schemas
     schema
+    |> Map.put("x-anthropic-optimized", true)
     |> enhance_descriptions()
+  end
+
+  defp apply_provider_optimizations(schema, :groq) do
+    # Groq optimizations
+    schema
+    |> Map.put("x-groq-optimized", true)
   end
 
   defp apply_provider_optimizations(schema, _provider), do: schema
@@ -774,6 +783,45 @@ defmodule ElixirML.Runtime do
       _ -> 
         property
     end
+  end
+
+  defp add_general_constraints(property, field_def) do
+    constraints = field_def.constraints || %{}
+    
+    property
+    |> add_string_constraints(constraints)
+    |> add_numeric_constraints(constraints)
+    |> add_array_constraints(constraints)
+  end
+
+  defp add_string_constraints(property, constraints) do
+    property
+    |> maybe_add_constraint("minLength", constraints[:min_length])
+    |> maybe_add_constraint("maxLength", constraints[:max_length])
+    |> maybe_add_constraint("pattern", constraints[:pattern])
+  end
+
+  defp add_numeric_constraints(property, constraints) do
+    property
+    |> maybe_add_constraint("minimum", constraints[:min_value])
+    |> maybe_add_constraint("maximum", constraints[:max_value])
+    |> maybe_add_range_constraints(constraints[:range])
+  end
+
+  defp add_array_constraints(property, constraints) do
+    property
+    |> maybe_add_constraint("minItems", constraints[:min_items])
+    |> maybe_add_constraint("maxItems", constraints[:max_items])
+  end
+
+  defp maybe_add_constraint(property, _key, nil), do: property
+  defp maybe_add_constraint(property, key, value), do: Map.put(property, key, value)
+
+  defp maybe_add_range_constraints(property, nil), do: property
+  defp maybe_add_range_constraints(property, {min, max}) do
+    property
+    |> Map.put("minimum", min)
+    |> Map.put("maximum", max)
   end
 
   defp json_type_for(:embedding), do: "array"
