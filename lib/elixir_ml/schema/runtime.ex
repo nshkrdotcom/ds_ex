@@ -8,6 +8,7 @@ defmodule ElixirML.Schema.Runtime do
 
   @enforce_keys [:fields]
   defstruct [
+    :name,
     :fields,
     :validations,
     :transforms,
@@ -15,6 +16,7 @@ defmodule ElixirML.Schema.Runtime do
   ]
 
   @type t :: %__MODULE__{
+          name: String.t() | nil,
           fields: list(),
           validations: list(),
           transforms: list(),
@@ -52,19 +54,31 @@ defmodule ElixirML.Schema.Runtime do
   end
 
   @doc """
-  Convert runtime schema to JSON schema.
+  Convert runtime schema to JSON schema with optional provider optimization.
   """
-  @spec to_json_schema(t()) :: map()
-  def to_json_schema(%__MODULE__{fields: fields, metadata: metadata}) do
+  @spec to_json_schema(t(), keyword()) :: map()
+  def to_json_schema(%__MODULE__{fields: fields, metadata: metadata}, opts \\ []) do
+    provider = Keyword.get(opts, :provider, :generic)
+    include_descriptions = Keyword.get(opts, :include_descriptions, true)
+    
     properties =
-      Enum.reduce(fields, %{}, fn {name, type, opts}, acc ->
+      Enum.reduce(fields, %{}, fn {name, type, opts_field}, acc ->
         field_schema = %{
           "type" => json_type_for(type),
-          "description" => Keyword.get(opts, :description, "")
+          "x-elixir-type" => type
         }
+        
+        # Add description if enabled
+        field_schema = 
+          if include_descriptions do
+            description = Keyword.get(opts_field, :description, "")
+            Map.put(field_schema, "description", description)
+          else
+            field_schema
+          end
 
         # Add type-specific constraints
-        field_schema = add_type_constraints(field_schema, type)
+        field_schema = add_type_constraints(field_schema, type, opts_field)
 
         Map.put(acc, to_string(name), field_schema)
       end)
@@ -74,14 +88,34 @@ defmodule ElixirML.Schema.Runtime do
       |> Enum.filter(fn {_name, _type, opts} -> Keyword.get(opts, :required, false) end)
       |> Enum.map(fn {name, _type, _opts} -> to_string(name) end)
 
-    %{
+    base_schema = %{
       "type" => "object",
       "properties" => properties,
       "required" => required_fields,
-      "additionalProperties" => false,
-      "metadata" => metadata || %{}
+      "additionalProperties" => false
     }
+    
+    # Add description if present in metadata
+    base_schema = 
+      case metadata do
+        %{description: desc} when is_binary(desc) and desc != "" ->
+          Map.put(base_schema, "description", desc)
+        _ -> 
+          base_schema
+      end
+    
+    # Add metadata if present
+    base_schema = 
+      if metadata && map_size(metadata) > 0 do
+        Map.put(base_schema, "metadata", metadata)
+      else
+        base_schema
+      end
+    
+    # Apply provider-specific optimizations
+    apply_provider_optimizations(base_schema, provider)
   end
+  
 
   # Private validation functions
 
@@ -158,15 +192,19 @@ defmodule ElixirML.Schema.Runtime do
 
   # Helper functions
 
-  defp add_type_constraints(field_schema, :embedding) do
+  defp add_type_constraints(field_schema, :embedding, opts) do
+    dimension = Keyword.get(opts, :dimension, 768)
+    
     Map.merge(field_schema, %{
       "type" => "array",
       "items" => %{"type" => "number"},
-      "minItems" => 1
+      "minItems" => dimension,
+      "maxItems" => dimension,
+      "x-constraints" => %{"dimension" => dimension}
     })
   end
 
-  defp add_type_constraints(field_schema, :probability) do
+  defp add_type_constraints(field_schema, :probability, _opts) do
     Map.merge(field_schema, %{
       "type" => "number",
       "minimum" => 0.0,
@@ -174,21 +212,121 @@ defmodule ElixirML.Schema.Runtime do
     })
   end
 
-  defp add_type_constraints(field_schema, :token_list) do
+  defp add_type_constraints(field_schema, :confidence_score, _opts) do
     Map.merge(field_schema, %{
-      "type" => "array",
-      "items" => %{"type" => ["string", "integer"]}
+      "type" => "number",
+      "minimum" => 0.0
     })
   end
 
-  defp add_type_constraints(field_schema, :tensor) do
+  defp add_type_constraints(field_schema, :token_list, opts) do
+    base_constraints = %{
+      "type" => "array",
+      "items" => %{
+        "oneOf" => [
+          %{"type" => "string"},
+          %{"type" => "integer"}
+        ]
+      }
+    }
+    
+    case Keyword.get(opts, :max_length) do
+      nil -> Map.merge(field_schema, base_constraints)
+      max_len -> Map.merge(field_schema, Map.put(base_constraints, "maxItems", max_len))
+    end
+  end
+
+  defp add_type_constraints(field_schema, :reasoning_chain, _opts) do
+    Map.merge(field_schema, %{
+      "type" => "array",
+      "items" => %{
+        "type" => "object",
+        "properties" => %{
+          "step" => %{"type" => "string"},
+          "reasoning" => %{"type" => "string"}
+        },
+        "required" => ["step", "reasoning"]
+      }
+    })
+  end
+
+  defp add_type_constraints(field_schema, :tensor, _opts) do
     Map.merge(field_schema, %{
       "type" => "array",
       "items" => %{"type" => ["number", "array"]}
     })
   end
 
-  defp add_type_constraints(field_schema, _type), do: field_schema
+  defp add_type_constraints(field_schema, _type, _opts), do: field_schema
+
+  defp apply_provider_optimizations(schema, :openai) do
+    schema
+    |> Map.put("additionalProperties", false)
+    |> ensure_required_array()
+    |> remove_unsupported_formats([:date, :time, :email])
+    |> Map.put("x-openai-optimized", true)
+  end
+
+  defp apply_provider_optimizations(schema, :anthropic) do
+    schema
+    |> Map.put("additionalProperties", false)
+    |> ensure_required_array()
+    |> remove_unsupported_formats([:uri, :uuid])
+    |> ensure_object_properties()
+    |> Map.put("x-anthropic-optimized", true)
+  end
+
+  defp apply_provider_optimizations(schema, :groq) do
+    schema
+    |> Map.put("additionalProperties", false)
+    |> ensure_required_array()
+    |> Map.put("x-groq-optimized", true)
+  end
+
+  defp apply_provider_optimizations(schema, _), do: schema
+
+  defp ensure_required_array(schema) do
+    case Map.get(schema, "required") do
+      nil -> Map.put(schema, "required", [])
+      list when is_list(list) -> schema
+      _ -> Map.put(schema, "required", [])
+    end
+  end
+
+  defp remove_unsupported_formats(schema, unsupported_formats) do
+    case Map.get(schema, "properties") do
+      nil -> schema
+      properties ->
+        updated_properties = 
+          properties
+          |> Enum.map(fn {key, prop} ->
+            case Map.get(prop, "format") do
+              format when is_atom(format) ->
+                if format in unsupported_formats do
+                  {key, Map.delete(prop, "format")}
+                else
+                  {key, prop}
+                end
+              _ ->
+                {key, prop}
+            end
+          end)
+          |> Map.new()
+        
+        Map.put(schema, "properties", updated_properties)
+    end
+  end
+
+  defp ensure_object_properties(schema) do
+    case Map.get(schema, "type") do
+      "object" ->
+        case Map.get(schema, "properties") do
+          nil -> Map.put(schema, "properties", %{})
+          _ -> schema
+        end
+      _ -> schema
+    end
+  end
 
   defp json_type_for(:embedding), do: "array"
   defp json_type_for(:tensor), do: "array"
