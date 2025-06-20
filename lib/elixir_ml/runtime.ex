@@ -1,10 +1,10 @@
 defmodule ElixirML.Runtime do
   @moduledoc """
   Enhanced runtime schema creation with ML-specific types and variable integration.
-  
+
   Combines the best of Elixact's runtime capabilities with ElixirML's
   ML-native types and variable system integration. Provides:
-  
+
   - Dynamic schema creation for teleprompters
   - Pydantic-style create_model patterns
   - Schema inference from examples
@@ -12,7 +12,7 @@ defmodule ElixirML.Runtime do
   - Variable extraction for optimization
   - Type adapters for single-value validation
   """
-  
+
   alias ElixirML.Schema.Types
   alias ElixirML.Schema.ValidationError
 
@@ -63,7 +63,7 @@ defmodule ElixirML.Runtime do
   @spec create_schema([field_spec()], keyword()) :: t()
   def create_schema(fields, opts \\ []) do
     parsed_fields = parse_field_definitions(fields)
-    
+
     %__MODULE__{
       name: Keyword.get(opts, :name),
       title: Keyword.get(opts, :title),
@@ -90,9 +90,10 @@ defmodule ElixirML.Runtime do
   """
   @spec create_model(String.t(), map(), keyword()) :: t()
   def create_model(name, fields, opts \\ []) when is_map(fields) do
-    field_list = Enum.map(fields, fn {field_name, field_def} ->
-      {field_name, parse_pydantic_field(field_def)}
-    end)
+    field_list =
+      Enum.map(fields, fn {field_name, field_def} ->
+        {field_name, parse_pydantic_field(field_def)}
+      end)
 
     %__MODULE__{
       name: name,
@@ -149,7 +150,7 @@ defmodule ElixirML.Runtime do
   """
   @spec merge_schemas([t()], keyword()) :: t()
   def merge_schemas(schemas, opts \\ []) when is_list(schemas) do
-    merged_fields = 
+    merged_fields =
       schemas
       |> Enum.reduce(%{}, fn schema, acc ->
         Map.merge(acc, schema.fields)
@@ -186,11 +187,12 @@ defmodule ElixirML.Runtime do
       {:ok, final}
     else
       {:error, reason} ->
-        {:error, %ValidationError{
-          message: reason,
-          schema: __MODULE__,
-          data: data
-        }}
+        {:error,
+         %ValidationError{
+           message: reason,
+           schema: __MODULE__,
+           data: data
+         }}
     end
   end
 
@@ -246,10 +248,10 @@ defmodule ElixirML.Runtime do
   @spec to_json_schema(t(), keyword()) :: map()
   def to_json_schema(%__MODULE__{} = schema, opts \\ []) do
     provider = Keyword.get(opts, :provider, :default)
-    
+
     properties = generate_properties(schema.fields)
     required_fields = get_required_fields(schema.fields)
-    
+
     base_schema = %{
       "type" => "object",
       "properties" => properties,
@@ -322,7 +324,7 @@ defmodule ElixirML.Runtime do
         description: Keyword.get(opts, :description),
         variable: Keyword.get(opts, :variable, false)
       }
-      
+
       Map.put(acc, name, field_def)
     end)
   end
@@ -344,10 +346,11 @@ defmodule ElixirML.Runtime do
 
   defp extract_constraints_from_opts(:float, opts) do
     %{
-      range: case {Keyword.get(opts, :ge), Keyword.get(opts, :le)} do
-        {nil, nil} -> Keyword.get(opts, :range, {0.0, 1.0})
-        {min, max} -> {min || 0.0, max || 1.0}
-      end,
+      range:
+        case {Keyword.get(opts, :ge), Keyword.get(opts, :le)} do
+          {nil, nil} -> Keyword.get(opts, :range, {0.0, 1.0})
+          {min, max} -> {min || 0.0, max || 1.0}
+        end,
       min_value: Keyword.get(opts, :ge) || Keyword.get(opts, :gteq),
       max_value: Keyword.get(opts, :le) || Keyword.get(opts, :lteq)
     }
@@ -355,10 +358,11 @@ defmodule ElixirML.Runtime do
 
   defp extract_constraints_from_opts(:integer, opts) do
     %{
-      range: case {Keyword.get(opts, :gt), Keyword.get(opts, :le)} do
-        {nil, nil} -> Keyword.get(opts, :range, {1, 100})
-        {min, max} -> {(min || 0) + 1, max || 100}
-      end,
+      range:
+        case {Keyword.get(opts, :gt), Keyword.get(opts, :le)} do
+          {nil, nil} -> Keyword.get(opts, :range, {1, 100})
+          {min, max} -> {(min || 0) + 1, max || 100}
+        end,
       min_value: Keyword.get(opts, :gt) || Keyword.get(opts, :gte),
       max_value: Keyword.get(opts, :lt) || Keyword.get(opts, :le)
     }
@@ -405,7 +409,7 @@ defmodule ElixirML.Runtime do
   defp infer_fields_from_examples(examples) do
     # Take first example as base, then refine with others
     base_fields = infer_fields_from_single_example(hd(examples))
-    
+
     Enum.reduce(tl(examples), base_fields, fn example, acc ->
       refine_inferred_fields(acc, example)
     end)
@@ -415,13 +419,14 @@ defmodule ElixirML.Runtime do
     Enum.reduce(example, %{}, fn {key, value}, acc ->
       field_def = %{
         type: infer_type(value),
-        required: true,  # Assume required if present in example
+        # Assume required if present in example
+        required: true,
         default: nil,
         constraints: infer_constraints(value),
         description: nil,
         variable: false
       }
-      
+
       Map.put(acc, key, field_def)
     end)
   end
@@ -435,12 +440,14 @@ defmodule ElixirML.Runtime do
       else
         field_def = %{
           type: infer_type(value),
-          required: false,  # Not required since missing from some examples
+          # Not required since missing from some examples
+          required: false,
           default: nil,
           constraints: infer_constraints(value),
           description: nil,
           variable: false
         }
+
         Map.put(acc, key, field_def)
       end
     end)
@@ -448,6 +455,7 @@ defmodule ElixirML.Runtime do
 
   defp infer_type(value) when is_binary(value), do: :string
   defp infer_type(value) when is_integer(value), do: :integer
+
   defp infer_type(value) when is_float(value) do
     # Check if it might be a probability
     if value >= 0.0 and value <= 1.0 do
@@ -456,10 +464,14 @@ defmodule ElixirML.Runtime do
       :float
     end
   end
+
   defp infer_type(value) when is_boolean(value), do: :boolean
+
   defp infer_type(value) when is_list(value) do
     case value do
-      [] -> :list
+      [] ->
+        :list
+
       [first | _] when is_number(first) ->
         # Check if all elements are numbers (potential embedding)
         if Enum.all?(value, &is_number/1) do
@@ -467,9 +479,12 @@ defmodule ElixirML.Runtime do
         else
           :list
         end
-      _ -> :list
+
+      _ ->
+        :list
     end
   end
+
   defp infer_type(value) when is_map(value), do: :map
   defp infer_type(_value), do: :string
 
@@ -480,6 +495,7 @@ defmodule ElixirML.Runtime do
       %{}
     end
   end
+
   defp infer_constraints(_value), do: %{}
 
   defp validate_fields(%__MODULE__{fields: fields}, data) do
@@ -493,21 +509,22 @@ defmodule ElixirML.Runtime do
 
   defp validate_field(name, field_def, data) do
     value = Map.get(data, name)
-    
+
     cond do
       is_nil(value) and field_def.required ->
         {:error, "Field #{name} is required"}
-      
+
       is_nil(value) and not is_nil(field_def.default) ->
         {:ok, Map.put(data, name, field_def.default)}
-      
+
       is_nil(value) ->
         {:ok, data}
-      
+
       true ->
         case validate_field_value(value, field_def) do
           {:ok, validated_value} ->
             {:ok, Map.put(data, name, validated_value)}
+
           {:error, reason} ->
             {:error, "Field #{name}: #{reason}"}
         end
@@ -520,6 +537,7 @@ defmodule ElixirML.Runtime do
       {:ok, validated} ->
         # Then apply additional constraints
         apply_field_constraints(validated, field_def)
+
       {:error, reason} ->
         {:error, reason}
     end
@@ -539,18 +557,19 @@ defmodule ElixirML.Runtime do
     cond do
       constraints[:min_value] && value < constraints[:min_value] ->
         {:error, "Value #{value} below minimum #{constraints[:min_value]}"}
-      
+
       constraints[:max_value] && value > constraints[:max_value] ->
         {:error, "Value #{value} above maximum #{constraints[:max_value]}"}
-      
+
       constraints[:range] ->
         {min, max} = constraints[:range]
+
         if value < min or value > max do
           {:error, "Value #{value} outside range #{inspect(constraints[:range])}"}
         else
           {:ok, value}
         end
-      
+
       true ->
         {:ok, value}
     end
@@ -560,10 +579,10 @@ defmodule ElixirML.Runtime do
     cond do
       constraints[:min_length] && String.length(value) < constraints[:min_length] ->
         {:error, "String too short (minimum #{constraints[:min_length]} characters)"}
-      
+
       constraints[:max_length] && String.length(value) > constraints[:max_length] ->
         {:error, "String too long (maximum #{constraints[:max_length]} characters)"}
-      
+
       true ->
         {:ok, value}
     end
@@ -571,7 +590,7 @@ defmodule ElixirML.Runtime do
 
   defp validate_choice_constraints(value, constraints) do
     choices = constraints[:choices] || []
-    
+
     if value in choices or constraints[:allow_custom] do
       {:ok, value}
     else
@@ -618,7 +637,7 @@ defmodule ElixirML.Runtime do
       description: field_def.description
     ]
 
-    constraint_opts = 
+    constraint_opts =
       case field_def.type do
         :float -> [range: field_def.constraints[:range], default: field_def.default]
         :integer -> [range: field_def.constraints[:range], default: field_def.default]
@@ -672,7 +691,7 @@ defmodule ElixirML.Runtime do
 
       property = add_type_specific_constraints(property, field_def)
       property = add_general_constraints(property, field_def)
-      
+
       Map.put(acc, to_string(name), property)
     end)
   end
@@ -685,10 +704,15 @@ defmodule ElixirML.Runtime do
 
   defp add_schema_metadata(schema, runtime_schema) do
     metadata = %{}
-    
-    metadata = if runtime_schema.title, do: Map.put(metadata, "title", runtime_schema.title), else: metadata
-    metadata = if runtime_schema.name, do: Map.put(metadata, "name", runtime_schema.name), else: metadata
-    
+
+    metadata =
+      if runtime_schema.title,
+        do: Map.put(metadata, "title", runtime_schema.title),
+        else: metadata
+
+    metadata =
+      if runtime_schema.name, do: Map.put(metadata, "name", runtime_schema.name), else: metadata
+
     Map.merge(schema, metadata)
   end
 
@@ -722,21 +746,24 @@ defmodule ElixirML.Runtime do
 
   defp enhance_descriptions(schema) do
     # Enhance property descriptions for better Anthropic tool use
-    properties = 
+    properties =
       case schema["properties"] do
-        nil -> %{}
+        nil ->
+          %{}
+
         props ->
           Enum.reduce(props, %{}, fn {key, prop}, acc ->
-            enhanced_prop = 
+            enhanced_prop =
               case prop["description"] do
                 "" -> Map.put(prop, "description", "Field: #{key}")
                 nil -> Map.put(prop, "description", "Field: #{key}")
                 desc -> Map.put(prop, "description", desc)
               end
+
             Map.put(acc, key, enhanced_prop)
           end)
       end
-    
+
     Map.put(schema, "properties", properties)
   end
 
@@ -748,26 +775,26 @@ defmodule ElixirML.Runtime do
           "items" => %{"type" => "number"},
           "minItems" => 1
         })
-      
+
       :probability ->
         Map.merge(property, %{
           "type" => "number",
           "minimum" => 0.0,
           "maximum" => 1.0
         })
-      
+
       :confidence_score ->
         Map.merge(property, %{
           "type" => "number",
           "minimum" => 0.0
         })
-      
+
       :token_list ->
         Map.merge(property, %{
           "type" => "array",
           "items" => %{"type" => ["string", "integer"]}
         })
-      
+
       :reasoning_chain ->
         Map.merge(property, %{
           "type" => "array",
@@ -779,15 +806,15 @@ defmodule ElixirML.Runtime do
             }
           }
         })
-      
-      _ -> 
+
+      _ ->
         property
     end
   end
 
   defp add_general_constraints(property, field_def) do
     constraints = field_def.constraints || %{}
-    
+
     property
     |> add_string_constraints(constraints)
     |> add_numeric_constraints(constraints)
@@ -818,6 +845,7 @@ defmodule ElixirML.Runtime do
   defp maybe_add_constraint(property, key, value), do: Map.put(property, key, value)
 
   defp maybe_add_range_constraints(property, nil), do: property
+
   defp maybe_add_range_constraints(property, {min, max}) do
     property
     |> Map.put("minimum", min)

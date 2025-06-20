@@ -44,7 +44,7 @@ defmodule ElixirML.Process.Pipeline do
       stage_results: %{},
       errors: []
     }
-    
+
     case pipeline.execution_strategy do
       :sequential -> execute_sequential(execution_context)
       :parallel -> execute_parallel(execution_context)
@@ -57,13 +57,19 @@ defmodule ElixirML.Process.Pipeline do
   """
   def execute_program(program, inputs, opts \\ []) do
     # Create a simple single-stage pipeline for program execution
-    pipeline = new([%{
-      id: :program_execution,
-      type: :program,
-      program: program,
-      timeout: Keyword.get(opts, :timeout, 30_000)
-    }], opts)
-    
+    pipeline =
+      new(
+        [
+          %{
+            id: :program_execution,
+            type: :program,
+            program: program,
+            timeout: Keyword.get(opts, :timeout, 30_000)
+          }
+        ],
+        opts
+      )
+
     execute(pipeline, inputs, opts)
   end
 
@@ -76,21 +82,26 @@ defmodule ElixirML.Process.Pipeline do
         {:ok, outputs} ->
           new_ctx = %{ctx | stage_results: Map.put(ctx.stage_results, stage.id, outputs)}
           {:cont, {:ok, outputs, new_ctx}}
-        
+
         {:error, error} ->
           case handle_stage_error(stage, error, ctx) do
             {:retry, retry_ctx} ->
               case execute_stage(stage, inputs, retry_ctx) do
                 {:ok, outputs} ->
-                  new_ctx = %{retry_ctx | stage_results: Map.put(retry_ctx.stage_results, stage.id, outputs)}
+                  new_ctx = %{
+                    retry_ctx
+                    | stage_results: Map.put(retry_ctx.stage_results, stage.id, outputs)
+                  }
+
                   {:cont, {:ok, outputs, new_ctx}}
+
                 {:error, retry_error} ->
                   {:halt, {:error, retry_error}}
               end
-            
+
             {:continue, continue_ctx} ->
               {:cont, {:ok, inputs, continue_ctx}}
-            
+
             {:halt, halt_error} ->
               {:halt, {:error, halt_error}}
           end
@@ -98,63 +109,72 @@ defmodule ElixirML.Process.Pipeline do
     end)
     |> case do
       {:ok, final_outputs, final_context} ->
-        {:ok, %{
-          outputs: final_outputs,
-          stage_results: final_context.stage_results,
-          execution_time: System.monotonic_time(:millisecond) - final_context.started_at,
-          pipeline_id: context.pipeline.id
-        }}
-      
+        {:ok,
+         %{
+           outputs: final_outputs,
+           stage_results: final_context.stage_results,
+           execution_time: System.monotonic_time(:millisecond) - final_context.started_at,
+           pipeline_id: context.pipeline.id
+         }}
+
       {:error, error} ->
-        {:error, %{
-          error: error,
-          stage_results: context.stage_results,
-          execution_time: System.monotonic_time(:millisecond) - context.started_at,
-          pipeline_id: context.pipeline.id
-        }}
+        {:error,
+         %{
+           error: error,
+           stage_results: context.stage_results,
+           execution_time: System.monotonic_time(:millisecond) - context.started_at,
+           pipeline_id: context.pipeline.id
+         }}
     end
   end
 
   defp execute_parallel(context) do
     # Execute all stages in parallel
-    tasks = context.pipeline.stages
-    |> Enum.map(fn stage ->
-      Task.async(fn ->
-        {stage.id, execute_stage(stage, context.inputs, context)}
+    tasks =
+      context.pipeline.stages
+      |> Enum.map(fn stage ->
+        Task.async(fn ->
+          {stage.id, execute_stage(stage, context.inputs, context)}
+        end)
       end)
-    end)
-    
+
     # Wait for all tasks to complete
     results = Task.await_many(tasks, context.pipeline.timeout)
-    
+
     # Process results
-    {successes, errors} = Enum.split_with(results, fn {_id, result} ->
-      match?({:ok, _}, result)
-    end)
-    
+    {successes, errors} =
+      Enum.split_with(results, fn {_id, result} ->
+        match?({:ok, _}, result)
+      end)
+
     if Enum.empty?(errors) or context.pipeline.error_handling == :continue_on_error do
-      stage_results = successes
-      |> Enum.into(%{}, fn {id, {:ok, result}} -> {id, result} end)
-      
+      stage_results =
+        successes
+        |> Enum.into(%{}, fn {id, {:ok, result}} -> {id, result} end)
+
       # Combine outputs (this is simplified - might need more sophisticated merging)
-      combined_outputs = stage_results
-      |> Map.values()
-      |> List.first()  # Take first result as primary output
-      
-      {:ok, %{
-        outputs: combined_outputs,
-        stage_results: stage_results,
-        execution_time: System.monotonic_time(:millisecond) - context.started_at,
-        pipeline_id: context.pipeline.id,
-        errors: errors
-      }}
+      combined_outputs =
+        stage_results
+        |> Map.values()
+        # Take first result as primary output
+        |> List.first()
+
+      {:ok,
+       %{
+         outputs: combined_outputs,
+         stage_results: stage_results,
+         execution_time: System.monotonic_time(:millisecond) - context.started_at,
+         pipeline_id: context.pipeline.id,
+         errors: errors
+       }}
     else
-      {:error, %{
-        error: errors |> List.first() |> elem(1),
-        stage_results: %{},
-        execution_time: System.monotonic_time(:millisecond) - context.started_at,
-        pipeline_id: context.pipeline.id
-      }}
+      {:error,
+       %{
+         error: errors |> List.first() |> elem(1),
+         stage_results: %{},
+         execution_time: System.monotonic_time(:millisecond) - context.started_at,
+         pipeline_id: context.pipeline.id
+       }}
     end
   end
 
@@ -168,13 +188,13 @@ defmodule ElixirML.Process.Pipeline do
     case stage.type do
       :program ->
         execute_program_stage(stage, inputs, context)
-      
+
       :function ->
         execute_function_stage(stage, inputs, context)
-      
+
       :validation ->
         execute_validation_stage(stage, inputs, context)
-      
+
       _ ->
         {:error, {:unknown_stage_type, stage.type}}
     end
@@ -182,18 +202,18 @@ defmodule ElixirML.Process.Pipeline do
 
   defp execute_program_stage(stage, inputs, context) do
     program = stage.program
-    
+
     # Start or get existing program worker
-    case ElixirML.Process.ProgramSupervisor.start_program(program, 
-      timeout: Map.get(stage, :timeout, context.pipeline.timeout)
-    ) do
+    case ElixirML.Process.ProgramSupervisor.start_program(program,
+           timeout: Map.get(stage, :timeout, context.pipeline.timeout)
+         ) do
       {:ok, pid} ->
         try do
           ElixirML.Process.ProgramWorker.execute(pid, inputs, context.opts)
         after
           ElixirML.Process.ProgramSupervisor.stop_program(pid)
         end
-      
+
       {:error, error} ->
         {:error, error}
     end
@@ -221,15 +241,15 @@ defmodule ElixirML.Process.Pipeline do
     case context.pipeline.error_handling do
       :fail_fast ->
         {:halt, error}
-      
+
       :continue_on_error ->
         new_context = %{context | errors: [error | context.errors]}
         {:continue, new_context}
-      
+
       :retry ->
         retry_count = Map.get(stage, :retry_count, 0)
         max_retries = Map.get(stage, :max_retries, 3)
-        
+
         if retry_count < max_retries do
           _updated_stage = Map.put(stage, :retry_count, retry_count + 1)
           {:retry, context}

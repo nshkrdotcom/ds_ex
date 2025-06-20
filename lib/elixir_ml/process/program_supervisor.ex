@@ -52,11 +52,12 @@ defmodule ElixirML.Process.ProgramSupervisor do
   """
   def execution_stats do
     children = DynamicSupervisor.which_children(__MODULE__)
-    
-    running_count = Enum.count(children, fn {_, pid, _, _} ->
-      is_pid(pid) and Process.alive?(pid)
-    end)
-    
+
+    running_count =
+      Enum.count(children, fn {_, pid, _, _} ->
+        is_pid(pid) and Process.alive?(pid)
+      end)
+
     %{
       total_programs: length(children),
       running_programs: running_count,

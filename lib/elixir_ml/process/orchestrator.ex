@@ -17,21 +17,21 @@ defmodule ElixirML.Process.Orchestrator do
       {ElixirML.Process.SchemaRegistry, []},
       {ElixirML.Process.VariableRegistry, []},
       {ElixirML.Process.ResourceManager, []},
-      
+
       # Execution services
       {ElixirML.Process.ProgramSupervisor, []},
       {ElixirML.Process.PipelinePool, []},
       {ElixirML.Process.ClientPool, []},
-      
+
       # Intelligence services
       {ElixirML.Process.TeleprompterSupervisor, []},
       {ElixirML.Process.EvaluationWorkers, []},
-      
+
       # Integration services
       {ElixirML.Process.ToolRegistry, []},
       {ElixirML.Process.DatasetManager, []}
     ]
-    
+
     Supervisor.init(children, strategy: :one_for_one)
   end
 
@@ -40,7 +40,7 @@ defmodule ElixirML.Process.Orchestrator do
   """
   def status do
     children = Supervisor.which_children(__MODULE__)
-    
+
     Enum.map(children, fn {id, pid, type, modules} ->
       %{
         id: id,
@@ -64,12 +64,13 @@ defmodule ElixirML.Process.Orchestrator do
   """
   def process_stats do
     children = Supervisor.which_children(__MODULE__)
-    
+
     %{
       total_processes: length(children),
-      running_processes: Enum.count(children, fn {_, pid, _, _} -> 
-        is_pid(pid) and Process.alive?(pid) 
-      end),
+      running_processes:
+        Enum.count(children, fn {_, pid, _, _} ->
+          is_pid(pid) and Process.alive?(pid)
+        end),
       memory_usage: :erlang.memory(:processes),
       uptime: :erlang.statistics(:wall_clock) |> elem(0)
     }

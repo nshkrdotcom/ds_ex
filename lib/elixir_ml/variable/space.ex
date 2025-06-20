@@ -247,7 +247,7 @@ defmodule ElixirML.Variable.Space do
 
   @doc """
   Validate that a variable space is well-formed.
-  
+
   Checks for:
   - Valid variable definitions
   - Resolvable dependencies
@@ -544,6 +544,7 @@ defmodule ElixirML.Variable.Space do
           throw({:error, "Invalid constraint: must be a function of arity 1"})
         end
       end)
+
       {:ok, space}
     catch
       {:error, reason} -> {:error, reason}
@@ -552,14 +553,19 @@ defmodule ElixirML.Variable.Space do
 
   defp check_dependency_references(%__MODULE__{} = space) do
     variable_names = Map.keys(space.variables) |> MapSet.new()
-    
+
     Enum.reduce_while(space.dependencies, :ok, fn {var_name, deps}, _acc ->
       case MapSet.member?(variable_names, var_name) do
-        false -> {:halt, {:error, "Unknown variable in dependencies: #{var_name}"}}
+        false ->
+          {:halt, {:error, "Unknown variable in dependencies: #{var_name}"}}
+
         true ->
           case Enum.find(deps, fn dep -> not MapSet.member?(variable_names, dep) end) do
-            nil -> {:cont, :ok}
-            unknown_dep -> {:halt, {:error, "Unknown dependency: #{unknown_dep} for variable #{var_name}"}}
+            nil ->
+              {:cont, :ok}
+
+            unknown_dep ->
+              {:halt, {:error, "Unknown dependency: #{unknown_dep} for variable #{var_name}"}}
           end
       end
     end)

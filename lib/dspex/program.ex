@@ -87,7 +87,8 @@ defmodule DSPEx.Program do
   Optional callback for programs that need configuration options.
 
   """
-  @callback forward(program(), inputs(), enhanced_options()) :: {:ok, outputs()} | {:error, term()}
+  @callback forward(program(), inputs(), enhanced_options()) ::
+              {:ok, outputs()} | {:error, term()}
 
   @optional_callbacks forward: 3
 
@@ -127,16 +128,30 @@ defmodule DSPEx.Program do
   """
   defmacro variable(name, type, opts \\ []) do
     quote do
-      variable_struct = case unquote(type) do
-        :float -> ElixirML.Variable.float(unquote(name), unquote(opts))
-        :integer -> ElixirML.Variable.integer(unquote(name), unquote(opts))
-        :choice -> 
-          choices = Keyword.get(unquote(opts), :choices, [])
-          ElixirML.Variable.choice(unquote(name), choices, Keyword.drop(unquote(opts), [:choices]))
-        :module -> ElixirML.Variable.module(unquote(name), unquote(opts))
-        :composite -> ElixirML.Variable.composite(unquote(name), unquote(opts))
-      end
-      
+      variable_struct =
+        case unquote(type) do
+          :float ->
+            ElixirML.Variable.float(unquote(name), unquote(opts))
+
+          :integer ->
+            ElixirML.Variable.integer(unquote(name), unquote(opts))
+
+          :choice ->
+            choices = Keyword.get(unquote(opts), :choices, [])
+
+            ElixirML.Variable.choice(
+              unquote(name),
+              choices,
+              Keyword.drop(unquote(opts), [:choices])
+            )
+
+          :module ->
+            ElixirML.Variable.module(unquote(name), unquote(opts))
+
+          :composite ->
+            ElixirML.Variable.composite(unquote(name), unquote(opts))
+        end
+
       @variables Map.put(@variables || %{}, unquote(name), variable_struct)
     end
   end
@@ -149,7 +164,7 @@ defmodule DSPEx.Program do
   """
   def create_variable_space(program_module) when is_atom(program_module) do
     variables = get_declared_variables(program_module)
-    
+
     if Enum.empty?(variables) do
       # Add standard ML variables for programs without explicit declarations
       ElixirML.Variable.MLTypes.standard_ml_config()
@@ -191,17 +206,17 @@ defmodule DSPEx.Program do
   """
   def resolve_variables(program, opts) when is_struct(program) do
     variable_config = get_variable_config(opts)
-    
+
     cond do
       # Program has variable_space field
       Map.has_key?(program, :variable_space) and program.variable_space ->
         resolve_with_space(program.variable_space, variable_config)
-        
+
       # Program module has declared variables
       not Enum.empty?(get_declared_variables(program.__struct__)) ->
         space = create_variable_space(program.__struct__)
         resolve_with_space(space, variable_config)
-        
+
       # No variables - return empty config
       true ->
         %{}
@@ -285,7 +300,13 @@ defmodule DSPEx.Program do
         task =
           Task.async(fn ->
             try do
-              execute_with_model_config(program, inputs, model_config, resolved_variables, execution_opts)
+              execute_with_model_config(
+                program,
+                inputs,
+                model_config,
+                resolved_variables,
+                execution_opts
+              )
             catch
               kind, reason ->
                 {:error, {kind, reason}}
@@ -307,7 +328,13 @@ defmodule DSPEx.Program do
         end
       else
         # Default timeout - execute directly for backward compatibility and performance
-        execute_with_model_config(program, inputs, model_config, resolved_variables, execution_opts)
+        execute_with_model_config(
+          program,
+          inputs,
+          model_config,
+          resolved_variables,
+          execution_opts
+        )
       end
 
     _execution_duration =
@@ -382,7 +409,13 @@ defmodule DSPEx.Program do
   end
 
   # Enhanced execution function that handles model configuration and variable resolution
-  defp execute_with_model_config(program, inputs, model_config, resolved_variables, execution_opts) do
+  defp execute_with_model_config(
+         program,
+         inputs,
+         model_config,
+         resolved_variables,
+         execution_opts
+       ) do
     # Merge model configuration and resolved variables into execution options
     enhanced_opts =
       case program do
@@ -390,7 +423,7 @@ defmodule DSPEx.Program do
         %{client: _} when map_size(model_config) > 0 ->
           model_config_list = Map.to_list(model_config)
           base_opts = Keyword.merge(execution_opts, model_config_list)
-          
+
           # Add resolved variables
           if Enum.empty?(resolved_variables) do
             base_opts
@@ -401,7 +434,7 @@ defmodule DSPEx.Program do
         # For other programs, pass as execution context
         _ when map_size(model_config) > 0 ->
           base_opts = Keyword.put(execution_opts, :model_config, model_config)
-          
+
           # Add resolved variables
           if Enum.empty?(resolved_variables) do
             base_opts
@@ -770,7 +803,7 @@ defmodule DSPEx.Program do
     # Add schema validation flag to program metadata
     current_metadata = Map.get(program, :metadata, %{})
     updated_metadata = Map.put(current_metadata, :schema_validation_enabled, true)
-    
+
     Map.put(program, :metadata, updated_metadata)
   end
 

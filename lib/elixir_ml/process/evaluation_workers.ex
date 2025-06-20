@@ -12,20 +12,21 @@ defmodule ElixirML.Process.EvaluationWorkers do
 
   def init(opts) do
     worker_count = Keyword.get(opts, :worker_count, 3)
-    
+
     state = %{
       worker_count: worker_count,
       workers: %{},
       evaluation_queue: :queue.new(),
       completed_evaluations: []
     }
-    
+
     # Start evaluation workers
-    workers = Enum.reduce(1..worker_count, %{}, fn i, acc ->
-      {:ok, pid} = start_evaluation_worker()
-      Map.put(acc, pid, %{id: i, status: :idle})
-    end)
-    
+    workers =
+      Enum.reduce(1..worker_count, %{}, fn i, acc ->
+        {:ok, pid} = start_evaluation_worker()
+        Map.put(acc, pid, %{id: i, status: :idle})
+      end)
+
     {:ok, %{state | workers: workers}}
   end
 
@@ -54,7 +55,7 @@ defmodule ElixirML.Process.EvaluationWorkers do
 
   def handle_call({:evaluate, configuration, evaluation_data, opts}, from, state) do
     evaluation_id = generate_evaluation_id()
-    
+
     case find_idle_worker(state.workers) do
       {:ok, worker_pid} ->
         # Assign to worker
@@ -63,24 +64,25 @@ defmodule ElixirML.Process.EvaluationWorkers do
           GenServer.cast(__MODULE__, {:evaluation_complete, worker_pid, evaluation_id, result})
           GenServer.reply(from, {:ok, evaluation_id, result})
         end)
-        
+
         workers = put_in(state.workers[worker_pid].status, :busy)
         {:noreply, %{state | workers: workers}}
-      
+
       :no_idle_workers ->
         # Queue the evaluation
         queue_item = {from, evaluation_id, configuration, evaluation_data, opts}
         new_queue = :queue.in(queue_item, state.evaluation_queue)
-        
+
         {:noreply, %{state | evaluation_queue: new_queue}}
     end
   end
 
   def handle_call({:get_results, configuration_id}, _from, state) do
-    result = Enum.find(state.completed_evaluations, fn eval ->
-      eval.configuration_id == configuration_id
-    end)
-    
+    result =
+      Enum.find(state.completed_evaluations, fn eval ->
+        eval.configuration_id == configuration_id
+      end)
+
     case result do
       nil -> {:reply, {:error, :not_found}, state}
       evaluation -> {:reply, {:ok, evaluation.result}, state}
@@ -95,29 +97,28 @@ defmodule ElixirML.Process.EvaluationWorkers do
       queued_evaluations: :queue.len(state.evaluation_queue),
       completed_evaluations: length(state.completed_evaluations)
     }
-    
+
     {:reply, stats, state}
   end
 
   def handle_cast({:evaluation_complete, worker_pid, evaluation_id, result}, state) do
     # Mark worker as idle
     workers = put_in(state.workers[worker_pid].status, :idle)
-    
+
     # Store completed evaluation
     completed_eval = %{
       id: evaluation_id,
       result: result,
       completed_at: System.monotonic_time(:millisecond)
     }
-    
-    completed_evaluations = [completed_eval | state.completed_evaluations]
-    |> Enum.take(100)  # Keep last 100 evaluations
-    
-    new_state = %{state | 
-      workers: workers,
-      completed_evaluations: completed_evaluations
-    }
-    
+
+    completed_evaluations =
+      [completed_eval | state.completed_evaluations]
+      # Keep last 100 evaluations
+      |> Enum.take(100)
+
+    new_state = %{state | workers: workers, completed_evaluations: completed_evaluations}
+
     # Process queued evaluations
     case :queue.out(state.evaluation_queue) do
       {{:value, {from, queued_id, config, eval_data, opts}}, new_queue} ->
@@ -127,11 +128,11 @@ defmodule ElixirML.Process.EvaluationWorkers do
           GenServer.cast(__MODULE__, {:evaluation_complete, worker_pid, queued_id, result})
           GenServer.reply(from, {:ok, queued_id, result})
         end)
-        
+
         workers = put_in(new_state.workers[worker_pid].status, :busy)
-        
+
         {:noreply, %{new_state | workers: workers, evaluation_queue: new_queue}}
-      
+
       {:empty, _} ->
         {:noreply, new_state}
     end
@@ -142,14 +143,15 @@ defmodule ElixirML.Process.EvaluationWorkers do
     case Map.get(state.workers, pid) do
       nil ->
         {:noreply, state}
-      
+
       worker_info ->
         {:ok, new_pid} = start_evaluation_worker()
-        
-        workers = state.workers
-        |> Map.delete(pid)
-        |> Map.put(new_pid, %{worker_info | status: :idle})
-        
+
+        workers =
+          state.workers
+          |> Map.delete(pid)
+          |> Map.put(new_pid, %{worker_info | status: :idle})
+
         {:noreply, %{state | workers: workers}}
     end
   end
@@ -166,16 +168,16 @@ defmodule ElixirML.Process.EvaluationWorkers do
         result = mock_evaluation(config, eval_data, opts)
         send(reply_to, {:evaluation_result, result})
         evaluation_worker_loop()
-      
+
       :stop ->
         :ok
     end
   end
 
   defp find_idle_worker(workers) do
-    case Enum.find(workers, fn {_pid, worker_info} -> 
-      worker_info.status == :idle 
-    end) do
+    case Enum.find(workers, fn {_pid, worker_info} ->
+           worker_info.status == :idle
+         end) do
       {pid, _} -> {:ok, pid}
       nil -> :no_idle_workers
     end
@@ -183,7 +185,7 @@ defmodule ElixirML.Process.EvaluationWorkers do
 
   defp perform_evaluation(worker_pid, configuration, evaluation_data, opts) do
     send(worker_pid, {:evaluate, configuration, evaluation_data, opts, self()})
-    
+
     receive do
       {:evaluation_result, result} -> result
     after
@@ -193,8 +195,9 @@ defmodule ElixirML.Process.EvaluationWorkers do
 
   defp mock_evaluation(_configuration, _evaluation_data, _opts) do
     # Mock evaluation - in practice this would run actual ML evaluation
-    Process.sleep(Enum.random(100..500))  # Simulate evaluation time
-    
+    # Simulate evaluation time
+    Process.sleep(Enum.random(100..500))
+
     %{
       accuracy: :rand.uniform(),
       precision: :rand.uniform(),
@@ -206,14 +209,14 @@ defmodule ElixirML.Process.EvaluationWorkers do
   end
 
   defp count_idle_workers(workers) do
-    Enum.count(workers, fn {_pid, worker_info} -> 
-      worker_info.status == :idle 
+    Enum.count(workers, fn {_pid, worker_info} ->
+      worker_info.status == :idle
     end)
   end
 
   defp count_busy_workers(workers) do
-    Enum.count(workers, fn {_pid, worker_info} -> 
-      worker_info.status == :busy 
+    Enum.count(workers, fn {_pid, worker_info} ->
+      worker_info.status == :busy
     end)
   end
 

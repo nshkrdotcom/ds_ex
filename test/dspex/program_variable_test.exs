@@ -1,6 +1,6 @@
 defmodule DSPEx.Program.VariableTest do
   use ExUnit.Case, async: true
-  
+
   alias DSPEx.Program
   alias ElixirML.Variable
 
@@ -9,9 +9,9 @@ defmodule DSPEx.Program.VariableTest do
     use DSPEx.Program
 
     # Declare test variables
-    variable :temperature, :float, range: {0.0, 2.0}, default: 0.7
-    variable :provider, :choice, choices: [:openai, :anthropic], default: :openai
-    variable :max_tokens, :integer, range: {50, 1000}, default: 100
+    variable(:temperature, :float, range: {0.0, 2.0}, default: 0.7)
+    variable(:provider, :choice, choices: [:openai, :anthropic], default: :openai)
+    variable(:max_tokens, :integer, range: {50, 1000}, default: 100)
 
     defstruct [:signature, :client, :variable_space]
 
@@ -38,12 +38,12 @@ defmodule DSPEx.Program.VariableTest do
   describe "variable declaration" do
     test "programs can declare variables" do
       variables = TestProgram.__variables__()
-      
+
       assert %{
-        temperature: %Variable{name: :temperature, type: :float},
-        provider: %Variable{name: :provider, type: :choice},
-        max_tokens: %Variable{name: :max_tokens, type: :integer}
-      } = variables
+               temperature: %Variable{name: :temperature, type: :float},
+               provider: %Variable{name: :provider, type: :choice},
+               max_tokens: %Variable{name: :max_tokens, type: :integer}
+             } = variables
     end
 
     test "programs without variables have empty variable map" do
@@ -55,7 +55,7 @@ defmodule DSPEx.Program.VariableTest do
   describe "variable space creation" do
     test "creates variable space from declared variables" do
       space = Program.create_variable_space(TestProgram)
-      
+
       assert %ElixirML.Variable.Space{} = space
       assert Map.has_key?(space.variables, :temperature)
       assert Map.has_key?(space.variables, :provider)
@@ -64,7 +64,7 @@ defmodule DSPEx.Program.VariableTest do
 
     test "creates standard ML config for programs without variables" do
       space = Program.create_variable_space(SimpleProgram)
-      
+
       assert %ElixirML.Variable.Space{} = space
       # Should have standard ML variables
       assert Map.has_key?(space.variables, :provider)
@@ -79,10 +79,10 @@ defmodule DSPEx.Program.VariableTest do
         client: :test,
         variable_space: Program.create_variable_space(TestProgram)
       }
-      
+
       opts = [variables: %{temperature: 0.9, provider: :anthropic}]
       resolved = Program.resolve_variables(program, opts)
-      
+
       assert resolved.temperature == 0.9
       assert resolved.provider == :anthropic
       # Should use default for unspecified variables
@@ -95,11 +95,11 @@ defmodule DSPEx.Program.VariableTest do
         client: :test,
         variable_space: Program.create_variable_space(TestProgram)
       }
-      
+
       # Invalid temperature (out of range)
       opts = [variables: %{temperature: 5.0, provider: :invalid}]
       resolved = Program.resolve_variables(program, opts)
-      
+
       # Should fall back to defaults for invalid values
       assert is_map(resolved)
     end
@@ -107,7 +107,7 @@ defmodule DSPEx.Program.VariableTest do
     test "returns empty config for program without variable space" do
       program = %SimpleProgram{signature: TestSignature, client: :test}
       opts = [variables: %{temperature: 0.9}]
-      
+
       resolved = Program.resolve_variables(program, opts)
       assert resolved == %{}
     end
@@ -120,12 +120,12 @@ defmodule DSPEx.Program.VariableTest do
         client: :test,
         variable_space: Program.create_variable_space(TestProgram)
       }
-      
+
       inputs = %{question: "test"}
       opts = [variables: %{temperature: 0.8, provider: :anthropic}]
-      
+
       {:ok, result} = Program.forward(program, inputs, opts)
-      
+
       assert %{resolved_variables: resolved, inputs: ^inputs} = result
       assert resolved.temperature == 0.8
       assert resolved.provider == :anthropic
@@ -134,9 +134,9 @@ defmodule DSPEx.Program.VariableTest do
     test "works with programs that don't use variables" do
       program = %SimpleProgram{signature: TestSignature, client: :test}
       inputs = %{question: "test"}
-      
+
       {:ok, result} = Program.forward(program, inputs, [])
-      
+
       assert %{simple: true, inputs: ^inputs} = result
     end
   end
@@ -148,9 +148,10 @@ defmodule DSPEx.Program.VariableTest do
         client: :test,
         variable_space: Program.create_variable_space(TestProgram)
       }
-      
+
       # Capture telemetry events
       test_pid = self()
+
       :telemetry.attach_many(
         "test-variables",
         [[:dspex, :program, :forward, :start]],
@@ -162,9 +163,9 @@ defmodule DSPEx.Program.VariableTest do
 
       inputs = %{question: "test"}
       opts = [variables: %{temperature: 0.8}]
-      
+
       Program.forward(program, inputs, opts)
-      
+
       # Should receive telemetry with variable information
       assert_receive {:telemetry, [:dspex, :program, :forward, :start], _measurements, metadata}
       assert metadata.has_variables == true

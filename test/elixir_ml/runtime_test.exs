@@ -1,6 +1,6 @@
 defmodule ElixirML.RuntimeTest do
   use ExUnit.Case, async: true
-  
+
   alias ElixirML.Runtime
 
   describe "create_schema/2" do
@@ -9,9 +9,9 @@ defmodule ElixirML.RuntimeTest do
         {:name, :string, required: true, min_length: 2},
         {:confidence, :probability, default: 0.5}
       ]
-      
+
       schema = Runtime.create_schema(fields, title: "Test Schema")
-      
+
       assert schema.title == "Test Schema"
       assert Map.has_key?(schema.fields, :name)
       assert Map.has_key?(schema.fields, :confidence)
@@ -22,14 +22,15 @@ defmodule ElixirML.RuntimeTest do
         {:embedding, :embedding, required: true},
         {:temperature, :float, range: {0.0, 2.0}}
       ]
-      
+
       schema = Runtime.create_schema(fields)
-      
-      {:ok, validated} = Runtime.validate(schema, %{
-        embedding: [1.0, 2.0, 3.0],
-        temperature: 0.7
-      })
-      
+
+      {:ok, validated} =
+        Runtime.validate(schema, %{
+          embedding: [1.0, 2.0, 3.0],
+          temperature: 0.7
+        })
+
       assert validated.embedding == [1.0, 2.0, 3.0]
       assert validated.temperature == 0.7
     end
@@ -44,19 +45,21 @@ defmodule ElixirML.RuntimeTest do
       schema = Runtime.create_schema(fields)
 
       # Test with valid data
-      {:ok, validated} = Runtime.validate(schema, %{
-        title: "Valid Title",
-        score: 0.9
-      })
+      {:ok, validated} =
+        Runtime.validate(schema, %{
+          title: "Valid Title",
+          score: 0.9
+        })
 
       assert validated.title == "Valid Title"
       assert validated.score == 0.9
       assert validated[:tokens] == nil
 
       # Test with defaults applied
-      {:ok, validated} = Runtime.validate(schema, %{
-        title: "Valid Title"
-      })
+      {:ok, validated} =
+        Runtime.validate(schema, %{
+          title: "Valid Title"
+        })
 
       assert validated.score == 0.8
     end
@@ -70,25 +73,28 @@ defmodule ElixirML.RuntimeTest do
       schema = Runtime.create_schema(fields)
 
       # Valid data
-      {:ok, _} = Runtime.validate(schema, %{
-        embedding: [1.0, 2.0, 3.0],
-        confidence: 0.95
-      })
+      {:ok, _} =
+        Runtime.validate(schema, %{
+          embedding: [1.0, 2.0, 3.0],
+          confidence: 0.95
+        })
 
       # Invalid embedding
-      {:error, error} = Runtime.validate(schema, %{
-        embedding: "not a list",
-        confidence: 0.95
-      })
-      
+      {:error, error} =
+        Runtime.validate(schema, %{
+          embedding: "not a list",
+          confidence: 0.95
+        })
+
       assert error.message =~ "embedding"
 
       # Invalid confidence score
-      {:error, error} = Runtime.validate(schema, %{
-        embedding: [1.0, 2.0, 3.0],
-        confidence: -0.5
-      })
-      
+      {:error, error} =
+        Runtime.validate(schema, %{
+          embedding: [1.0, 2.0, 3.0],
+          confidence: -0.5
+        })
+
       assert error.message =~ "confidence"
     end
   end
@@ -100,9 +106,9 @@ defmodule ElixirML.RuntimeTest do
         answer: {:string, required: true},
         confidence: {:float, gteq: 0.0, lteq: 1.0}
       }
-      
+
       schema = Runtime.create_model("LLMOutput", fields)
-      
+
       assert schema.name == "LLMOutput"
       assert Map.has_key?(schema.fields, :reasoning)
       assert Map.has_key?(schema.fields, :answer)
@@ -118,14 +124,16 @@ defmodule ElixirML.RuntimeTest do
 
       schema = Runtime.create_model("ModelConfig", fields)
 
-      {:ok, validated} = Runtime.validate(schema, %{
-        temperature: 1.2,
-        max_tokens: 1000
-      })
+      {:ok, validated} =
+        Runtime.validate(schema, %{
+          temperature: 1.2,
+          max_tokens: 1000
+        })
 
       assert validated.temperature == 1.2
       assert validated.max_tokens == 1000
-      assert validated.provider == :openai  # default applied
+      # default applied
+      assert validated.provider == :openai
     end
   end
 
@@ -150,7 +158,8 @@ defmodule ElixirML.RuntimeTest do
 
       assert name_field.type == :string
       assert age_field.type == :integer
-      assert score_field.type == :probability  # Inferred as probability since 0.0 <= value <= 1.0
+      # Inferred as probability since 0.0 <= value <= 1.0
+      assert score_field.type == :probability
     end
 
     test "handles nested structures" do
@@ -174,14 +183,22 @@ defmodule ElixirML.RuntimeTest do
 
   describe "merge_schemas/2" do
     test "merges multiple schemas" do
-      schema1 = Runtime.create_schema([
-        {:input_text, :string, required: true}
-      ], title: "Input")
+      schema1 =
+        Runtime.create_schema(
+          [
+            {:input_text, :string, required: true}
+          ],
+          title: "Input"
+        )
 
-      schema2 = Runtime.create_schema([
-        {:output_text, :string, required: true},
-        {:confidence, :probability, default: 0.8}
-      ], title: "Output")
+      schema2 =
+        Runtime.create_schema(
+          [
+            {:output_text, :string, required: true},
+            {:confidence, :probability, default: 0.8}
+          ],
+          title: "Output"
+        )
 
       merged = Runtime.merge_schemas([schema1, schema2], title: "Complete")
 
@@ -192,13 +209,15 @@ defmodule ElixirML.RuntimeTest do
     end
 
     test "handles field conflicts with last-wins strategy" do
-      schema1 = Runtime.create_schema([
-        {:score, :integer, default: 1}
-      ])
+      schema1 =
+        Runtime.create_schema([
+          {:score, :integer, default: 1}
+        ])
 
-      schema2 = Runtime.create_schema([
-        {:score, :probability, default: 0.8}
-      ])
+      schema2 =
+        Runtime.create_schema([
+          {:score, :probability, default: 0.8}
+        ])
 
       merged = Runtime.merge_schemas([schema1, schema2])
 
@@ -220,7 +239,7 @@ defmodule ElixirML.RuntimeTest do
       variables = Runtime.extract_variables(schema)
 
       assert length(variables) == 2
-      
+
       variable_names = Enum.map(variables, fn {name, _type, _opts} -> name end)
       assert :temperature in variable_names
       assert :provider in variable_names
@@ -271,18 +290,18 @@ defmodule ElixirML.RuntimeTest do
 
       # OpenAI format
       openai_json = Runtime.to_json_schema(schema, provider: :openai)
-      
+
       assert openai_json["type"] == "object"
       assert openai_json["title"] == "QA Schema"
       assert is_map(openai_json["properties"])
       assert openai_json["required"] == ["question"]
-      
+
       # Should be flattened for OpenAI
       refute Map.has_key?(openai_json, "definitions")
 
       # Anthropic format
       anthropic_json = Runtime.to_json_schema(schema, provider: :anthropic)
-      
+
       assert anthropic_json["type"] == "object"
       assert is_map(anthropic_json["properties"])
     end
@@ -315,10 +334,13 @@ defmodule ElixirML.RuntimeTest do
 
       schema = Runtime.create_schema(fields)
 
-      {:error, error} = Runtime.validate(schema, %{
-        name: "Hi",  # Too short
-        score: 1.5   # Invalid probability
-      })
+      {:error, error} =
+        Runtime.validate(schema, %{
+          # Too short
+          name: "Hi",
+          # Invalid probability
+          score: 1.5
+        })
 
       assert %ElixirML.Schema.ValidationError{} = error
       assert error.schema == ElixirML.Runtime

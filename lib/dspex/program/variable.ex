@@ -41,13 +41,13 @@ defmodule DSPEx.Program.Variable do
   def extract_from_signature(signature, opts \\ []) do
     include_ml = Keyword.get(opts, :include_ml_variables, true)
     provider_choices = Keyword.get(opts, :provider_choices, [:openai, :anthropic, :groq])
-    
+
     # Start with empty space
     space = Space.new()
-    
+
     # Add signature-specific variables
     space = add_signature_variables(space, signature, opts)
-    
+
     # Add standard ML variables if requested
     if include_ml do
       add_standard_ml_variables(space, provider_choices)
@@ -89,12 +89,20 @@ defmodule DSPEx.Program.Variable do
     Space.new()
     |> Space.add_variable(MLTypes.provider(:provider, providers: provider_choices))
     |> Space.add_variable(MLTypes.model(:model, [:auto]))
-    |> Space.add_variable(Variable.float(:temperature, 
-         range: temperature_range, default: 0.7, 
-         description: "Sampling temperature for model response"))
-    |> Space.add_variable(Variable.integer(:max_tokens, 
-         range: max_tokens_range, default: 1000,
-         description: "Maximum tokens in model response"))
+    |> Space.add_variable(
+      Variable.float(:temperature,
+        range: temperature_range,
+        default: 0.7,
+        description: "Sampling temperature for model response"
+      )
+    )
+    |> Space.add_variable(
+      Variable.integer(:max_tokens,
+        range: max_tokens_range,
+        default: 1000,
+        description: "Maximum tokens in model response"
+      )
+    )
     |> maybe_add_reasoning_variables(include_reasoning)
     |> maybe_add_adapter_variables(include_adapters)
   end
@@ -125,25 +133,27 @@ defmodule DSPEx.Program.Variable do
   def enhance_program(program, opts \\ []) when is_struct(program) do
     auto_extract = Keyword.get(opts, :auto_extract, true)
     include_ml = Keyword.get(opts, :include_ml_variables, true)
-    
-    variable_space = case Keyword.get(opts, :variable_space) do
-      nil ->
-        cond do
-          auto_extract and Map.has_key?(program, :signature) ->
-            extract_from_signature(program.signature, 
-              include_ml_variables: include_ml)
-          
-          include_ml ->
-            standard_ml_config()
-            
-          true ->
-            Space.new()
-        end
-      
-      space ->
-        space
-    end
-    
+
+    variable_space =
+      case Keyword.get(opts, :variable_space) do
+        nil ->
+          cond do
+            auto_extract and Map.has_key?(program, :signature) ->
+              extract_from_signature(program.signature,
+                include_ml_variables: include_ml
+              )
+
+            include_ml ->
+              standard_ml_config()
+
+            true ->
+              Space.new()
+          end
+
+        space ->
+          space
+      end
+
     # Add variable_space field to program if it doesn't exist
     if Map.has_key?(program, :variable_space) do
       %{program | variable_space: variable_space}
@@ -192,7 +202,7 @@ defmodule DSPEx.Program.Variable do
   defp add_signature_variables(space, signature, opts) do
     extract_temperature = Keyword.get(opts, :extract_temperature, true)
     extract_max_tokens = Keyword.get(opts, :extract_max_tokens, true)
-    
+
     space
     |> maybe_add_temperature_from_signature(signature, extract_temperature)
     |> maybe_add_max_tokens_from_signature(signature, extract_max_tokens)
@@ -204,10 +214,8 @@ defmodule DSPEx.Program.Variable do
     |> Space.add_variable(MLTypes.provider(:provider, providers: provider_choices))
     |> Space.add_variable(MLTypes.adapter(:adapter))
     |> Space.add_variable(MLTypes.reasoning_strategy(:reasoning_strategy))
-    |> Space.add_variable(Variable.float(:temperature, 
-         range: {0.0, 2.0}, default: 0.7))
-    |> Space.add_variable(Variable.integer(:max_tokens, 
-         range: {50, 4000}, default: 1000))
+    |> Space.add_variable(Variable.float(:temperature, range: {0.0, 2.0}, default: 0.7))
+    |> Space.add_variable(Variable.integer(:max_tokens, range: {50, 4000}, default: 1000))
   end
 
   defp maybe_add_reasoning_variables(space, true) do
@@ -225,9 +233,13 @@ defmodule DSPEx.Program.Variable do
   defp maybe_add_temperature_from_signature(space, signature, true) do
     # Check if signature has temperature hints or constraints
     if has_temperature_field?(signature) do
-      Space.add_variable(space, Variable.float(:temperature, 
-        range: get_temperature_range(signature), 
-        default: get_temperature_default(signature)))
+      Space.add_variable(
+        space,
+        Variable.float(:temperature,
+          range: get_temperature_range(signature),
+          default: get_temperature_default(signature)
+        )
+      )
     else
       space
     end
@@ -238,9 +250,13 @@ defmodule DSPEx.Program.Variable do
   defp maybe_add_max_tokens_from_signature(space, signature, true) do
     # Check if signature has max_tokens hints or constraints
     if has_max_tokens_field?(signature) do
-      Space.add_variable(space, Variable.integer(:max_tokens, 
-        range: get_max_tokens_range(signature), 
-        default: get_max_tokens_default(signature)))
+      Space.add_variable(
+        space,
+        Variable.integer(:max_tokens,
+          range: get_max_tokens_range(signature),
+          default: get_max_tokens_default(signature)
+        )
+      )
     else
       space
     end
@@ -289,10 +305,10 @@ defmodule DSPEx.Program.Variable do
 
   defp has_temperature_field?(_signature), do: false
   defp has_max_tokens_field?(_signature), do: false
-  
+
   defp get_temperature_range(_signature), do: {0.0, 2.0}
   defp get_temperature_default(_signature), do: 0.7
-  
+
   defp get_max_tokens_range(_signature), do: {50, 4000}
   defp get_max_tokens_default(_signature), do: 1000
 end

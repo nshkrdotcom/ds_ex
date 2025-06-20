@@ -60,16 +60,16 @@ defmodule ElixirML.Schema.Runtime do
   def to_json_schema(%__MODULE__{fields: fields, metadata: metadata}, opts \\ []) do
     provider = Keyword.get(opts, :provider, :generic)
     include_descriptions = Keyword.get(opts, :include_descriptions, true)
-    
+
     properties =
       Enum.reduce(fields, %{}, fn {name, type, opts_field}, acc ->
         field_schema = %{
           "type" => json_type_for(type),
           "x-elixir-type" => type
         }
-        
+
         # Add description if enabled
-        field_schema = 
+        field_schema =
           if include_descriptions do
             description = Keyword.get(opts_field, :description, "")
             Map.put(field_schema, "description", description)
@@ -94,28 +94,28 @@ defmodule ElixirML.Schema.Runtime do
       "required" => required_fields,
       "additionalProperties" => false
     }
-    
+
     # Add description if present in metadata
-    base_schema = 
+    base_schema =
       case metadata do
         %{description: desc} when is_binary(desc) and desc != "" ->
           Map.put(base_schema, "description", desc)
-        _ -> 
+
+        _ ->
           base_schema
       end
-    
+
     # Add metadata if present
-    base_schema = 
+    base_schema =
       if metadata && map_size(metadata) > 0 do
         Map.put(base_schema, "metadata", metadata)
       else
         base_schema
       end
-    
+
     # Apply provider-specific optimizations
     apply_provider_optimizations(base_schema, provider)
   end
-  
 
   # Private validation functions
 
@@ -194,7 +194,7 @@ defmodule ElixirML.Schema.Runtime do
 
   defp add_type_constraints(field_schema, :embedding, opts) do
     dimension = Keyword.get(opts, :dimension, 768)
-    
+
     Map.merge(field_schema, %{
       "type" => "array",
       "items" => %{"type" => "number"},
@@ -229,7 +229,7 @@ defmodule ElixirML.Schema.Runtime do
         ]
       }
     }
-    
+
     case Keyword.get(opts, :max_length) do
       nil -> Map.merge(field_schema, base_constraints)
       max_len -> Map.merge(field_schema, Map.put(base_constraints, "maxItems", max_len))
@@ -295,9 +295,11 @@ defmodule ElixirML.Schema.Runtime do
 
   defp remove_unsupported_formats(schema, unsupported_formats) do
     case Map.get(schema, "properties") do
-      nil -> schema
+      nil ->
+        schema
+
       properties ->
-        updated_properties = 
+        updated_properties =
           properties
           |> Enum.map(fn {key, prop} ->
             case Map.get(prop, "format") do
@@ -307,12 +309,13 @@ defmodule ElixirML.Schema.Runtime do
                 else
                   {key, prop}
                 end
+
               _ ->
                 {key, prop}
             end
           end)
           |> Map.new()
-        
+
         Map.put(schema, "properties", updated_properties)
     end
   end
@@ -324,7 +327,9 @@ defmodule ElixirML.Schema.Runtime do
           nil -> Map.put(schema, "properties", %{})
           _ -> schema
         end
-      _ -> schema
+
+      _ ->
+        schema
     end
   end
 

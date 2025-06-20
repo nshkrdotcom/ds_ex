@@ -20,7 +20,7 @@ defmodule ElixirML.Process.ProgramWorker do
   def start_link(opts) do
     program = Keyword.fetch!(opts, :program)
     program_id = Keyword.get(opts, :program_id, generate_program_id())
-    
+
     GenServer.start_link(__MODULE__, %{
       program: program,
       program_id: program_id,
@@ -38,15 +38,15 @@ defmodule ElixirML.Process.ProgramWorker do
       status: :initialized,
       started_at: System.monotonic_time(:millisecond)
     }
-    
+
     # Register with variable registry if space is available
     if program.variable_space do
       ElixirML.Process.VariableRegistry.register_space(
-        "#{program_id}_space", 
+        "#{program_id}_space",
         program.variable_space
       )
     end
-    
+
     {:ok, state}
   end
 
@@ -82,20 +82,20 @@ defmodule ElixirML.Process.ProgramWorker do
 
   def handle_call({:execute, inputs, opts}, _from, state) do
     execution_start = System.monotonic_time(:millisecond)
-    
+
     try do
       # Validate inputs against program signature
       validated_inputs = validate_inputs(state.program, inputs)
-      
+
       # Apply variable configuration
       execution_config = merge_configurations(state.variable_configuration, opts)
-      
+
       # Execute the program
       result = execute_program_logic(state.program, validated_inputs, execution_config)
-      
+
       execution_end = System.monotonic_time(:millisecond)
       execution_time = execution_end - execution_start
-      
+
       # Record execution history
       execution_record = %{
         inputs: inputs,
@@ -104,23 +104,23 @@ defmodule ElixirML.Process.ProgramWorker do
         timestamp: execution_start,
         status: :success
       }
-      
+
       # Update metrics
       new_metrics = update_performance_metrics(state.performance_metrics, execution_record)
-      
-      new_state = %{state |
-        execution_history: [execution_record | state.execution_history],
-        performance_metrics: new_metrics,
-        status: :active
+
+      new_state = %{
+        state
+        | execution_history: [execution_record | state.execution_history],
+          performance_metrics: new_metrics,
+          status: :active
       }
-      
+
       {:reply, {:ok, result}, new_state}
-      
     catch
       error_type, error ->
         execution_end = System.monotonic_time(:millisecond)
         execution_time = execution_end - execution_start
-        
+
         error_record = %{
           inputs: inputs,
           error: {error_type, error},
@@ -128,14 +128,15 @@ defmodule ElixirML.Process.ProgramWorker do
           timestamp: execution_start,
           status: :error
         }
-        
+
         Logger.error("Program execution failed: #{inspect(error)}")
-        
-        new_state = %{state |
-          execution_history: [error_record | state.execution_history],
-          status: :error
+
+        new_state = %{
+          state
+          | execution_history: [error_record | state.execution_history],
+            status: :error
         }
-        
+
         {:reply, {:error, error}, new_state}
     end
   end
@@ -146,7 +147,7 @@ defmodule ElixirML.Process.ProgramWorker do
       {:ok, validated_config} ->
         new_state = %{state | variable_configuration: validated_config}
         {:reply, {:ok, validated_config}, new_state}
-        
+
       {:error, _} = error ->
         {:reply, error, state}
     end
@@ -161,7 +162,7 @@ defmodule ElixirML.Process.ProgramWorker do
       current_configuration: state.variable_configuration,
       performance_summary: summarize_performance(state.performance_metrics)
     }
-    
+
     {:reply, {:ok, info}, state}
   end
 
@@ -189,10 +190,10 @@ defmodule ElixirML.Process.ProgramWorker do
   defp execute_program_logic(_program, inputs, config) do
     # TODO: Implement actual program execution logic
     # This is a placeholder that simulates program execution
-    
+
     # Simulate some processing time
     Process.sleep(Enum.random(10..100))
-    
+
     # Return a mock result
     %{
       output: "Processed: #{inspect(inputs)}",
@@ -202,6 +203,7 @@ defmodule ElixirML.Process.ProgramWorker do
   end
 
   defp validate_configuration(nil, _config), do: {:ok, %{}}
+
   defp validate_configuration(variable_space, config) do
     ElixirML.Variable.Space.validate_configuration(variable_space, config)
   end
@@ -211,19 +213,21 @@ defmodule ElixirML.Process.ProgramWorker do
       :success ->
         execution_times = Map.get(current_metrics, :execution_times, [])
         new_times = [execution_record.execution_time_ms | execution_times] |> Enum.take(100)
-        
-        %{current_metrics |
-          execution_times: new_times,
-          total_executions: Map.get(current_metrics, :total_executions, 0) + 1,
-          successful_executions: Map.get(current_metrics, :successful_executions, 0) + 1,
-          average_execution_time: Enum.sum(new_times) / length(new_times),
-          last_execution_time: execution_record.execution_time_ms
+
+        %{
+          current_metrics
+          | execution_times: new_times,
+            total_executions: Map.get(current_metrics, :total_executions, 0) + 1,
+            successful_executions: Map.get(current_metrics, :successful_executions, 0) + 1,
+            average_execution_time: Enum.sum(new_times) / length(new_times),
+            last_execution_time: execution_record.execution_time_ms
         }
-        
+
       :error ->
-        %{current_metrics |
-          total_executions: Map.get(current_metrics, :total_executions, 0) + 1,
-          failed_executions: Map.get(current_metrics, :failed_executions, 0) + 1
+        %{
+          current_metrics
+          | total_executions: Map.get(current_metrics, :total_executions, 0) + 1,
+            failed_executions: Map.get(current_metrics, :failed_executions, 0) + 1
         }
     end
   end
@@ -240,7 +244,7 @@ defmodule ElixirML.Process.ProgramWorker do
   defp calculate_success_rate(metrics) do
     total = Map.get(metrics, :total_executions, 0)
     successful = Map.get(metrics, :successful_executions, 0)
-    
+
     if total > 0 do
       successful / total
     else

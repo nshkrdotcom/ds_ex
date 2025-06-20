@@ -12,20 +12,21 @@ defmodule ElixirML.Process.ClientPool do
 
   def init(opts) do
     pool_size = Keyword.get(opts, :pool_size, 10)
-    
+
     state = %{
       pool_size: pool_size,
       available_clients: [],
       busy_clients: %{},
       waiting_requests: :queue.new()
     }
-    
+
     # Start initial client processes
-    clients = Enum.map(1..pool_size, fn _i ->
-      {:ok, pid} = start_client()
-      pid
-    end)
-    
+    clients =
+      Enum.map(1..pool_size, fn _i ->
+        {:ok, pid} = start_client()
+        pid
+      end)
+
     {:ok, %{state | available_clients: clients}}
   end
 
@@ -57,18 +58,15 @@ defmodule ElixirML.Process.ClientPool do
       [client | rest] ->
         # Client available, assign it
         busy_clients = Map.put(state.busy_clients, client, from)
-        new_state = %{state | 
-          available_clients: rest,
-          busy_clients: busy_clients
-        }
-        
+        new_state = %{state | available_clients: rest, busy_clients: busy_clients}
+
         {:reply, {:ok, client}, new_state}
-      
+
       [] ->
         # No clients available, queue the request
         waiting_requests = :queue.in(from, state.waiting_requests)
         new_state = %{state | waiting_requests: waiting_requests}
-        
+
         {:noreply, new_state}
     end
   end
@@ -80,37 +78,31 @@ defmodule ElixirML.Process.ClientPool do
       busy_clients: map_size(state.busy_clients),
       waiting_requests: :queue.len(state.waiting_requests)
     }
-    
+
     {:reply, stats, state}
   end
 
   def handle_cast({:checkin_client, client_pid}, state) do
     # Remove from busy clients
     busy_clients = Map.delete(state.busy_clients, client_pid)
-    
+
     # Check if there are waiting requests
     case :queue.out(state.waiting_requests) do
       {{:value, waiting_from}, new_queue} ->
         # Assign client to waiting request
         GenServer.reply(waiting_from, {:ok, client_pid})
         new_busy_clients = Map.put(busy_clients, client_pid, waiting_from)
-        
-        new_state = %{state |
-          busy_clients: new_busy_clients,
-          waiting_requests: new_queue
-        }
-        
+
+        new_state = %{state | busy_clients: new_busy_clients, waiting_requests: new_queue}
+
         {:noreply, new_state}
-      
+
       {:empty, _} ->
         # No waiting requests, return client to available pool
         available_clients = [client_pid | state.available_clients]
-        
-        new_state = %{state |
-          available_clients: available_clients,
-          busy_clients: busy_clients
-        }
-        
+
+        new_state = %{state | available_clients: available_clients, busy_clients: busy_clients}
+
         {:noreply, new_state}
     end
   end
@@ -119,15 +111,16 @@ defmodule ElixirML.Process.ClientPool do
     # Client process died, remove from tracking and start a new one
     busy_clients = Map.delete(state.busy_clients, pid)
     available_clients = List.delete(state.available_clients, pid)
-    
+
     # Start replacement client
     {:ok, new_client} = start_client()
-    
-    new_state = %{state |
-      available_clients: [new_client | available_clients],
-      busy_clients: busy_clients
+
+    new_state = %{
+      state
+      | available_clients: [new_client | available_clients],
+        busy_clients: busy_clients
     }
-    
+
     {:noreply, new_state}
   end
 

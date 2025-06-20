@@ -109,8 +109,10 @@ defmodule ElixirML do
 
   defp orchestrator_status do
     case Process.whereis(ElixirML.Process.Orchestrator) do
-      nil -> :not_started
-      pid when is_pid(pid) -> 
+      nil ->
+        :not_started
+
+      pid when is_pid(pid) ->
         if Process.alive?(pid) do
           :running
         else
@@ -135,8 +137,10 @@ defmodule ElixirML do
 
   defp process_status(module) do
     case Process.whereis(module) do
-      nil -> :not_started
-      pid when is_pid(pid) -> 
+      nil ->
+        :not_started
+
+      pid when is_pid(pid) ->
         if Process.alive?(pid) do
           :running
         else

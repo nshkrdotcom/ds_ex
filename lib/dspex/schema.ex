@@ -1,7 +1,7 @@
 defmodule DSPEx.Schema do
   @moduledoc """
   Bridge between DSPEx signatures and ElixirML schemas.
-  
+
   Replaces DSPEx.Signature.Sinter with ElixirML-based validation.
   Provides seamless integration between DSPEx signature definitions
   and the ElixirML schema system with ML-specific types and optimization.
@@ -48,9 +48,9 @@ defmodule DSPEx.Schema do
 
   @type signature_module :: module()
   @type validation_opts :: [
-    field_type: :inputs | :outputs | :all,
-    strict: boolean()
-  ]
+          field_type: :inputs | :outputs | :all,
+          strict: boolean()
+        ]
 
   @doc """
   Converts a DSPEx signature module to an ElixirML schema.
@@ -183,7 +183,7 @@ defmodule DSPEx.Schema do
     provider = Keyword.get(opts, :provider, :generic)
 
     schema = signature_to_schema_for_field_type(signature, field_type)
-    
+
     json_schema = Runtime.to_json_schema(schema, provider: provider)
 
     # Customize the schema based on options
@@ -258,7 +258,7 @@ defmodule DSPEx.Schema do
 
   defp extract_from_enhanced_fields(signature, input_fields, _output_fields) do
     enhanced_fields = signature.__enhanced_fields__()
-    
+
     Enum.map(enhanced_fields, fn enhanced_field ->
       convert_enhanced_field_to_elixir_ml(enhanced_field, enhanced_field.name in input_fields)
     end)
@@ -277,7 +277,8 @@ defmodule DSPEx.Schema do
       name: enhanced_field.name,
       type: map_type_to_elixir_ml(enhanced_field.type),
       constraints: convert_constraints_to_elixir_ml(enhanced_field.constraints),
-      required: is_input,  # Only inputs are required for validation
+      # Only inputs are required for validation
+      required: is_input,
       default: Map.get(enhanced_field, :default),
       description: Map.get(enhanced_field, :description),
       variable: Map.get(enhanced_field, :variable, false)
@@ -287,9 +288,11 @@ defmodule DSPEx.Schema do
   defp build_basic_field_definition(field_name, is_input) do
     %{
       name: field_name,
-      type: :string,  # Default type for basic fields
+      # Default type for basic fields
+      type: :string,
       constraints: %{},
-      required: is_input,  # Only inputs are required by default
+      # Only inputs are required by default
+      required: is_input,
       default: nil,
       description: nil,
       variable: false
@@ -336,7 +339,7 @@ defmodule DSPEx.Schema do
 
   defp generate_elixir_ml_schema(signature, field_definitions) do
     # Convert field definitions to ElixirML format
-    elixir_ml_fields = 
+    elixir_ml_fields =
       Enum.map(field_definitions, fn field_def ->
         opts = build_field_opts(field_def)
         {field_def.name, field_def.type, opts}
@@ -361,11 +364,11 @@ defmodule DSPEx.Schema do
       variable: field_def.variable
     ]
 
-    constraint_opts = 
+    constraint_opts =
       field_def.constraints
       |> Enum.to_list()
 
-    default_opts = 
+    default_opts =
       if field_def.default, do: [default: field_def.default], else: []
 
     base_opts

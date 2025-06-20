@@ -18,12 +18,14 @@ defmodule ElixirML.Process.TeleprompterSupervisor do
   Start a new optimization process.
   """
   def start_optimization(algorithm, program, training_data, opts \\ []) do
-    child_spec = {ElixirML.Process.OptimizationWorker, [
-      algorithm: algorithm,
-      program: program,
-      training_data: training_data
-    ] ++ opts}
-    
+    child_spec =
+      {ElixirML.Process.OptimizationWorker,
+       [
+         algorithm: algorithm,
+         program: program,
+         training_data: training_data
+       ] ++ opts}
+
     DynamicSupervisor.start_child(__MODULE__, child_spec)
   end
 

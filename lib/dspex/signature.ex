@@ -328,12 +328,12 @@ defmodule DSPEx.Signature do
 
   @doc """
   Defines an input field with optional ML-specific type and constraints.
-  
+
   ## Parameters
   - `name` - Field name as atom
   - `type` - Field type (supports ElixirML types like :embedding, :confidence_score)
   - `opts` - Additional constraints and options
-  
+
   ## Examples
       input :question, :string
       input :context, :embedding, dimensions: 1536
@@ -347,12 +347,12 @@ defmodule DSPEx.Signature do
 
   @doc """
   Defines an output field with optional ML-specific type and constraints.
-  
+
   ## Parameters
   - `name` - Field name as atom
   - `type` - Field type (supports ElixirML types like :confidence_score, :model_response)
   - `opts` - Additional constraints and options
-  
+
   ## Examples
       output :answer, :string
       output :confidence, :confidence_score
@@ -369,17 +369,17 @@ defmodule DSPEx.Signature do
   defp generate_schema_dsl_signature do
     quote do
       @behaviour DSPEx.Signature
-      
+
       # Initialize field accumulators
       Module.register_attribute(__MODULE__, :schema_input_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :schema_output_fields, accumulate: true)
-      
+
       # Import DSL macros
       import DSPEx.Signature, only: [input: 2, input: 3, output: 2, output: 3]
-      
+
       # Add schema integration
       alias ElixirML.{Schema, Variable}
-      
+
       @before_compile DSPEx.Signature
     end
   end
@@ -387,39 +387,49 @@ defmodule DSPEx.Signature do
   # Compile-time callback to generate signature struct and methods
   defmacro __before_compile__(env) do
     # Get field definitions at compile time
-    input_field_defs = Module.get_attribute(env.module, :schema_input_fields, []) |> Enum.reverse()
-    output_field_defs = Module.get_attribute(env.module, :schema_output_fields, []) |> Enum.reverse()
-    
+    input_field_defs =
+      Module.get_attribute(env.module, :schema_input_fields, []) |> Enum.reverse()
+
+    output_field_defs =
+      Module.get_attribute(env.module, :schema_output_fields, []) |> Enum.reverse()
+
     # Extract field names for compatibility
     input_field_names = Enum.map(input_field_defs, fn {name, _type, _opts} -> name end)
     output_field_names = Enum.map(output_field_defs, fn {name, _type, _opts} -> name end)
     all_field_names = input_field_names ++ output_field_names
-    
+
     # Generate enhanced field definitions for schema integration
-    enhanced_input_fields = Enum.map(input_field_defs, fn {name, type, opts} ->
-      %{
-        name: name,
-        type: type,
-        constraints: Map.new(opts),
-        required: Keyword.get(opts, :required, true),
-        default: Keyword.get(opts, :default, nil)
-      }
-    end)
-    
-    enhanced_output_fields = Enum.map(output_field_defs, fn {name, type, opts} ->
-      %{
-        name: name,
-        type: type,
-        constraints: Map.new(opts),
-        required: Keyword.get(opts, :required, true),
-        default: Keyword.get(opts, :default, nil)
-      }
-    end)
-    
+    enhanced_input_fields =
+      Enum.map(input_field_defs, fn {name, type, opts} ->
+        %{
+          name: name,
+          type: type,
+          constraints: Map.new(opts),
+          required: Keyword.get(opts, :required, true),
+          default: Keyword.get(opts, :default, nil)
+        }
+      end)
+
+    enhanced_output_fields =
+      Enum.map(output_field_defs, fn {name, type, opts} ->
+        %{
+          name: name,
+          type: type,
+          constraints: Map.new(opts),
+          required: Keyword.get(opts, :required, true),
+          default: Keyword.get(opts, :default, nil)
+        }
+      end)
+
     all_enhanced_fields = enhanced_input_fields ++ enhanced_output_fields
-    
+
     # Generate the signature struct and methods
-    generate_signature_struct_with_schema(input_field_names, output_field_names, all_field_names, all_enhanced_fields)
+    generate_signature_struct_with_schema(
+      input_field_names,
+      output_field_names,
+      all_field_names,
+      all_enhanced_fields
+    )
   end
 
   # Generate enhanced signature with Sinter support
@@ -452,7 +462,12 @@ defmodule DSPEx.Signature do
   # Generate signature struct with schema integration
   @spec generate_signature_struct_with_schema(list(atom()), list(atom()), list(atom()), list()) ::
           Macro.t()
-  defp generate_signature_struct_with_schema(input_fields, output_fields, all_fields, enhanced_fields) do
+  defp generate_signature_struct_with_schema(
+         input_fields,
+         output_fields,
+         all_fields,
+         enhanced_fields
+       ) do
     quote do
       @behaviour DSPEx.Signature
 
@@ -593,10 +608,10 @@ defmodule DSPEx.Signature do
     quote do
       @doc """
       Validates inputs using ElixirML Schema Engine with ML-specific type validation.
-      
+
       ## Parameters
       - `inputs` - A map containing input field values
-      
+
       ## Returns
       - `{:ok, validated_inputs}` if validation passes
       - `{:error, validation_errors}` if validation fails
@@ -608,10 +623,10 @@ defmodule DSPEx.Signature do
 
       @doc """
       Validates outputs using ElixirML Schema Engine with ML-specific type validation.
-      
+
       ## Parameters
       - `outputs` - A map containing output field values
-      
+
       ## Returns
       - `{:ok, validated_outputs}` if validation passes
       - `{:error, validation_errors}` if validation fails
@@ -623,7 +638,7 @@ defmodule DSPEx.Signature do
 
       @doc """
       Extracts variables from signature field definitions for optimization.
-      
+
       ## Returns
       - Variable space containing extractable variables from field types and constraints
       """
@@ -640,7 +655,7 @@ defmodule DSPEx.Signature do
     quote do
       @doc """
       Validates that all required input fields are present and non-nil.
-      
+
       Uses basic field presence validation for backward compatibility.
       For ML-specific type validation, use validate_inputs_with_schema/1.
 
@@ -666,7 +681,7 @@ defmodule DSPEx.Signature do
 
       @doc """
       Validates that all required output fields are present and non-nil.
-      
+
       Uses basic field presence validation for backward compatibility.
       For ML-specific type validation, use validate_outputs_with_schema/1.
 

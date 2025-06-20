@@ -1,16 +1,16 @@
 defmodule ElixirML.JsonSchema do
   @moduledoc """
   Advanced JSON Schema generation with provider-specific optimizations.
-  
+
   Provides comprehensive JSON Schema generation capabilities specifically optimized
   for ML use cases and LLM providers. Supports:
-  
+
   - Provider-specific optimizations (OpenAI, Anthropic, Groq)
   - ML-native type conversion and constraints  
   - Schema flattening and enhancement
   - OpenAPI compatibility
   - Schema merging and validation
-  
+
   This module consolidates the best features from Elixact's JSON Schema
   generation with ElixirML's ML-specific type system.
   """
@@ -20,12 +20,12 @@ defmodule ElixirML.JsonSchema do
   @type json_schema :: map()
   @type provider :: :openai | :anthropic | :groq | atom()
   @type optimization_opts :: [
-    provider: provider(),
-    flatten: boolean(),
-    enhance_descriptions: boolean(),
-    add_examples: boolean(),
-    strict_mode: boolean()
-  ]
+          provider: provider(),
+          flatten: boolean(),
+          enhance_descriptions: boolean(),
+          add_examples: boolean(),
+          strict_mode: boolean()
+        ]
 
   @doc """
   Generate JSON schema from ElixirML schema with provider optimizations.
@@ -133,10 +133,12 @@ defmodule ElixirML.JsonSchema do
   @spec flatten_schema(json_schema()) :: json_schema()
   def flatten_schema(schema) do
     case Map.get(schema, "definitions") do
-      nil -> schema
+      nil ->
+        schema
+
       definitions ->
         flattened_props = flatten_properties(schema["properties"] || %{}, definitions)
-        
+
         schema
         |> Map.put("properties", flattened_props)
         |> Map.delete("definitions")
@@ -161,14 +163,16 @@ defmodule ElixirML.JsonSchema do
   @spec enhance_descriptions(json_schema()) :: json_schema()
   def enhance_descriptions(schema) do
     case Map.get(schema, "properties") do
-      nil -> schema
+      nil ->
+        schema
+
       properties ->
-        enhanced_properties = 
+        enhanced_properties =
           Enum.reduce(properties, %{}, fn {key, prop}, acc ->
             enhanced_prop = enhance_property_description(prop, key)
             Map.put(acc, key, enhanced_prop)
           end)
-        
+
         Map.put(schema, "properties", enhanced_properties)
     end
   end
@@ -190,14 +194,16 @@ defmodule ElixirML.JsonSchema do
   @spec remove_unsupported_formats(json_schema(), [atom()]) :: json_schema()
   def remove_unsupported_formats(schema, unsupported_formats) do
     case Map.get(schema, "properties") do
-      nil -> schema
+      nil ->
+        schema
+
       properties ->
-        cleaned_properties = 
+        cleaned_properties =
           Enum.reduce(properties, %{}, fn {key, prop}, acc ->
             cleaned_prop = remove_format_if_unsupported(prop, unsupported_formats)
             Map.put(acc, key, cleaned_prop)
           end)
-        
+
         Map.put(schema, "properties", cleaned_properties)
     end
   end
@@ -239,9 +245,9 @@ defmodule ElixirML.JsonSchema do
   @spec to_openapi_schema(Runtime.t(), keyword()) :: json_schema()
   def to_openapi_schema(%Runtime{} = runtime_schema, opts \\ []) do
     version = Keyword.get(opts, :version, "3.0")
-    
+
     base_schema = runtime_to_json_schema(runtime_schema)
-    
+
     case version do
       "3.0" -> add_openapi_3_extensions(base_schema)
       _ -> base_schema
@@ -263,16 +269,18 @@ defmodule ElixirML.JsonSchema do
   @spec add_examples(json_schema(), map()) :: json_schema()
   def add_examples(schema, examples) when is_map(examples) do
     case Map.get(schema, "properties") do
-      nil -> schema
+      nil ->
+        schema
+
       properties ->
-        enhanced_properties = 
+        enhanced_properties =
           Enum.reduce(properties, %{}, fn {key, prop}, acc ->
             case Map.get(examples, key) do
               nil -> Map.put(acc, key, prop)
               example -> Map.put(acc, key, Map.put(prop, "example", example))
             end
           end)
-        
+
         Map.put(schema, "properties", enhanced_properties)
     end
   end
@@ -305,7 +313,7 @@ defmodule ElixirML.JsonSchema do
   defp runtime_to_json_schema(%Runtime{} = runtime_schema) do
     properties = generate_properties_from_runtime(runtime_schema.fields)
     required_fields = get_required_fields_from_runtime(runtime_schema.fields)
-    
+
     base_schema = %{
       "type" => "object",
       "properties" => properties,
@@ -326,7 +334,7 @@ defmodule ElixirML.JsonSchema do
       }
 
       property = add_ml_type_constraints(property, field_def)
-      
+
       Map.put(acc, to_string(name), property)
     end)
   end
@@ -335,26 +343,32 @@ defmodule ElixirML.JsonSchema do
     fields
     |> Enum.filter(fn {_name, field_def} -> field_def.required end)
     |> Enum.map(fn {name, _field_def} -> to_string(name) end)
-    |> Enum.sort()  # Sort to ensure consistent ordering
+    # Sort to ensure consistent ordering
+    |> Enum.sort()
   end
 
   defp add_schema_title(schema, %Runtime{title: title}) when is_binary(title) do
     Map.put(schema, "title", title)
   end
+
   defp add_schema_title(schema, %Runtime{name: name}) when is_binary(name) do
     Map.put(schema, "title", name)
   end
+
   defp add_schema_title(schema, _), do: schema
 
-  defp add_schema_description(schema, %Runtime{metadata: %{description: desc}}) when is_binary(desc) do
+  defp add_schema_description(schema, %Runtime{metadata: %{description: desc}})
+       when is_binary(desc) do
     Map.put(schema, "description", desc)
   end
+
   defp add_schema_description(schema, _), do: schema
 
   defp add_ml_type_constraints(property, field_def) do
     case field_def.type do
       :embedding ->
         dimensions = get_in(field_def.constraints, [:dimensions]) || 768
+
         Map.merge(property, %{
           "type" => "array",
           "items" => %{"type" => "number"},
@@ -394,13 +408,13 @@ defmodule ElixirML.JsonSchema do
           }
         })
 
-      _ -> 
+      _ ->
         property
     end
   end
 
   defp json_type_for_ml_type(:embedding), do: "array"
-  defp json_type_for_ml_type(:tensor), do: "array" 
+  defp json_type_for_ml_type(:tensor), do: "array"
   defp json_type_for_ml_type(:token_list), do: "array"
   defp json_type_for_ml_type(:probability), do: "number"
   defp json_type_for_ml_type(:confidence_score), do: "number"
@@ -418,20 +432,22 @@ defmodule ElixirML.JsonSchema do
 
   defp apply_ml_type_optimizations(schema) do
     case Map.get(schema, "properties") do
-      nil -> schema
+      nil ->
+        schema
+
       properties ->
-        optimized_props = 
+        optimized_props =
           properties
           |> Enum.map(fn {key, prop} -> {key, optimize_ml_property_type(prop)} end)
           |> Map.new()
-        
+
         Map.put(schema, "properties", optimized_props)
     end
   end
 
   defp optimize_ml_property_type(%{"x-elixir-type" => :embedding} = prop) do
     dimension = get_in(prop, ["x-constraints", "dimension"]) || 768
-    
+
     Map.merge(prop, %{
       "type" => "array",
       "items" => %{"type" => "number"},
@@ -459,6 +475,7 @@ defmodule ElixirML.JsonSchema do
   defp maybe_add_examples(schema, true, examples) when is_map(examples) do
     add_examples(schema, examples)
   end
+
   defp maybe_add_examples(schema, _, _), do: schema
 
   defp flatten_properties(properties, definitions) when is_map(properties) do
@@ -472,10 +489,13 @@ defmodule ElixirML.JsonSchema do
     case extract_definition_name(ref) do
       {:ok, def_name} ->
         case Map.get(definitions, def_name) do
-          nil -> %{"type" => "object"}  # Fallback
+          # Fallback
+          nil -> %{"type" => "object"}
           definition -> definition
         end
-      {:error, _} -> %{"type" => "object"}
+
+      {:error, _} ->
+        %{"type" => "object"}
     end
   end
 
@@ -500,19 +520,23 @@ defmodule ElixirML.JsonSchema do
         else
           prop
         end
+
       format when is_binary(format) ->
         format_atom = String.to_existing_atom(format)
+
         if format_atom in unsupported_formats do
           Map.delete(prop, "format")
         else
           prop
         end
-      _ -> prop
+
+      _ ->
+        prop
     end
   rescue
-    ArgumentError -> prop  # Handle case where string can't be converted to existing atom
+    # Handle case where string can't be converted to existing atom
+    ArgumentError -> prop
   end
-
 
   defp ensure_required_array_sorted(schema) do
     case Map.get(schema, "required") do
@@ -529,7 +553,9 @@ defmodule ElixirML.JsonSchema do
           nil -> Map.put(schema, "properties", %{})
           _ -> schema
         end
-      _ -> schema
+
+      _ ->
+        schema
     end
   end
 
@@ -545,6 +571,7 @@ defmodule ElixirML.JsonSchema do
     case Map.get(schema, "type") do
       type when type in ["object", "array", "string", "number", "integer", "boolean", "null"] ->
         :ok
+
       _ ->
         {:error, "Invalid type field value"}
     end
@@ -561,7 +588,7 @@ defmodule ElixirML.JsonSchema do
   defp add_openapi_3_extensions(schema) do
     # Add example if possible
     example = generate_example_from_schema(schema)
-    
+
     schema
     |> Map.put("example", example)
     |> Map.put("x-openapi-version", "3.0")
@@ -585,15 +612,17 @@ defmodule ElixirML.JsonSchema do
   defp generate_example_value(_), do: nil
 
   defp merge_two_schemas(schema1, schema2) do
-    merged_properties = merge_properties(
-      Map.get(schema1, "properties", %{}),
-      Map.get(schema2, "properties", %{})
-    )
+    merged_properties =
+      merge_properties(
+        Map.get(schema1, "properties", %{}),
+        Map.get(schema2, "properties", %{})
+      )
 
-    merged_required = merge_required_fields(
-      Map.get(schema1, "required", []),
-      Map.get(schema2, "required", [])
-    )
+    merged_required =
+      merge_required_fields(
+        Map.get(schema1, "required", []),
+        Map.get(schema2, "required", [])
+      )
 
     %{
       "type" => "object",
@@ -606,11 +635,11 @@ defmodule ElixirML.JsonSchema do
   defp merge_properties(props1, props2) do
     # Check for conflicts
     common_keys = MapSet.intersection(MapSet.new(Map.keys(props1)), MapSet.new(Map.keys(props2)))
-    
+
     Enum.each(common_keys, fn key ->
       type1 = get_in(props1, [key, "type"])
       type2 = get_in(props2, [key, "type"])
-      
+
       if type1 != type2 do
         raise "Type conflict for field '#{key}': #{type1} vs #{type2}"
       end

@@ -1,6 +1,6 @@
 defmodule ElixirML.Process.PipelineTest do
   use ExUnit.Case, async: true
-  
+
   alias ElixirML.Process.Pipeline
 
   describe "pipeline creation" do
@@ -8,9 +8,9 @@ defmodule ElixirML.Process.PipelineTest do
       stages = [
         %{id: :stage1, type: :function, function: fn x -> x + 1 end}
       ]
-      
+
       pipeline = Pipeline.new(stages)
-      
+
       assert pipeline.id != nil
       assert pipeline.name == "Pipeline"
       assert pipeline.stages == stages
@@ -23,7 +23,7 @@ defmodule ElixirML.Process.PipelineTest do
       stages = [
         %{id: :stage1, type: :function, function: fn x -> x * 2 end}
       ]
-      
+
       opts = [
         id: "custom_pipeline",
         name: "Custom Pipeline",
@@ -31,9 +31,9 @@ defmodule ElixirML.Process.PipelineTest do
         error_handling: :continue_on_error,
         timeout: 60_000
       ]
-      
+
       pipeline = Pipeline.new(stages, opts)
-      
+
       assert pipeline.id == "custom_pipeline"
       assert pipeline.name == "Custom Pipeline"
       assert pipeline.execution_strategy == :parallel
@@ -49,13 +49,14 @@ defmodule ElixirML.Process.PipelineTest do
         %{id: :multiply_two, type: :function, function: fn x -> x * 2 end},
         %{id: :subtract_three, type: :function, function: fn x -> x - 3 end}
       ]
-      
+
       pipeline = Pipeline.new(stages, execution_strategy: :sequential)
-      
+
       result = Pipeline.execute(pipeline, 5)
-      
+
       assert {:ok, execution_result} = result
-      assert execution_result.outputs == 9  # (5 + 1) * 2 - 3 = 9
+      # (5 + 1) * 2 - 3 = 9
+      assert execution_result.outputs == 9
       assert Map.has_key?(execution_result, :stage_results)
       assert Map.has_key?(execution_result, :execution_time)
       assert execution_result.pipeline_id == pipeline.id
@@ -67,14 +68,15 @@ defmodule ElixirML.Process.PipelineTest do
         %{id: :failure, type: :function, function: fn _x -> raise "Test error" end},
         %{id: :never_reached, type: :function, function: fn x -> x * 2 end}
       ]
-      
-      pipeline = Pipeline.new(stages, 
-        execution_strategy: :sequential,
-        error_handling: :fail_fast
-      )
-      
+
+      pipeline =
+        Pipeline.new(stages,
+          execution_strategy: :sequential,
+          error_handling: :fail_fast
+        )
+
       result = Pipeline.execute(pipeline, 5)
-      
+
       assert {:error, error_result} = result
       assert Map.has_key?(error_result, :error)
       assert Map.has_key?(error_result, :execution_time)
@@ -89,19 +91,22 @@ defmodule ElixirML.Process.PipelineTest do
         %{id: :multiply_two, type: :function, function: fn x -> x * 2 end},
         %{id: :add_ten, type: :function, function: fn x -> x + 10 end}
       ]
-      
+
       pipeline = Pipeline.new(stages, execution_strategy: :parallel)
-      
+
       result = Pipeline.execute(pipeline, 5)
-      
+
       assert {:ok, execution_result} = result
       assert Map.has_key?(execution_result, :stage_results)
       assert map_size(execution_result.stage_results) == 3
-      
+
       # All stages should have executed with the same input
-      assert execution_result.stage_results[:add_one] == 6      # 5 + 1
-      assert execution_result.stage_results[:multiply_two] == 10 # 5 * 2
-      assert execution_result.stage_results[:add_ten] == 15     # 5 + 10
+      # 5 + 1
+      assert execution_result.stage_results[:add_one] == 6
+      # 5 * 2
+      assert execution_result.stage_results[:multiply_two] == 10
+      # 5 + 10
+      assert execution_result.stage_results[:add_ten] == 15
     end
 
     test "handles parallel execution with some failures" do
@@ -110,22 +115,23 @@ defmodule ElixirML.Process.PipelineTest do
         %{id: :failure, type: :function, function: fn _x -> raise "Test error" end},
         %{id: :success2, type: :function, function: fn x -> x * 2 end}
       ]
-      
-      pipeline = Pipeline.new(stages, 
-        execution_strategy: :parallel,
-        error_handling: :continue_on_error
-      )
-      
+
+      pipeline =
+        Pipeline.new(stages,
+          execution_strategy: :parallel,
+          error_handling: :continue_on_error
+        )
+
       result = Pipeline.execute(pipeline, 5)
-      
+
       assert {:ok, execution_result} = result
       assert Map.has_key?(execution_result, :stage_results)
       assert Map.has_key?(execution_result, :errors)
-      
+
       # Successful stages should have results
       assert execution_result.stage_results[:success1] == 6
       assert execution_result.stage_results[:success2] == 10
-      
+
       # Should have recorded errors
       assert is_list(execution_result.errors)
       assert length(execution_result.errors) > 0
@@ -141,19 +147,19 @@ defmodule ElixirML.Process.PipelineTest do
           {:error, :invalid_input}
         end
       end
-      
+
       stages = [
         %{id: :validate, type: :validation, validator: validator},
         %{id: :process, type: :function, function: fn x -> x * 2 end}
       ]
-      
+
       pipeline = Pipeline.new(stages)
-      
+
       # Test with valid input
       result = Pipeline.execute(pipeline, 5)
       assert {:ok, execution_result} = result
       assert execution_result.outputs == 10
-      
+
       # Test with invalid input
       result = Pipeline.execute(pipeline, -1)
       assert {:error, _error_result} = result
@@ -164,14 +170,14 @@ defmodule ElixirML.Process.PipelineTest do
         %{id: :validate, type: :validation, validator: fn x -> x > 0 end},
         %{id: :process, type: :function, function: fn x -> x * 2 end}
       ]
-      
+
       pipeline = Pipeline.new(stages)
-      
+
       # Test with valid input (returns true)
       result = Pipeline.execute(pipeline, 5)
       assert {:ok, execution_result} = result
       assert execution_result.outputs == 10
-      
+
       # Test with invalid input (returns false)
       result = Pipeline.execute(pipeline, -1)
       assert {:error, _error_result} = result
@@ -185,21 +191,26 @@ defmodule ElixirML.Process.PipelineTest do
         id: "test_program",
         variable_space: nil
       }
-      
+
       # Create a simple function pipeline instead of program pipeline
       # to avoid dependency on ProgramSupervisor
-      pipeline = Pipeline.new([
-        %{id: :mock_program, type: :function, function: fn inputs ->
+      pipeline =
+        Pipeline.new([
           %{
-            output: "Processed: #{inspect(inputs)}",
-            program_id: program.id,
-            timestamp: System.monotonic_time(:millisecond)
+            id: :mock_program,
+            type: :function,
+            function: fn inputs ->
+              %{
+                output: "Processed: #{inspect(inputs)}",
+                program_id: program.id,
+                timestamp: System.monotonic_time(:millisecond)
+              }
+            end
           }
-        end}
-      ])
-      
+        ])
+
       result = Pipeline.execute(pipeline, %{input: "test"})
-      
+
       # The result structure should be consistent
       assert {:ok, execution_result} = result
       assert Map.has_key?(execution_result, :outputs)
@@ -215,14 +226,15 @@ defmodule ElixirML.Process.PipelineTest do
         %{id: :failure, type: :function, function: fn _x -> raise "Test error" end},
         %{id: :success2, type: :function, function: fn x -> x * 2 end}
       ]
-      
-      pipeline = Pipeline.new(stages, 
-        execution_strategy: :sequential,
-        error_handling: :continue_on_error
-      )
-      
+
+      pipeline =
+        Pipeline.new(stages,
+          execution_strategy: :sequential,
+          error_handling: :continue_on_error
+        )
+
       result = Pipeline.execute(pipeline, 5)
-      
+
       # Should complete successfully despite the error in the middle
       assert {:ok, execution_result} = result
       assert Map.has_key?(execution_result, :stage_results)
@@ -233,7 +245,7 @@ defmodule ElixirML.Process.PipelineTest do
     test "generates unique pipeline IDs" do
       pipeline1 = Pipeline.new([])
       pipeline2 = Pipeline.new([])
-      
+
       assert pipeline1.id != pipeline2.id
       assert is_binary(pipeline1.id)
       assert is_binary(pipeline2.id)

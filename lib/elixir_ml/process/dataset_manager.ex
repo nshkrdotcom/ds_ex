@@ -17,7 +17,7 @@ defmodule ElixirML.Process.DatasetManager do
       preprocessing_pipelines: %{},
       stats: %{loads: 0, cache_hits: 0, cache_misses: 0}
     }
-    
+
     {:ok, state}
   end
 
@@ -64,9 +64,9 @@ defmodule ElixirML.Process.DatasetManager do
       registered_at: System.monotonic_time(:millisecond),
       load_count: 0
     }
-    
+
     datasets = Map.put(state.datasets, dataset_id, dataset_info)
-    
+
     {:reply, {:ok, dataset_id}, %{state | datasets: datasets}}
   end
 
@@ -74,11 +74,11 @@ defmodule ElixirML.Process.DatasetManager do
     case Map.get(state.datasets, dataset_id) do
       nil ->
         {:reply, {:error, :dataset_not_found}, state}
-      
+
       dataset_info ->
         # Check cache first
         cache_key = generate_cache_key(dataset_id, opts)
-        
+
         case Map.get(state.cache, cache_key) do
           nil ->
             # Cache miss - load and process dataset
@@ -86,19 +86,23 @@ defmodule ElixirML.Process.DatasetManager do
               {:ok, processed_data} ->
                 # Update cache and stats
                 cache = Map.put(state.cache, cache_key, processed_data)
-                datasets = put_in(state.datasets[dataset_id].load_count, dataset_info.load_count + 1)
-                stats = %{state.stats | 
-                  loads: state.stats.loads + 1,
-                  cache_misses: state.stats.cache_misses + 1
+
+                datasets =
+                  put_in(state.datasets[dataset_id].load_count, dataset_info.load_count + 1)
+
+                stats = %{
+                  state.stats
+                  | loads: state.stats.loads + 1,
+                    cache_misses: state.stats.cache_misses + 1
                 }
-                
+
                 new_state = %{state | cache: cache, datasets: datasets, stats: stats}
                 {:reply, {:ok, processed_data}, new_state}
-              
+
               {:error, _} = error ->
                 {:reply, error, state}
             end
-          
+
           cached_data ->
             # Cache hit
             stats = %{state.stats | cache_hits: state.stats.cache_hits + 1}
@@ -109,7 +113,7 @@ defmodule ElixirML.Process.DatasetManager do
 
   def handle_call({:register_pipeline, pipeline_id, pipeline_function}, _from, state) do
     pipelines = Map.put(state.preprocessing_pipelines, pipeline_id, pipeline_function)
-    
+
     {:reply, {:ok, pipeline_id}, %{state | preprocessing_pipelines: pipelines}}
   end
 
@@ -122,7 +126,7 @@ defmodule ElixirML.Process.DatasetManager do
       cache_hit_rate: calculate_cache_hit_rate(state.stats),
       memory_usage: estimate_memory_usage(state.cache)
     }
-    
+
     {:reply, stats, state}
   end
 
@@ -136,39 +140,45 @@ defmodule ElixirML.Process.DatasetManager do
   defp load_and_process_dataset(dataset_spec, opts) do
     try do
       # Mock dataset loading - in practice this would load from files, databases, etc.
-      raw_data = case dataset_spec do
-        %{type: :file, path: path} ->
-          load_from_file(path)
-        
-        %{type: :generator, size: size} ->
-          generate_mock_data(size)
-        
-        %{type: :memory, data: data} ->
-          data
-        
-        _ ->
-          {:error, :unsupported_dataset_type}
-      end
-      
+      raw_data =
+        case dataset_spec do
+          %{type: :file, path: path} ->
+            load_from_file(path)
+
+          %{type: :generator, size: size} ->
+            generate_mock_data(size)
+
+          %{type: :memory, data: data} ->
+            data
+
+          _ ->
+            {:error, :unsupported_dataset_type}
+        end
+
       case raw_data do
-        {:error, _} = error -> error
+        {:error, _} = error ->
+          error
+
         data ->
           # Apply preprocessing if specified
           preprocessing_pipeline = Keyword.get(opts, :preprocessing)
-          
-          processed_data = case preprocessing_pipeline do
-            nil -> data
-            pipeline_id when is_atom(pipeline_id) ->
-              # Look up registered pipeline
-              # For now, just return data as-is
-              data
-            pipeline_function when is_function(pipeline_function) ->
-              pipeline_function.(data)
-          end
-          
+
+          processed_data =
+            case preprocessing_pipeline do
+              nil ->
+                data
+
+              pipeline_id when is_atom(pipeline_id) ->
+                # Look up registered pipeline
+                # For now, just return data as-is
+                data
+
+              pipeline_function when is_function(pipeline_function) ->
+                pipeline_function.(data)
+            end
+
           {:ok, processed_data}
       end
-      
     rescue
       error -> {:error, error}
     end
@@ -183,11 +193,11 @@ defmodule ElixirML.Process.DatasetManager do
             {:ok, content} -> Jason.decode(content)
             error -> error
           end
-        
+
         ".csv" ->
           # Mock CSV parsing
           {:ok, [%{id: 1, text: "sample", label: "positive"}]}
-        
+
         _ ->
           {:error, :unsupported_file_format}
       end
@@ -197,15 +207,16 @@ defmodule ElixirML.Process.DatasetManager do
   end
 
   defp generate_mock_data(size) do
-    data = Enum.map(1..size, fn i ->
-      %{
-        id: i,
-        text: "Sample text #{i}",
-        label: Enum.random(["positive", "negative", "neutral"]),
-        score: :rand.uniform()
-      }
-    end)
-    
+    data =
+      Enum.map(1..size, fn i ->
+        %{
+          id: i,
+          text: "Sample text #{i}",
+          label: Enum.random(["positive", "negative", "neutral"]),
+          score: :rand.uniform()
+        }
+      end)
+
     {:ok, data}
   end
 
@@ -217,7 +228,7 @@ defmodule ElixirML.Process.DatasetManager do
 
   defp calculate_cache_hit_rate(stats) do
     total_requests = stats.cache_hits + stats.cache_misses
-    
+
     if total_requests > 0 do
       stats.cache_hits / total_requests
     else
@@ -228,7 +239,7 @@ defmodule ElixirML.Process.DatasetManager do
   defp estimate_memory_usage(cache) do
     # Rough estimate of cache memory usage
     cache
-    |> Enum.map(fn {_key, data} -> 
+    |> Enum.map(fn {_key, data} ->
       :erlang.external_size(data)
     end)
     |> Enum.sum()

@@ -197,6 +197,7 @@ defmodule ElixirML.Variable do
     case variable.type do
       type when type in [:float, :integer, :choice, :module, :composite] ->
         {:ok, variable}
+
       _ ->
         {:error, "Invalid variable type: #{variable.type}"}
     end

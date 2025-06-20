@@ -16,7 +16,7 @@ defmodule ElixirML.Process.ToolRegistry do
       tool_categories: %{},
       usage_stats: %{}
     }
-    
+
     # Register built-in tools
     register_builtin_tools(state)
   end
@@ -58,16 +58,16 @@ defmodule ElixirML.Process.ToolRegistry do
       registered_at: System.monotonic_time(:millisecond),
       usage_count: 0
     }
-    
+
     tools = Map.put(state.tools, tool_name, tool_info)
-    
+
     # Update category mapping
     category = Map.get(metadata, :category, :general)
     category_tools = Map.get(state.tool_categories, category, [])
     tool_categories = Map.put(state.tool_categories, category, [tool_name | category_tools])
-    
+
     new_state = %{state | tools: tools, tool_categories: tool_categories}
-    
+
     {:reply, {:ok, tool_name}, new_state}
   end
 
@@ -75,36 +75,38 @@ defmodule ElixirML.Process.ToolRegistry do
     case Map.get(state.tools, tool_name) do
       nil ->
         {:reply, {:error, :not_found}, state}
-      
+
       tool_info ->
         # Update usage stats
         updated_tool = %{tool_info | usage_count: tool_info.usage_count + 1}
         tools = Map.put(state.tools, tool_name, updated_tool)
-        
+
         usage_stats = Map.update(state.usage_stats, tool_name, 1, &(&1 + 1))
-        
+
         new_state = %{state | tools: tools, usage_stats: usage_stats}
-        
+
         {:reply, {:ok, tool_info.module}, new_state}
     end
   end
 
   def handle_call({:list_tools, category}, _from, state) do
-    tools = case category do
-      :all ->
-        state.tools
-        |> Enum.map(fn {name, info} ->
-          %{name: name, module: info.module, metadata: info.metadata}
-        end)
-      
-      specific_category ->
-        tool_names = Map.get(state.tool_categories, specific_category, [])
-        Enum.map(tool_names, fn name ->
-          info = state.tools[name]
-          %{name: name, module: info.module, metadata: info.metadata}
-        end)
-    end
-    
+    tools =
+      case category do
+        :all ->
+          state.tools
+          |> Enum.map(fn {name, info} ->
+            %{name: name, module: info.module, metadata: info.metadata}
+          end)
+
+        specific_category ->
+          tool_names = Map.get(state.tool_categories, specific_category, [])
+
+          Enum.map(tool_names, fn name ->
+            info = state.tools[name]
+            %{name: name, module: info.module, metadata: info.metadata}
+          end)
+      end
+
     {:reply, tools, state}
   end
 
@@ -116,7 +118,7 @@ defmodule ElixirML.Process.ToolRegistry do
       most_used_tool: find_most_used_tool(state.usage_stats),
       category_breakdown: calculate_category_breakdown(state.tool_categories)
     }
-    
+
     {:reply, stats, state}
   end
 
@@ -129,23 +131,26 @@ defmodule ElixirML.Process.ToolRegistry do
       {:pipeline_executor, ElixirML.Process.Pipeline, %{category: :execution}},
       {:resource_manager, ElixirML.Process.ResourceManager, %{category: :management}}
     ]
-    
-    tools = Enum.reduce(builtin_tools, %{}, fn {name, module, metadata}, acc ->
-      tool_info = %{
-        module: module,
-        metadata: metadata,
-        registered_at: System.monotonic_time(:millisecond),
-        usage_count: 0
-      }
-      Map.put(acc, name, tool_info)
-    end)
-    
-    tool_categories = Enum.reduce(builtin_tools, %{}, fn {name, _module, metadata}, acc ->
-      category = Map.get(metadata, :category, :general)
-      category_tools = Map.get(acc, category, [])
-      Map.put(acc, category, [name | category_tools])
-    end)
-    
+
+    tools =
+      Enum.reduce(builtin_tools, %{}, fn {name, module, metadata}, acc ->
+        tool_info = %{
+          module: module,
+          metadata: metadata,
+          registered_at: System.monotonic_time(:millisecond),
+          usage_count: 0
+        }
+
+        Map.put(acc, name, tool_info)
+      end)
+
+    tool_categories =
+      Enum.reduce(builtin_tools, %{}, fn {name, _module, metadata}, acc ->
+        category = Map.get(metadata, :category, :general)
+        category_tools = Map.get(acc, category, [])
+        Map.put(acc, category, [name | category_tools])
+      end)
+
     {:ok, %{state | tools: tools, tool_categories: tool_categories}}
   end
 

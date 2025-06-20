@@ -36,18 +36,18 @@ defmodule DSPEx.Builder do
   defstruct [
     # Required
     :signature,
-    
+
     # Program configuration
     :variables,
     :client,
     :adapter,
     :instruction,
-    
+
     # ElixirML integration
     :schema_validation,
     :automatic_ml_variables,
     :variable_space,
-    
+
     # Build options
     :build_options,
     :metadata
@@ -108,9 +108,9 @@ defmodule DSPEx.Builder do
           build_options: Keyword.get(opts, :build_options, []),
           metadata: %{created_at: DateTime.utc_now()}
         }
-        
+
         {:ok, builder}
-      
+
       {:error, reason} ->
         {:error, reason}
     end
@@ -142,7 +142,7 @@ defmodule DSPEx.Builder do
   def with_variables(%__MODULE__{} = builder, variables) when is_map(variables) do
     current_variables = builder.variables || %{}
     updated_variables = Map.merge(current_variables, variables)
-    
+
     %{builder | variables: updated_variables}
   end
 
@@ -274,14 +274,14 @@ defmodule DSPEx.Builder do
     with {:ok, variable_space} <- create_variable_space(builder),
          {:ok, program_opts} <- create_program_options(builder, variable_space),
          {:ok, program} <- Program.new(builder.signature, program_opts) do
-      
       # Add schema validation configuration if enabled
-      final_program = if builder.schema_validation do
-        DSPEx.Program.enable_schema_validation(program)
-      else
-        program
-      end
-      
+      final_program =
+        if builder.schema_validation do
+          DSPEx.Program.enable_schema_validation(program)
+        else
+          program
+        end
+
       {:ok, final_program}
     end
   end
@@ -293,16 +293,18 @@ defmodule DSPEx.Builder do
     if Code.ensure_loaded?(module) do
       # Check if module implements DSPEx.Signature behaviour
       behaviours = module.module_info(:attributes) |> Keyword.get(:behaviour, [])
-      
+
       if DSPEx.Signature in behaviours do
         :ok
       else
-        {:error, {:invalid_signature_module, "Module does not implement DSPEx.Signature behaviour"}}
+        {:error,
+         {:invalid_signature_module, "Module does not implement DSPEx.Signature behaviour"}}
       end
     else
       {:error, {:invalid_signature_module, "Module cannot be loaded"}}
     end
   end
+
   defp validate_signature_module(_) do
     {:error, {:invalid_signature_module, "Must be a module atom"}}
   end
@@ -312,43 +314,50 @@ defmodule DSPEx.Builder do
     try do
       # Start with empty variable space
       variable_space = Variable.Space.new(name: "#{builder.signature} Variables")
-      
+
       # Extract variables from signature if it supports it
-      signature_variables = if function_exported?(builder.signature, :extract_variables, 0) do
-        builder.signature.extract_variables()
-      else
-        Variable.Space.new()
-      end
-      
+      signature_variables =
+        if function_exported?(builder.signature, :extract_variables, 0) do
+          builder.signature.extract_variables()
+        else
+          Variable.Space.new()
+        end
+
       # Merge signature variables (if merge function available)
-      variable_space = if function_exported?(Variable.Space, :merge, 2) do
-        Variable.Space.merge(variable_space, signature_variables)
-      else
-        variable_space
-      end
-      
-      # Add automatic ML variables if enabled
-      variable_space = if builder.automatic_ml_variables and function_exported?(Variable.MLTypes, :standard_ml_config, 0) do
-        ml_variables = Variable.MLTypes.standard_ml_config()
+      variable_space =
         if function_exported?(Variable.Space, :merge, 2) do
-          Variable.Space.merge(variable_space, ml_variables)
+          Variable.Space.merge(variable_space, signature_variables)
         else
           variable_space
         end
-      else
-        variable_space
-      end
-      
-      # Set current variable values if provided
-      variable_space = if builder.variables && not Enum.empty?(builder.variables) do
-        case Variable.Space.validate_configuration(variable_space, builder.variables) do
-          {:ok, _validated} -> variable_space
-          {:error, _reason} -> variable_space  # Continue with defaults
+
+      # Add automatic ML variables if enabled
+      variable_space =
+        if builder.automatic_ml_variables and
+             function_exported?(Variable.MLTypes, :standard_ml_config, 0) do
+          ml_variables = Variable.MLTypes.standard_ml_config()
+
+          if function_exported?(Variable.Space, :merge, 2) do
+            Variable.Space.merge(variable_space, ml_variables)
+          else
+            variable_space
+          end
+        else
+          variable_space
         end
-      else
-        variable_space
-      end
-      
+
+      # Set current variable values if provided
+      variable_space =
+        if builder.variables && not Enum.empty?(builder.variables) do
+          case Variable.Space.validate_configuration(variable_space, builder.variables) do
+            {:ok, _validated} -> variable_space
+            # Continue with defaults
+            {:error, _reason} -> variable_space
+          end
+        else
+          variable_space
+        end
+
       {:ok, variable_space}
     rescue
       error -> {:error, {:variable_space_creation_failed, error}}
@@ -358,33 +367,36 @@ defmodule DSPEx.Builder do
   @spec create_program_options(t(), Variable.Space.t()) :: {:ok, keyword()} | {:error, term()}
   defp create_program_options(builder, variable_space) do
     opts = []
-    
+
     # Add variable space
     opts = Keyword.put(opts, :variable_space, variable_space)
-    
+
     # Add client if specified
     opts = if builder.client, do: Keyword.put(opts, :client, builder.client), else: opts
-    
+
     # Add adapter if specified
     opts = if builder.adapter, do: Keyword.put(opts, :adapter, builder.adapter), else: opts
-    
+
     # Add instruction if specified
-    opts = if builder.instruction, do: Keyword.put(opts, :instruction, builder.instruction), else: opts
-    
+    opts =
+      if builder.instruction, do: Keyword.put(opts, :instruction, builder.instruction), else: opts
+
     # Add current variable values
-    opts = if builder.variables && not Enum.empty?(builder.variables) do
-      Keyword.put(opts, :config, builder.variables)
-    else
-      opts
-    end
-    
+    opts =
+      if builder.variables && not Enum.empty?(builder.variables) do
+        Keyword.put(opts, :config, builder.variables)
+      else
+        opts
+      end
+
     # Add build options
-    opts = if builder.build_options do
-      Keyword.merge(opts, builder.build_options)
-    else
-      opts
-    end
-    
+    opts =
+      if builder.build_options do
+        Keyword.merge(opts, builder.build_options)
+      else
+        opts
+      end
+
     {:ok, opts}
   end
 end

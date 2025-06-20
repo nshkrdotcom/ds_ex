@@ -211,11 +211,11 @@ defmodule DSPEx do
       )
 
   """
-  @spec optimize(Builder.t() | struct(), [DSPEx.Example.t()], keyword()) :: 
+  @spec optimize(Builder.t() | struct(), [DSPEx.Example.t()], keyword()) ::
           {:ok, struct()} | {:error, term()}
   def optimize(program_or_builder, training_data, opts \\ []) do
     teleprompter = Keyword.get(opts, :teleprompter, DSPEx.Teleprompter.SIMBA)
-    
+
     case ensure_program(program_or_builder) do
       {:ok, program} -> teleprompter.optimize(program, training_data, opts)
       {:error, reason} -> {:error, reason}
@@ -249,6 +249,7 @@ defmodule DSPEx do
   defp ensure_program(%Builder{} = builder) do
     Builder.build(builder)
   end
+
   defp ensure_program(program) when is_struct(program) do
     {:ok, program}
   end
@@ -262,6 +263,7 @@ defmodule DSPEx do
       {:ok, inputs}
     end
   end
+
   defp maybe_validate_inputs(_program, inputs, false) do
     {:ok, inputs}
   end
@@ -275,6 +277,7 @@ defmodule DSPEx do
       {:ok, outputs}
     end
   end
+
   defp maybe_validate_outputs(_program, outputs, false) do
     {:ok, outputs}
   end

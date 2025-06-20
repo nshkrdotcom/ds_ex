@@ -7,7 +7,8 @@ defmodule ElixirML.Process.SchemaRegistry do
   use GenServer
 
   @default_max_size 10_000
-  @default_ttl 3_600_000  # 1 hour in milliseconds
+  # 1 hour in milliseconds
+  @default_ttl 3_600_000
 
   defstruct [
     :table,
@@ -25,9 +26,9 @@ defmodule ElixirML.Process.SchemaRegistry do
     table_name = Keyword.get(opts, :table_name, :schema_cache)
     max_size = Keyword.get(opts, :max_size, @default_max_size)
     ttl = Keyword.get(opts, :ttl, @default_ttl)
-    
+
     :ets.new(table_name, [:named_table, :public, :set])
-    
+
     state = %__MODULE__{
       table: table_name,
       max_size: max_size,
@@ -35,10 +36,10 @@ defmodule ElixirML.Process.SchemaRegistry do
       access_order: :queue.new(),
       ttl: ttl
     }
-    
+
     # Schedule periodic cleanup
     Process.send_after(self(), :cleanup_expired, ttl)
-    
+
     {:ok, state}
   end
 
@@ -47,7 +48,7 @@ defmodule ElixirML.Process.SchemaRegistry do
   """
   def get_cached_validation(schema_module, data_hash, table_name \\ :schema_cache) do
     case :ets.lookup(table_name, {schema_module, data_hash}) do
-      [{_, result, timestamp}] -> 
+      [{_, result, timestamp}] ->
         if not expired?(timestamp) do
           GenServer.cast(__MODULE__, {:access, schema_module, data_hash})
           {:hit, result}
@@ -55,7 +56,8 @@ defmodule ElixirML.Process.SchemaRegistry do
           GenServer.cast(__MODULE__, {:remove, schema_module, data_hash})
           :miss
         end
-      [] -> 
+
+      [] ->
         :miss
     end
   end
@@ -93,55 +95,54 @@ defmodule ElixirML.Process.SchemaRegistry do
     # Update access order for LRU
     key = {schema_module, data_hash}
     new_access_order = :queue.in(key, state.access_order)
-    
+
     {:noreply, %{state | access_order: new_access_order}}
   end
 
   def handle_cast({:cache, schema_module, data_hash, result}, state) do
     key = {schema_module, data_hash}
     timestamp = System.monotonic_time(:millisecond)
-    
+
     # Check if we need to evict
-    state = if state.current_size >= state.max_size do
-      evict_lru(state)
-    else
-      state
-    end
-    
+    state =
+      if state.current_size >= state.max_size do
+        evict_lru(state)
+      else
+        state
+      end
+
     # Insert new entry
     :ets.insert(state.table, {key, result, timestamp})
-    
-    new_state = %{state | 
-      current_size: state.current_size + 1,
-      access_order: :queue.in(key, state.access_order)
+
+    new_state = %{
+      state
+      | current_size: state.current_size + 1,
+        access_order: :queue.in(key, state.access_order)
     }
-    
+
     {:noreply, new_state}
   end
 
   def handle_cast({:remove, schema_module, data_hash}, state) do
     key = {schema_module, data_hash}
     :ets.delete(state.table, key)
-    
+
     new_state = %{state | current_size: max(0, state.current_size - 1)}
-    
+
     {:noreply, new_state}
   end
 
   def handle_call(:clear_cache, _from, state) do
     :ets.delete_all_objects(state.table)
-    
-    new_state = %{state | 
-      current_size: 0,
-      access_order: :queue.new()
-    }
-    
+
+    new_state = %{state | current_size: 0, access_order: :queue.new()}
+
     {:reply, :ok, new_state}
   end
 
   def handle_call(:cache_stats, _from, state) do
     total_memory = :ets.info(state.table, :memory) * :erlang.system_info(:wordsize)
-    
+
     stats = %{
       current_size: state.current_size,
       max_size: state.max_size,
@@ -149,28 +150,28 @@ defmodule ElixirML.Process.SchemaRegistry do
       hit_rate: calculate_hit_rate(state.table),
       oldest_entry_age: get_oldest_entry_age(state.table)
     }
-    
+
     {:reply, stats, state}
   end
 
   def handle_info(:cleanup_expired, state) do
     # Remove expired entries
     now = System.monotonic_time(:millisecond)
-    expired_keys = :ets.select(state.table, [
-      {{{:"$1", :"$2"}, :"$3", :"$4"}, 
-       [{:<, {:+, :"$4", state.ttl}, now}], 
-       [{{:"$1", :"$2"}}]}
-    ])
-    
+
+    expired_keys =
+      :ets.select(state.table, [
+        {{{:"$1", :"$2"}, :"$3", :"$4"}, [{:<, {:+, :"$4", state.ttl}, now}], [{{:"$1", :"$2"}}]}
+      ])
+
     Enum.each(expired_keys, fn key ->
       :ets.delete(state.table, key)
     end)
-    
+
     new_state = %{state | current_size: max(0, state.current_size - length(expired_keys))}
-    
+
     # Schedule next cleanup
     Process.send_after(self(), :cleanup_expired, state.ttl)
-    
+
     {:noreply, new_state}
   end
 
@@ -178,17 +179,15 @@ defmodule ElixirML.Process.SchemaRegistry do
 
   defp expired?(timestamp) do
     now = System.monotonic_time(:millisecond)
-    (now - timestamp) > @default_ttl
+    now - timestamp > @default_ttl
   end
 
   defp evict_lru(state) do
     case :queue.out(state.access_order) do
       {{:value, key}, new_queue} ->
         :ets.delete(state.table, key)
-        %{state | 
-          access_order: new_queue,
-          current_size: state.current_size - 1
-        }
+        %{state | access_order: new_queue, current_size: state.current_size - 1}
+
       {:empty, _} ->
         state
     end
@@ -205,10 +204,12 @@ defmodule ElixirML.Process.SchemaRegistry do
 
   defp get_oldest_entry_age(table) do
     now = System.monotonic_time(:millisecond)
-    
+
     case :ets.select(table, [{{:"$1", :"$2", :"$3"}, [], [:"$3"]}]) do
-      [] -> 0
-      timestamps -> 
+      [] ->
+        0
+
+      timestamps ->
         oldest = Enum.min(timestamps)
         now - oldest
     end

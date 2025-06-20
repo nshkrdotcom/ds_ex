@@ -1,7 +1,7 @@
 defmodule ElixirML.Application do
   @moduledoc """
   ElixirML Application supervisor.
-  
+
   Starts and supervises all ElixirML foundation components including the
   Process Orchestrator and its child processes.
   """
