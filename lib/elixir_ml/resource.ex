@@ -9,18 +9,18 @@ defmodule ElixirML.Resource do
 
       defmodule MyApp.Program do
         use ElixirML.Resource
-        
+
         attributes do
           attribute :name, :string, allow_nil?: false
           attribute :type, :atom, constraints: [one_of: [:predict, :chain_of_thought]]
           schema_attribute :config, MyApp.ProgramConfig
         end
-        
+
         relationships do
           belongs_to :variable_space, ElixirML.Resources.VariableSpace
           has_many :optimization_runs, ElixirML.Resources.OptimizationRun
         end
-        
+
         actions do
           action :execute do
             argument :inputs, :map, allow_nil?: false
@@ -81,4 +81,16 @@ defmodule ElixirML.Resource do
   Validates a resource's attributes.
   """
   @callback validate(resource :: struct()) :: {:ok, struct()} | {:error, term()}
+
+  @doc """
+  Executes a named action on the resource.
+  """
+  @callback execute_action(resource :: struct(), action_name :: atom(), arguments :: map()) ::
+              {:ok, term()} | {:error, term()}
+
+  @doc """
+  Calculates a named calculation for the resource.
+  """
+  @callback calculate(resource :: struct(), calculation_name :: atom(), arguments :: map()) ::
+              {:ok, term()} | {:error, term()}
 end

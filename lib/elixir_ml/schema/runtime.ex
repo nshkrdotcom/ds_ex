@@ -6,6 +6,7 @@ defmodule ElixirML.Schema.Runtime do
 
   alias ElixirML.Schema.Types
 
+  @enforce_keys [:fields]
   defstruct [
     :fields,
     :validations,
@@ -23,6 +24,7 @@ defmodule ElixirML.Schema.Runtime do
   @doc """
   Validate data against a runtime schema.
   """
+  @spec validate(t(), map()) :: {:ok, map()} | {:error, ElixirML.Schema.ValidationError.t()}
   def validate(%__MODULE__{} = schema, data) do
     with {:ok, validated} <- validate_fields(schema, data),
          {:ok, transformed} <- apply_transforms(schema, validated),
@@ -42,6 +44,7 @@ defmodule ElixirML.Schema.Runtime do
   @doc """
   Extract variables from a runtime schema.
   """
+  @spec extract_variables(t()) :: list()
   def extract_variables(%__MODULE__{fields: fields}) do
     Enum.filter(fields, fn {_name, _type, opts} ->
       Keyword.get(opts, :variable, false)
@@ -51,6 +54,7 @@ defmodule ElixirML.Schema.Runtime do
   @doc """
   Convert runtime schema to JSON schema.
   """
+  @spec to_json_schema(t()) :: map()
   def to_json_schema(%__MODULE__{fields: fields, metadata: metadata}) do
     properties =
       Enum.reduce(fields, %{}, fn {name, type, opts}, acc ->

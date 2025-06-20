@@ -7,6 +7,7 @@ defmodule ElixirML.Variable.Space do
   the complete parameter space that optimizers can explore.
   """
 
+  @enforce_keys [:id, :name]
   defstruct [
     # Unique identifier
     :id,
@@ -43,6 +44,7 @@ defmodule ElixirML.Variable.Space do
       iex> space.name
       "ML Model Config"
   """
+  @spec new(keyword()) :: t()
   def new(opts \\ []) do
     %__MODULE__{
       id: Keyword.get(opts, :id, generate_id()),
@@ -66,6 +68,7 @@ defmodule ElixirML.Variable.Space do
       iex> Map.has_key?(space.variables, :temperature)
       true
   """
+  @spec add_variable(t(), ElixirML.Variable.t()) :: t()
   def add_variable(%__MODULE__{} = space, %ElixirML.Variable{} = variable) do
     updated_variables = Map.put(space.variables, variable.name, variable)
     updated_dependencies = Map.put(space.dependencies, variable.name, variable.dependencies)
@@ -76,6 +79,7 @@ defmodule ElixirML.Variable.Space do
   @doc """
   Add multiple variables to the space.
   """
+  @spec add_variables(t(), [ElixirML.Variable.t()]) :: t()
   def add_variables(%__MODULE__{} = space, variables) when is_list(variables) do
     Enum.reduce(variables, space, &add_variable(&2, &1))
   end
@@ -83,6 +87,7 @@ defmodule ElixirML.Variable.Space do
   @doc """
   Get a variable from the space by name.
   """
+  @spec get_variable(t(), atom()) :: ElixirML.Variable.t() | nil
   def get_variable(%__MODULE__{} = space, name) do
     Map.get(space.variables, name)
   end
@@ -90,6 +95,7 @@ defmodule ElixirML.Variable.Space do
   @doc """
   Remove a variable from the space.
   """
+  @spec remove_variable(t(), atom()) :: t()
   def remove_variable(%__MODULE__{} = space, name) do
     updated_variables = Map.delete(space.variables, name)
     updated_dependencies = Map.delete(space.dependencies, name)
@@ -121,6 +127,7 @@ defmodule ElixirML.Variable.Space do
       iex> length(space.constraints)
       1
   """
+  @spec add_constraint(t(), function()) :: t()
   def add_constraint(%__MODULE__{} = space, constraint_fn) when is_function(constraint_fn, 1) do
     %{space | constraints: [constraint_fn | space.constraints]}
   end
@@ -143,6 +150,7 @@ defmodule ElixirML.Variable.Space do
       iex> ElixirML.Variable.Space.validate_configuration(space, config)
       {:ok, %{temperature: 0.8}}
   """
+  @spec validate_configuration(t(), map()) :: {:ok, map()} | {:error, String.t()}
   def validate_configuration(%__MODULE__{} = space, configuration) do
     with {:ok, complete_config} <- ensure_all_variables_present(space, configuration),
          {:ok, validated_config} <- validate_variable_values(space, complete_config),
@@ -166,6 +174,7 @@ defmodule ElixirML.Variable.Space do
       iex> Map.has_key?(config, :temperature)
       true
   """
+  @spec random_configuration(t()) :: {:ok, map()} | {:error, String.t()}
   def random_configuration(%__MODULE__{} = space) do
     config =
       Enum.reduce(space.variables, %{}, fn {name, variable}, acc ->
@@ -207,6 +216,7 @@ defmodule ElixirML.Variable.Space do
       iex> length(configs)
       5
   """
+  @spec sample_configurations(t(), keyword()) :: [map()]
   def sample_configurations(%__MODULE__{} = space, opts \\ []) do
     count = Keyword.get(opts, :count, 10)
     max_attempts = Keyword.get(opts, :max_attempts, count * 3)
@@ -218,6 +228,7 @@ defmodule ElixirML.Variable.Space do
   Get the dimensionality of the variable space.
   Returns {discrete_dimensions, continuous_dimensions}
   """
+  @spec dimensionality(t()) :: {non_neg_integer(), non_neg_integer()}
   def dimensionality(%__MODULE__{} = space) do
     {discrete, continuous} =
       Enum.reduce(space.variables, {0, 0}, fn {_name, variable}, {disc, cont} ->
@@ -237,6 +248,7 @@ defmodule ElixirML.Variable.Space do
   @doc """
   Extract variables from a signature or schema module.
   """
+  @spec from_signature(module(), keyword()) :: t()
   def from_signature(signature_module, opts \\ []) do
     space = new(opts)
 
@@ -257,6 +269,7 @@ defmodule ElixirML.Variable.Space do
   @doc """
   Check if the variable space is valid (no circular dependencies, etc.).
   """
+  @spec valid?(t()) :: boolean()
   def valid?(%__MODULE__{} = space) do
     case check_circular_dependencies(space) do
       :ok -> true
@@ -267,6 +280,7 @@ defmodule ElixirML.Variable.Space do
   @doc """
   Get the dependency order for variables (topological sort).
   """
+  @spec dependency_order(t()) :: [atom()]
   def dependency_order(%__MODULE__{} = space) do
     case topological_sort(space.dependencies) do
       {:ok, order} -> order
@@ -276,10 +290,12 @@ defmodule ElixirML.Variable.Space do
 
   # Private helper functions
 
+  @spec generate_id() :: String.t()
   defp generate_id do
     :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
   end
 
+  @spec ensure_all_variables_present(t(), map()) :: {:ok, map()} | {:error, String.t()}
   defp ensure_all_variables_present(%__MODULE__{} = space, configuration) do
     missing_required = find_missing_required_variables(space, configuration)
 

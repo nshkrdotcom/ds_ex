@@ -40,6 +40,7 @@ defmodule ElixirML.Schema do
       iex> ElixirML.Schema.validate(schema, %{embedding: [1.0, 2.0, 3.0], confidence: 0.8})
       {:ok, %{embedding: [1.0, 2.0, 3.0], confidence: 0.8}}
   """
+  @spec create(list(), keyword()) :: Runtime.t()
   def create(fields, opts \\ []) do
     %Runtime{
       fields: fields,
@@ -60,6 +61,8 @@ defmodule ElixirML.Schema do
       iex> ElixirML.Schema.validate(MySchema, %{invalid: "data"})
       {:error, %ElixirML.Schema.ValidationError{}}
   """
+  @spec validate(module() | Runtime.t(), map()) ::
+          {:ok, map()} | {:error, ElixirML.Schema.ValidationError.t()}
   def validate(schema_module, data) when is_atom(schema_module) do
     schema_module.validate(data)
   end
@@ -71,6 +74,7 @@ defmodule ElixirML.Schema do
   @doc """
   Extract variables from a schema for optimization.
   """
+  @spec extract_variables(module()) :: list()
   def extract_variables(schema_module) when is_atom(schema_module) do
     schema_module.__variables__()
   end
@@ -78,6 +82,7 @@ defmodule ElixirML.Schema do
   @doc """
   Generate JSON schema representation.
   """
+  @spec to_json_schema(module()) :: map()
   def to_json_schema(schema_module) when is_atom(schema_module) do
     schema_module.to_json_schema()
   end

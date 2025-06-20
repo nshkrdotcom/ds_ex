@@ -21,6 +21,7 @@ defmodule ElixirML.Variable.MLTypes do
       iex> :openai in provider_var.constraints.choices
       true
   """
+  @spec provider(atom(), keyword()) :: Variable.t()
   def provider(name, opts \\ []) do
     providers = Keyword.get(opts, :providers, [:openai, :anthropic, :groq, :google])
 
@@ -62,6 +63,7 @@ defmodule ElixirML.Variable.MLTypes do
       iex> "gpt-4" in model_var.constraints.choices
       true
   """
+  @spec model(atom(), keyword()) :: Variable.t()
   def model(name, opts \\ []) do
     provider = Keyword.get(opts, :provider)
 
@@ -97,6 +99,7 @@ defmodule ElixirML.Variable.MLTypes do
       iex> adapter_var.type
       :module
   """
+  @spec adapter(atom(), keyword()) :: Variable.t()
   def adapter(name, opts \\ []) do
     adapters =
       Keyword.get(opts, :adapters, [
@@ -134,6 +137,7 @@ defmodule ElixirML.Variable.MLTypes do
       iex> reasoning_var.type
       :module
   """
+  @spec reasoning_strategy(atom(), keyword()) :: Variable.t()
   def reasoning_strategy(name, opts \\ []) do
     strategies =
       Keyword.get(opts, :strategies, [
@@ -181,6 +185,7 @@ defmodule ElixirML.Variable.MLTypes do
       iex> temp_var.constraints.range
       {0.0, 2.0}
   """
+  @spec temperature(atom(), keyword()) :: Variable.t()
   def temperature(name, opts \\ []) do
     range = Keyword.get(opts, :range, {0.0, 2.0})
     default = Keyword.get(opts, :default, 0.7)
@@ -215,6 +220,7 @@ defmodule ElixirML.Variable.MLTypes do
       iex> tokens_var.type
       :integer
   """
+  @spec max_tokens(atom(), keyword()) :: Variable.t()
   def max_tokens(name, opts \\ []) do
     range = Keyword.get(opts, :range, {1, 4096})
     default = Keyword.get(opts, :default, 1000)
@@ -248,6 +254,7 @@ defmodule ElixirML.Variable.MLTypes do
       iex> top_p_var.constraints.range
       {0.0, 1.0}
   """
+  @spec top_p(atom(), keyword()) :: Variable.t()
   def top_p(name, opts \\ []) do
     Variable.float(name,
       range: {0.0, 1.0},
@@ -267,6 +274,7 @@ defmodule ElixirML.Variable.MLTypes do
   @doc """
   Create a frequency_penalty variable.
   """
+  @spec frequency_penalty(atom(), keyword()) :: Variable.t()
   def frequency_penalty(name, opts \\ []) do
     Variable.float(name,
       range: {-2.0, 2.0},
@@ -282,6 +290,7 @@ defmodule ElixirML.Variable.MLTypes do
   @doc """
   Create a presence_penalty variable.
   """
+  @spec presence_penalty(atom(), keyword()) :: Variable.t()
   def presence_penalty(name, opts \\ []) do
     Variable.float(name,
       range: {-2.0, 2.0},
@@ -306,6 +315,7 @@ defmodule ElixirML.Variable.MLTypes do
       iex> map_size(space.variables) > 5
       true
   """
+  @spec standard_ml_config(keyword()) :: Space.t()
   def standard_ml_config(opts \\ []) do
     space =
       Space.new(
@@ -351,6 +361,7 @@ defmodule ElixirML.Variable.MLTypes do
   @doc """
   Extract variables from a signature module with ML-specific enhancements.
   """
+  @spec extract_from_signature(module()) :: Space.t()
   def extract_from_signature(signature_module) do
     base_space = Space.from_signature(signature_module)
 
@@ -367,6 +378,7 @@ defmodule ElixirML.Variable.MLTypes do
 
   # Private helper functions
 
+  @spec model_capabilities([String.t()]) :: %{String.t() => [atom()]}
   defp model_capabilities(models) do
     Enum.reduce(models, %{}, fn model, acc ->
       capabilities =
@@ -383,6 +395,7 @@ defmodule ElixirML.Variable.MLTypes do
     end)
   end
 
+  @spec model_context_windows([String.t()]) :: %{String.t() => pos_integer()}
   defp model_context_windows(models) do
     Enum.reduce(models, %{}, fn model, acc ->
       context_window =
@@ -401,6 +414,7 @@ defmodule ElixirML.Variable.MLTypes do
 
   # Cross-variable constraint validators
 
+  @spec validate_provider_model_compatibility(map()) :: {:ok, map()} | {:error, String.t()}
   defp validate_provider_model_compatibility(config) do
     case {config[:provider], config[:model]} do
       {:openai, model} when model in ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"] ->
@@ -428,6 +442,7 @@ defmodule ElixirML.Variable.MLTypes do
     end
   end
 
+  @spec validate_token_limits(map()) :: {:ok, map()} | {:error, String.t()}
   defp validate_token_limits(config) do
     max_tokens = config[:max_tokens]
     model = config[:model]
@@ -452,6 +467,7 @@ defmodule ElixirML.Variable.MLTypes do
     end
   end
 
+  @spec validate_temperature_top_p_interaction(map()) :: {:ok, map()} | {:error, String.t()}
   defp validate_temperature_top_p_interaction(config) do
     temp = config[:temperature]
     top_p = config[:top_p]

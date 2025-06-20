@@ -9,6 +9,7 @@ defmodule ElixirML.Variable do
 
   @type variable_type :: :float | :integer | :choice | :module | :composite
 
+  @enforce_keys [:name, :type]
   defstruct [
     # Variable identifier (atom)
     :name,
@@ -52,6 +53,7 @@ defmodule ElixirML.Variable do
         constraints: %{range: {0.0, 2.0}, precision: 0.01, distribution: :uniform}
       }
   """
+  @spec float(atom(), keyword()) :: t()
   def float(name, opts \\ []) do
     %__MODULE__{
       name: name,
@@ -77,6 +79,7 @@ defmodule ElixirML.Variable do
       iex> ElixirML.Variable.integer(:max_tokens, range: {1, 4096}, default: 1000)
       %ElixirML.Variable{name: :max_tokens, type: :integer, default: 1000}
   """
+  @spec integer(atom(), keyword()) :: t()
   def integer(name, opts \\ []) do
     %__MODULE__{
       name: name,
@@ -101,6 +104,7 @@ defmodule ElixirML.Variable do
       iex> ElixirML.Variable.choice(:provider, [:openai, :anthropic, :groq], default: :openai)
       %ElixirML.Variable{name: :provider, type: :choice, default: :openai}
   """
+  @spec choice(atom(), [term()], keyword()) :: t()
   def choice(name, choices, opts \\ []) do
     %__MODULE__{
       name: name,
@@ -132,6 +136,7 @@ defmodule ElixirML.Variable do
       ...> )
       %ElixirML.Variable{name: :adapter, type: :module}
   """
+  @spec module(atom(), keyword()) :: t()
   def module(name, opts \\ []) do
     %__MODULE__{
       name: name,
@@ -164,6 +169,7 @@ defmodule ElixirML.Variable do
       ...> )
       %ElixirML.Variable{name: :model_config, type: :composite}
   """
+  @spec composite(atom(), keyword()) :: t()
   def composite(name, opts \\ []) do
     %__MODULE__{
       name: name,
@@ -192,6 +198,7 @@ defmodule ElixirML.Variable do
       iex> ElixirML.Variable.validate(var, 3.0)
       {:error, "Value 3.0 outside range {0.0, 2.0}"}
   """
+  @spec validate(t(), term()) :: {:ok, term()} | {:error, String.t()}
   def validate(%__MODULE__{type: :float} = variable, value) do
     {min, max} = variable.constraints.range
 
@@ -271,6 +278,7 @@ defmodule ElixirML.Variable do
       iex> value >= 0.0 and value <= 2.0
       true
   """
+  @spec random_value(t()) :: term()
   def random_value(%__MODULE__{type: :float} = variable) do
     {min, max} = variable.constraints.range
     min + :rand.uniform() * (max - min)
@@ -311,6 +319,7 @@ defmodule ElixirML.Variable do
       iex> ElixirML.Variable.compatible?(var1, var2)
       true
   """
+  @spec compatible?(t(), t()) :: boolean()
   def compatible?(%__MODULE__{} = var1, %__MODULE__{} = var2) do
     # Check compatibility matrix if present
     compatibility_matrix = var1.constraints[:compatibility_matrix] || %{}
@@ -326,6 +335,7 @@ defmodule ElixirML.Variable do
   Get optimization hints for a variable.
   These hints help optimizers understand how to best optimize this variable.
   """
+  @spec optimization_hints(t()) :: keyword()
   def optimization_hints(%__MODULE__{} = variable) do
     base_hints =
       case variable.type do
@@ -341,6 +351,7 @@ defmodule ElixirML.Variable do
 
   # Private helper functions
 
+  @spec check_compatibility_constraints(t(), term()) :: boolean()
   defp check_compatibility_constraints(_variable, _constraints) do
     # Check basic compatibility constraints
     # In a full implementation, this would check various constraint types:

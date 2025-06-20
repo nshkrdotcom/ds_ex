@@ -10,6 +10,7 @@ defmodule ElixirML.Resources.Schemas do
   defmodule ProgramSignatureConfig do
     @moduledoc "Schema for program signature configuration"
 
+    @spec validate(term()) :: {:ok, map()} | {:error, String.t()}
     def validate(data) when is_map(data) do
       {:ok, data}
     end
@@ -20,6 +21,7 @@ defmodule ElixirML.Resources.Schemas do
   defmodule ProgramConfig do
     @moduledoc "Schema for program configuration"
 
+    @spec validate(term()) :: {:ok, map()} | {:error, String.t()}
     def validate(data) when is_map(data) do
       {:ok, data}
     end
@@ -30,6 +32,7 @@ defmodule ElixirML.Resources.Schemas do
   defmodule PerformanceMetrics do
     @moduledoc "Schema for performance metrics"
 
+    @spec validate(term()) :: {:ok, map()} | {:error, String.t()}
     def validate(data) when is_map(data) do
       {:ok, data}
     end
@@ -41,6 +44,7 @@ defmodule ElixirML.Resources.Schemas do
   defmodule VariableDefinitions do
     @moduledoc "Schema for variable definitions"
 
+    @spec validate(term()) :: {:ok, list()} | {:error, String.t()}
     def validate(data) when is_list(data) do
       {:ok, data}
     end
@@ -51,6 +55,7 @@ defmodule ElixirML.Resources.Schemas do
   defmodule VariableConstraints do
     @moduledoc "Schema for variable constraints"
 
+    @spec validate(term()) :: {:ok, map()} | {:error, String.t()}
     def validate(data) when is_map(data) do
       {:ok, data}
     end
@@ -61,6 +66,7 @@ defmodule ElixirML.Resources.Schemas do
   defmodule OptimizationHints do
     @moduledoc "Schema for optimization hints"
 
+    @spec validate(term()) :: {:ok, map()} | {:error, String.t()}
     def validate(data) when is_map(data) do
       {:ok, data}
     end
@@ -71,6 +77,7 @@ defmodule ElixirML.Resources.Schemas do
   defmodule VariableValues do
     @moduledoc "Schema for variable values"
 
+    @spec validate(term()) :: {:ok, map()} | {:error, String.t()}
     def validate(data) when is_map(data) do
       {:ok, data}
     end
@@ -81,6 +88,7 @@ defmodule ElixirML.Resources.Schemas do
   defmodule ConfigurationMetadata do
     @moduledoc "Schema for configuration metadata"
 
+    @spec validate(term()) :: {:ok, map()} | {:error, String.t()}
     def validate(data) when is_map(data) do
       {:ok, data}
     end
@@ -92,6 +100,7 @@ defmodule ElixirML.Resources.Schemas do
   defmodule OptimizationConfig do
     @moduledoc "Schema for optimization configuration"
 
+    @spec validate(term()) :: {:ok, map()} | {:error, String.t()}
     def validate(data) when is_map(data) do
       {:ok, data}
     end
@@ -102,6 +111,7 @@ defmodule ElixirML.Resources.Schemas do
   defmodule OptimizationResults do
     @moduledoc "Schema for optimization results"
 
+    @spec validate(term()) :: {:ok, map()} | {:error, String.t()}
     def validate(data) when is_map(data) do
       {:ok, data}
     end
@@ -113,6 +123,7 @@ defmodule ElixirML.Resources.Schemas do
   defmodule ExecutionInputs do
     @moduledoc "Schema for execution inputs"
 
+    @spec validate(term()) :: {:ok, map()} | {:error, String.t()}
     def validate(data) when is_map(data) do
       {:ok, data}
     end
@@ -123,6 +134,7 @@ defmodule ElixirML.Resources.Schemas do
   defmodule ExecutionOutputs do
     @moduledoc "Schema for execution outputs"
 
+    @spec validate(term()) :: {:ok, map()} | {:error, String.t()}
     def validate(data) when is_map(data) do
       {:ok, data}
     end
@@ -133,6 +145,7 @@ defmodule ElixirML.Resources.Schemas do
   defmodule ExecutionMetrics do
     @moduledoc "Schema for execution metrics"
 
+    @spec validate(term()) :: {:ok, map()} | {:error, String.t()}
     def validate(data) when is_map(data) do
       {:ok, data}
     end
@@ -141,6 +154,7 @@ defmodule ElixirML.Resources.Schemas do
   end
 
   # Helper functions
+  @spec valid_field_definitions?(term()) :: boolean()
   def valid_field_definitions?(fields) when is_list(fields) do
     Enum.all?(fields, fn field ->
       Map.has_key?(field, "name") and Map.has_key?(field, "type")

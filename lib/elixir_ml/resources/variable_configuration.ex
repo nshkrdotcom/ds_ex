@@ -49,6 +49,7 @@ defmodule ElixirML.Resources.VariableConfiguration do
   @doc """
   Creates a configuration from a map of variable values.
   """
+  @spec from_values(term(), map(), keyword()) :: {:ok, struct()} | {:error, term()}
   def from_values(variable_space_id, values, opts \\ []) do
     create(%{
       name: Keyword.get(opts, :name, "Configuration"),

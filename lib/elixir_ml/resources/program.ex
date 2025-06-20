@@ -101,6 +101,7 @@ defmodule ElixirML.Resources.Program do
   @doc """
   Creates a program from a DSPEx signature and configuration.
   """
+  @spec from_signature(module(), keyword()) :: {:ok, struct()} | {:error, term()}
   def from_signature(signature_module, opts \\ []) do
     # Extract signature information
     signature_config = extract_signature_config(signature_module)
@@ -126,6 +127,7 @@ defmodule ElixirML.Resources.Program do
   @doc """
   Extracts variables from the program for optimization.
   """
+  @spec get_variable_space(struct()) :: Space.t()
   def get_variable_space(_program) do
     # Extract variables from program configuration and signature
     # This would integrate with the Variable system when VariableSpace resource is implemented
@@ -134,6 +136,7 @@ defmodule ElixirML.Resources.Program do
 
   # Private helper functions
 
+  @spec extract_signature_config(module()) :: map()
   defp extract_signature_config(_signature_module) do
     # This would extract the actual signature configuration
     # For now, return a basic structure
@@ -145,6 +148,7 @@ defmodule ElixirML.Resources.Program do
     }
   end
 
+  @spec create_variable_space_from_signature(module(), keyword()) :: {:ok, map()}
   defp create_variable_space_from_signature(_signature_module, _opts) do
     # Create a variable space based on the signature
     # This would integrate with the existing Variable system when VariableSpace resource is implemented
