@@ -14,6 +14,7 @@ defmodule ElixirML.Schema.Types do
           | :variable_config
           | :reasoning_chain
           | :attention_weights
+          | :api_key
 
   @doc """
   Validate an embedding vector.
@@ -22,7 +23,7 @@ defmodule ElixirML.Schema.Types do
 
       iex> ElixirML.Schema.Types.validate_type([1.0, 2.0, 3.0], :embedding)
       {:ok, [1.0, 2.0, 3.0]}
-      
+
       iex> ElixirML.Schema.Types.validate_type("invalid", :embedding)
       {:error, "Embedding must be list of numbers"}
   """
@@ -139,6 +140,19 @@ defmodule ElixirML.Schema.Types do
 
       _ ->
         {:error, "Attention weights must be a matrix (list of lists)"}
+    end
+  end
+
+  def validate_type(value, :api_key) do
+    case value do
+      str when is_binary(str) and byte_size(str) > 0 ->
+        {:ok, value}
+
+      {:system, env_var} when is_binary(env_var) ->
+        {:ok, value}
+
+      _ ->
+        {:error, "API key must be a non-empty string or {:system, env_var} tuple"}
     end
   end
 

@@ -348,21 +348,28 @@ defmodule ElixirML.Runtime do
     # Check for explicit range first
     explicit_range = Keyword.get(opts, :range)
 
+    # Get explicit min/max constraints
+    min_val = Keyword.get(opts, :gteq) || Keyword.get(opts, :ge) || Keyword.get(opts, :gt)
+    max_val = Keyword.get(opts, :lteq) || Keyword.get(opts, :le) || Keyword.get(opts, :lt)
+
     range =
       if explicit_range do
         explicit_range
       else
-        case {Keyword.get(opts, :ge), Keyword.get(opts, :le)} do
-          # Default only if no explicit range
+        case {min_val, max_val} do
+          # Only apply default if NO constraints provided
           {nil, nil} -> {0.0, 1.0}
-          {min, max} -> {min || 0.0, max || 1.0}
+          # Use explicit constraints when provided
+          {min, max} when not is_nil(min) and not is_nil(max) -> {min, max}
+          {min, nil} when not is_nil(min) -> {min, 100.0}
+          {nil, max} when not is_nil(max) -> {0.0, max}
         end
       end
 
     %{
       range: range,
-      min_value: Keyword.get(opts, :ge) || Keyword.get(opts, :gteq) || Keyword.get(opts, :gt),
-      max_value: Keyword.get(opts, :le) || Keyword.get(opts, :lteq) || Keyword.get(opts, :lt)
+      min_value: min_val,
+      max_value: max_val
     }
   end
 
@@ -370,25 +377,39 @@ defmodule ElixirML.Runtime do
     # Check for explicit range first
     explicit_range = Keyword.get(opts, :range)
 
+    # Get explicit min/max constraints
+    min_val = Keyword.get(opts, :gteq) || Keyword.get(opts, :gte) || Keyword.get(opts, :gt)
+    max_val = Keyword.get(opts, :lteq) || Keyword.get(opts, :lte) || Keyword.get(opts, :lt)
+
     range =
       if explicit_range do
         explicit_range
       else
-        case {Keyword.get(opts, :gt), Keyword.get(opts, :le)} do
-          # Default only if no explicit range
+        case {min_val, max_val} do
+          # Only apply default if NO constraints provided
           {nil, nil} -> {1, 100}
-          {min, max} -> {(min || 0) + 1, max || 100}
+          # Use explicit constraints when provided
+          {min, max} when not is_nil(min) and not is_nil(max) -> {min, max}
+          {min, nil} when not is_nil(min) -> {min, 1_000_000}
+          {nil, max} when not is_nil(max) -> {0, max}
         end
       end
 
     %{
       range: range,
-      min_value: Keyword.get(opts, :gt) || Keyword.get(opts, :gte) || Keyword.get(opts, :gteq),
-      max_value: Keyword.get(opts, :lt) || Keyword.get(opts, :le) || Keyword.get(opts, :lteq)
+      min_value: min_val,
+      max_value: max_val
     }
   end
 
   defp extract_constraints_from_opts(:choice, opts) do
+    %{
+      choices: Keyword.get(opts, :choices, []),
+      allow_custom: Keyword.get(opts, :allow_custom, false)
+    }
+  end
+
+  defp extract_constraints_from_opts(:atom, opts) do
     %{
       choices: Keyword.get(opts, :choices, []),
       allow_custom: Keyword.get(opts, :allow_custom, false)
@@ -569,6 +590,7 @@ defmodule ElixirML.Runtime do
       :integer -> validate_numeric_constraints(value, field_def.constraints)
       :string -> validate_string_constraints(value, field_def.constraints)
       :choice -> validate_choice_constraints(value, field_def.constraints)
+      :atom -> validate_choice_constraints(value, field_def.constraints)
       _ -> {:ok, value}
     end
   end
