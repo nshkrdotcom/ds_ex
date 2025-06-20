@@ -217,12 +217,14 @@ defmodule ElixirML.Performance do
         atom when atom in [:float, :integer, :boolean] -> 1.0
         :choice -> 1.5
         :module -> 2.0
-        :composite -> 3.0  # Composite variables are most complex
+        # Composite variables are most complex
+        :composite -> 3.0
         _ -> 1.5
       end
 
     # Constraint complexity scoring
-    constraint_score = if is_map(variable.constraints), do: map_size(variable.constraints) * 0.3, else: 0
+    constraint_score =
+      if is_map(variable.constraints), do: map_size(variable.constraints) * 0.3, else: 0
 
     # Dependencies add complexity
     dependency_score = length(variable.dependencies) * 0.5
@@ -273,42 +275,54 @@ defmodule ElixirML.Performance do
     bottlenecks = []
 
     # Check for high-dimensional variables
-    high_dim_vars = Enum.filter(variables, fn var ->
-      var.type == :composite and
-      get_in(var.metadata, [:dimensions]) &&
-      get_in(var.metadata, [:dimensions]) > 512
-    end)
+    high_dim_vars =
+      Enum.filter(variables, fn var ->
+        (var.type == :composite and
+           get_in(var.metadata, [:dimensions])) &&
+          get_in(var.metadata, [:dimensions]) > 512
+      end)
 
-    bottlenecks = if length(high_dim_vars) > 0 do
-      ["High-dimensional embedding variables: #{inspect(Enum.map(high_dim_vars, & &1.name))}" | bottlenecks]
-    else
-      bottlenecks
-    end
+    bottlenecks =
+      if length(high_dim_vars) > 0 do
+        [
+          "High-dimensional embedding variables: #{inspect(Enum.map(high_dim_vars, & &1.name))}"
+          | bottlenecks
+        ]
+      else
+        bottlenecks
+      end
 
     # Check for too many variables
-    bottlenecks = if length(variables) > 20 do
-      ["High variable count (#{length(variables)}) may slow optimization" | bottlenecks]
-    else
-      bottlenecks
-    end
+    bottlenecks =
+      if length(variables) > 20 do
+        ["High variable count (#{length(variables)}) may slow optimization" | bottlenecks]
+      else
+        bottlenecks
+      end
 
     # Check for complex constraints
-    complex_vars = Enum.filter(variables, fn var ->
-      calculate_variable_complexity(var) > 5.0
-    end)
+    complex_vars =
+      Enum.filter(variables, fn var ->
+        calculate_variable_complexity(var) > 5.0
+      end)
 
-    bottlenecks = if length(complex_vars) > 0 do
-      ["Complex variables detected: #{inspect(Enum.map(complex_vars, & &1.name))}" | bottlenecks]
-    else
-      bottlenecks
-    end
+    bottlenecks =
+      if length(complex_vars) > 0 do
+        [
+          "Complex variables detected: #{inspect(Enum.map(complex_vars, & &1.name))}"
+          | bottlenecks
+        ]
+      else
+        bottlenecks
+      end
 
     # Performance metrics
     performance_metrics = %{
       total_variables: length(variables),
       complex_variables: length(complex_vars),
       high_dimensional_variables: length(high_dim_vars),
-      average_complexity: Enum.sum(Enum.map(variables, &calculate_variable_complexity/1)) / length(variables)
+      average_complexity:
+        Enum.sum(Enum.map(variables, &calculate_variable_complexity/1)) / length(variables)
     }
 
     # Optimization suggestions
@@ -335,7 +349,8 @@ defmodule ElixirML.Performance do
       end
 
     # Constraint complexity scoring
-    constraint_score = if is_map(field_def.constraints), do: map_size(field_def.constraints) * 0.5, else: 0
+    constraint_score =
+      if is_map(field_def.constraints), do: map_size(field_def.constraints) * 0.5, else: 0
 
     # Required fields are slightly more complex due to validation
     required_score = if field_def.required, do: 0.2, else: 0.0
@@ -363,7 +378,10 @@ defmodule ElixirML.Performance do
     # Check for too many fields
     recommendations =
       if map_size(fields) > 20 do
-        ["Consider reducing field count (#{map_size(fields)}) for better performance" | recommendations]
+        [
+          "Consider reducing field count (#{map_size(fields)}) for better performance"
+          | recommendations
+        ]
       else
         recommendations
       end
@@ -390,15 +408,17 @@ defmodule ElixirML.Performance do
     ml_complexity = Enum.count(ml_factors, &Map.has_key?(metadata, &1)) * 0.2
 
     # High-dimensional embeddings add significant complexity
-    dimension_complexity = case Map.get(metadata, :dimensions) do
-      dim when is_integer(dim) and dim > 1000 -> 2.0
-      dim when is_integer(dim) and dim > 100 -> 1.0
-      dim when is_integer(dim) -> 0.5
-      _ -> 0.0
-    end
+    dimension_complexity =
+      case Map.get(metadata, :dimensions) do
+        dim when is_integer(dim) and dim > 1000 -> 2.0
+        dim when is_integer(dim) and dim > 100 -> 1.0
+        dim when is_integer(dim) -> 0.5
+        _ -> 0.0
+      end
 
     ml_complexity + dimension_complexity
   end
+
   defp calculate_ml_metadata_complexity(_), do: 0.0
 
   defp calculate_dimensionality_score(variables) do
@@ -408,10 +428,11 @@ defmodule ElixirML.Performance do
     # Additional complexity from composite variables
     composite_complexity =
       variables
-      |> Enum.filter(& &1.type == :composite)
+      |> Enum.filter(&(&1.type == :composite))
       |> Enum.map(fn var ->
         case get_in(var.metadata, [:dimensions]) do
-          dim when is_integer(dim) -> dim / 100  # Scale down for scoring
+          # Scale down for scoring
+          dim when is_integer(dim) -> dim / 100
           _ -> 1
         end
       end)
@@ -424,29 +445,42 @@ defmodule ElixirML.Performance do
     tips = []
 
     # Check for high dimensionality
-    tips = if length(variables) > 15 do
-      ["Consider dimensionality reduction techniques for spaces with #{length(variables)} variables" | tips]
-    else
-      tips
-    end
+    tips =
+      if length(variables) > 15 do
+        [
+          "Consider dimensionality reduction techniques for spaces with #{length(variables)} variables"
+          | tips
+        ]
+      else
+        tips
+      end
 
     # Check for embedding variables
-    embedding_count = Enum.count(variables, fn var ->
-      get_in(var.metadata, [:ml_type]) == :embedding
-    end)
+    embedding_count =
+      Enum.count(variables, fn var ->
+        get_in(var.metadata, [:ml_type]) == :embedding
+      end)
 
-    tips = if embedding_count > 0 do
-      ["Use efficient embedding representations for #{embedding_count} embedding variables" | tips]
-    else
-      tips
-    end
+    tips =
+      if embedding_count > 0 do
+        [
+          "Use efficient embedding representations for #{embedding_count} embedding variables"
+          | tips
+        ]
+      else
+        tips
+      end
 
     # Check metadata for optimization hints
-    tips = if space.metadata[:space_type] == :provider_optimized do
-      ["Provider-optimized space detected - use provider-specific optimization strategies" | tips]
-    else
-      tips
-    end
+    tips =
+      if space.metadata[:space_type] == :provider_optimized do
+        [
+          "Provider-optimized space detected - use provider-specific optimization strategies"
+          | tips
+        ]
+      else
+        tips
+      end
 
     if Enum.empty?(tips) do
       ["Variable space is well-structured for optimization"]
@@ -457,7 +491,8 @@ defmodule ElixirML.Performance do
 
   defp estimate_search_time(dimensionality_score, variable_count) do
     # Simple heuristic for search time estimation
-    base_time = variable_count * 0.1  # 0.1 seconds per variable
+    # 0.1 seconds per variable
+    base_time = variable_count * 0.1
     complexity_multiplier = :math.log(dimensionality_score + 1)
     base_time * complexity_multiplier
   end
@@ -465,23 +500,26 @@ defmodule ElixirML.Performance do
   defp generate_bottleneck_suggestions(_bottlenecks, metrics) do
     suggestions = []
 
-    suggestions = if metrics.total_variables > 20 do
-      ["Consider variable selection or dimensionality reduction" | suggestions]
-    else
-      suggestions
-    end
+    suggestions =
+      if metrics.total_variables > 20 do
+        ["Consider variable selection or dimensionality reduction" | suggestions]
+      else
+        suggestions
+      end
 
-    suggestions = if metrics.average_complexity > 3.0 do
-      ["Simplify variable constraints to reduce complexity" | suggestions]
-    else
-      suggestions
-    end
+    suggestions =
+      if metrics.average_complexity > 3.0 do
+        ["Simplify variable constraints to reduce complexity" | suggestions]
+      else
+        suggestions
+      end
 
-    suggestions = if metrics.high_dimensional_variables > 0 do
-      ["Use embedding compression techniques for high-dimensional variables" | suggestions]
-    else
-      suggestions
-    end
+    suggestions =
+      if metrics.high_dimensional_variables > 0 do
+        ["Use embedding compression techniques for high-dimensional variables" | suggestions]
+      else
+        suggestions
+      end
 
     if Enum.empty?(suggestions) do
       ["Space is well-optimized - no major bottlenecks detected"]

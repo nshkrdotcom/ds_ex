@@ -641,12 +641,14 @@ defmodule ElixirML.Variable.MLTypes do
   @spec context_window(atom(), keyword()) :: Variable.t()
   def context_window(name, opts \\ []) do
     model = Keyword.get(opts, :model, "gpt-4")
-    max_context = case model do
-      "gpt-4" -> 8192
-      "gpt-3.5-turbo" -> 4096
-      "claude-3" -> 200000
-      _ -> 4096
-    end
+
+    max_context =
+      case model do
+        "gpt-4" -> 8192
+        "gpt-3.5-turbo" -> 4096
+        "claude-3" -> 200_000
+        _ -> 4096
+      end
 
     Variable.integer(name,
       range: {1, max_context},
@@ -752,7 +754,12 @@ defmodule ElixirML.Variable.MLTypes do
         space_type: :multi_objective,
         optimization_method: :nsga_ii,
         pareto_dominance: true,
-        objective_weights: %{accuracy: 0.4, inference_time: 0.3, compute_cost: 0.2, prediction_confidence: 0.1}
+        objective_weights: %{
+          accuracy: 0.4,
+          inference_time: 0.3,
+          compute_cost: 0.2,
+          prediction_confidence: 0.1
+        }
       }
     )
     |> Variable.Space.add_variables(variables)
@@ -770,28 +777,32 @@ defmodule ElixirML.Variable.MLTypes do
       latency_estimate(:response_time)
     ]
 
-    provider_specific = case provider do
-      :openai ->
-        [
-          probability(:top_p),
-          token_count(:max_tokens, max: 4096),
-          cost_estimate(:cost, currency: :usd, scaling: :token_based)
-        ]
-      :anthropic ->
-        [
-          token_count(:max_tokens, max: 100000),
-          cost_estimate(:cost, currency: :usd, scaling: :character_based),
-          reasoning_complexity(:reasoning_depth)
-        ]
-      :groq ->
-        [
-          batch_size(:batch_size),
-          latency_estimate(:inference_speed, timeout: 5.0),
-          cost_estimate(:cost, currency: :usd, scaling: :throughput_based)
-        ]
-      _ ->
-        []
-    end
+    provider_specific =
+      case provider do
+        :openai ->
+          [
+            probability(:top_p),
+            token_count(:max_tokens, max: 4096),
+            cost_estimate(:cost, currency: :usd, scaling: :token_based)
+          ]
+
+        :anthropic ->
+          [
+            token_count(:max_tokens, max: 100_000),
+            cost_estimate(:cost, currency: :usd, scaling: :character_based),
+            reasoning_complexity(:reasoning_depth)
+          ]
+
+        :groq ->
+          [
+            batch_size(:batch_size),
+            latency_estimate(:inference_speed, timeout: 5.0),
+            cost_estimate(:cost, currency: :usd, scaling: :throughput_based)
+          ]
+
+        _ ->
+          []
+      end
 
     all_variables = base_variables ++ provider_specific
 

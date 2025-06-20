@@ -7,10 +7,11 @@ defmodule ElixirML.PerformanceTest do
   describe "schema validation benchmarking" do
     test "benchmark_validation/3 measures validation performance" do
       # Create a simple schema for benchmarking
-      schema = Runtime.create_schema([
-        {:temperature, :float, gteq: 0.0, lteq: 2.0},
-        {:max_tokens, :integer, gteq: 1, lteq: 4096}
-      ])
+      schema =
+        Runtime.create_schema([
+          {:temperature, :float, gteq: 0.0, lteq: 2.0},
+          {:max_tokens, :integer, gteq: 1, lteq: 4096}
+        ])
 
       dataset = [
         %{temperature: 0.7, max_tokens: 1000},
@@ -22,7 +23,8 @@ defmodule ElixirML.PerformanceTest do
 
       assert is_number(stats.avg_time_microseconds)
       assert is_number(stats.total_time_microseconds)
-      assert stats.total_validations == 30  # 10 iterations * 3 items
+      # 10 iterations * 3 items
+      assert stats.total_validations == 30
       assert stats.validations_per_second > 0
     end
 
@@ -38,11 +40,12 @@ defmodule ElixirML.PerformanceTest do
 
     test "benchmark_validation/3 with ML-specific types" do
       # Use ML-specific types for benchmarking
-      schema = Runtime.create_schema([
-        {:confidence, :float, gteq: 0.0, lteq: 1.0},
-        {:token_count, :integer, gteq: 1, lteq: 8192},
-        {:cost_estimate, :float, gteq: 0.0, lteq: 1000.0}
-      ])
+      schema =
+        Runtime.create_schema([
+          {:confidence, :float, gteq: 0.0, lteq: 1.0},
+          {:token_count, :integer, gteq: 1, lteq: 8192},
+          {:cost_estimate, :float, gteq: 0.0, lteq: 1000.0}
+        ])
 
       dataset = [
         %{confidence: 0.95, token_count: 1500, cost_estimate: 0.05},
@@ -58,10 +61,11 @@ defmodule ElixirML.PerformanceTest do
 
   describe "memory usage analysis" do
     test "analyze_memory_usage/2 measures memory consumption" do
-      schema = Runtime.create_schema([
-        {:embedding, :float, gteq: -1.0, lteq: 1.0},
-        {:quality_score, :float, gteq: 0.0, lteq: 10.0}
-      ])
+      schema =
+        Runtime.create_schema([
+          {:embedding, :float, gteq: -1.0, lteq: 1.0},
+          {:quality_score, :float, gteq: 0.0, lteq: 10.0}
+        ])
 
       dataset = [
         %{embedding: 0.5, quality_score: 8.5},
@@ -78,14 +82,17 @@ defmodule ElixirML.PerformanceTest do
     end
 
     test "analyze_memory_usage/2 handles validation failures" do
-      schema = Runtime.create_schema([
-        {:probability, :float, gteq: 0.0, lteq: 1.0}
-      ])
+      schema =
+        Runtime.create_schema([
+          {:probability, :float, gteq: 0.0, lteq: 1.0}
+        ])
 
       # Mix valid and invalid data
       dataset = [
-        %{probability: 0.8},  # valid
-        %{probability: 1.5}   # invalid (> 1.0)
+        # valid
+        %{probability: 0.8},
+        # invalid (> 1.0)
+        %{probability: 1.5}
       ]
 
       memory_stats = Performance.analyze_memory_usage(schema, dataset)
@@ -98,10 +105,11 @@ defmodule ElixirML.PerformanceTest do
 
   describe "schema complexity profiling" do
     test "profile_schema_complexity/1 analyzes simple schemas" do
-      schema = Runtime.create_schema([
-        {:temperature, :float, gteq: 0.0, lteq: 2.0},
-        {:enabled, :integer, gteq: 0, lteq: 1}
-      ])
+      schema =
+        Runtime.create_schema([
+          {:temperature, :float, gteq: 0.0, lteq: 2.0},
+          {:enabled, :integer, gteq: 0, lteq: 1}
+        ])
 
       profile = Performance.profile_schema_complexity(schema)
 
@@ -114,14 +122,15 @@ defmodule ElixirML.PerformanceTest do
 
     test "profile_schema_complexity/1 identifies complex schemas" do
       # Create a complex schema with many constraints
-      schema = Runtime.create_schema([
-        {:embedding_vector, :float, gteq: -1.0, lteq: 1.0},
-        {:confidence_matrix, :float, gteq: 0.0, lteq: 1.0},
-        {:token_counts, :integer, gteq: 1, lteq: 100000},
-        {:quality_metrics, :float, gteq: 0.0, lteq: 10.0},
-        {:cost_breakdown, :float, gteq: 0.0, lteq: 1000.0},
-        {:latency_stats, :float, gteq: 0.001, lteq: 60.0}
-      ])
+      schema =
+        Runtime.create_schema([
+          {:embedding_vector, :float, gteq: -1.0, lteq: 1.0},
+          {:confidence_matrix, :float, gteq: 0.0, lteq: 1.0},
+          {:token_counts, :integer, gteq: 1, lteq: 100_000},
+          {:quality_metrics, :float, gteq: 0.0, lteq: 10.0},
+          {:cost_breakdown, :float, gteq: 0.0, lteq: 1000.0},
+          {:latency_stats, :float, gteq: 0.001, lteq: 60.0}
+        ])
 
       profile = Performance.profile_schema_complexity(schema)
 
@@ -132,16 +141,17 @@ defmodule ElixirML.PerformanceTest do
     end
 
     test "profile_schema_complexity/1 provides optimization recommendations" do
-      schema = Runtime.create_schema([
-        {:simple_field, :integer, gteq: 1, lteq: 10}
-      ])
+      schema =
+        Runtime.create_schema([
+          {:simple_field, :integer, gteq: 1, lteq: 10}
+        ])
 
       profile = Performance.profile_schema_complexity(schema)
 
       # Simple schemas should get positive feedback
       assert Enum.any?(profile.optimization_recommendations, fn rec ->
-        String.contains?(rec, "well-optimized") or String.contains?(rec, "optimized")
-      end)
+               String.contains?(rec, "well-optimized") or String.contains?(rec, "optimized")
+             end)
     end
   end
 
@@ -156,7 +166,8 @@ defmodule ElixirML.PerformanceTest do
       ]
 
       # Benchmark variable space validation
-      stats = Performance.benchmark_variable_space_validation(space, sample_configs, iterations: 5)
+      stats =
+        Performance.benchmark_variable_space_validation(space, sample_configs, iterations: 5)
 
       assert is_number(stats.avg_time_microseconds)
       assert stats.total_validations == 10
@@ -168,8 +179,15 @@ defmodule ElixirML.PerformanceTest do
 
       sample_config = %{temperature: 0.8, output_quality: 7.5, response_time: 2.0}
 
-      openai_stats = Performance.benchmark_variable_space_validation(openai_space, [sample_config], iterations: 3)
-      anthropic_stats = Performance.benchmark_variable_space_validation(anthropic_space, [sample_config], iterations: 3)
+      openai_stats =
+        Performance.benchmark_variable_space_validation(openai_space, [sample_config],
+          iterations: 3
+        )
+
+      anthropic_stats =
+        Performance.benchmark_variable_space_validation(anthropic_space, [sample_config],
+          iterations: 3
+        )
 
       # Both should complete successfully
       assert openai_stats.total_validations == 3
@@ -217,8 +235,9 @@ defmodule ElixirML.PerformanceTest do
         MLTypes.quality_score(:quality1)
       ]
 
-      space = ElixirML.Variable.Space.new(name: "High-Dimensional Space")
-              |> ElixirML.Variable.Space.add_variables(variables)
+      space =
+        ElixirML.Variable.Space.new(name: "High-Dimensional Space")
+        |> ElixirML.Variable.Space.add_variables(variables)
 
       recommendations = Performance.analyze_optimization_space(space)
 
