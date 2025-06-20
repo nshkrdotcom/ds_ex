@@ -124,9 +124,7 @@ defmodule ElixirML.Schema.ValidationError do
       case error.context do
         context when map_size(context) > 0 ->
           context_str =
-            context
-            |> Enum.map(fn {k, v} -> "#{k}: #{inspect(v)}" end)
-            |> Enum.join(", ")
+            Enum.map_join(context, ", ", fn {k, v} -> "#{k}: #{inspect(v)}" end)
 
           " (#{context_str})"
 
@@ -138,8 +136,10 @@ defmodule ElixirML.Schema.ValidationError do
   end
 
   defimpl String.Chars do
+    alias ElixirML.Schema.ValidationError
+
     def to_string(error) do
-      ElixirML.Schema.ValidationError.to_friendly_string(error)
+      ValidationError.to_friendly_string(error)
     end
   end
 
@@ -157,7 +157,6 @@ defmodule ElixirML.Schema.ValidationError do
   defp path_to_string(path) do
     path
     |> Enum.reverse()
-    |> Enum.map(&to_string/1)
-    |> Enum.join(".")
+    |> Enum.map_join(".", &to_string/1)
   end
 end

@@ -4,6 +4,8 @@ defmodule ElixirML.Schema.Runtime do
   Useful for cases where schemas need to be created at runtime.
   """
 
+  alias ElixirML.Schema.Types
+
   defstruct [
     :fields,
     :validations,
@@ -104,7 +106,7 @@ defmodule ElixirML.Schema.Runtime do
         end
 
       value ->
-        case ElixirML.Schema.Types.validate_type(value, type) do
+        case Types.validate_type(value, type) do
           {:ok, validated_value} ->
             {:ok, Map.put(data, name, validated_value)}
 
@@ -126,11 +128,9 @@ defmodule ElixirML.Schema.Runtime do
   end
 
   defp apply_transform(transform_fn, data) when is_function(transform_fn, 1) do
-    try do
-      transform_fn.(data)
-    rescue
-      e -> {:error, "Transform failed: #{Exception.message(e)}"}
-    end
+    transform_fn.(data)
+  rescue
+    e -> {:error, "Transform failed: #{Exception.message(e)}"}
   end
 
   defp apply_validations(%__MODULE__{validations: validations}, data) do
@@ -147,11 +147,9 @@ defmodule ElixirML.Schema.Runtime do
   end
 
   defp apply_validation(validation_fn, data) when is_function(validation_fn, 1) do
-    try do
-      validation_fn.(data)
-    rescue
-      e -> {:error, "Validation failed: #{Exception.message(e)}"}
-    end
+    validation_fn.(data)
+  rescue
+    e -> {:error, "Validation failed: #{Exception.message(e)}"}
   end
 
   # Helper functions

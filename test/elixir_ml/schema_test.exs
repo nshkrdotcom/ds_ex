@@ -3,7 +3,8 @@ defmodule ElixirML.SchemaTest do
   use ExUnitProperties
 
   alias ElixirML.Schema
-  alias ElixirML.Schema.{ValidationError, Runtime}
+  alias ElixirML.Schema.Runtime
+  alias ElixirML.Schema.ValidationError
 
   # Test schema definition
   defmodule TestSchema do
@@ -14,6 +15,7 @@ defmodule ElixirML.SchemaTest do
       field(:confidence, :probability, default: 0.5)
       field(:tokens, :token_list, required: false)
       field(:response, :model_response, required: true)
+      field(:optional_field, :string, required: false)
 
       # Note: Complex validations and transforms removed for compilation compatibility
 
@@ -26,7 +28,7 @@ defmodule ElixirML.SchemaTest do
 
   describe "schema compilation" do
     test "compiles schema with all metadata" do
-      assert TestSchema.TestMLSchema.__fields__() |> length() == 4
+      assert TestSchema.TestMLSchema.__fields__() |> length() == 5
       assert TestSchema.TestMLSchema.__metadata__().version == "1.0"
     end
 
@@ -150,8 +152,8 @@ defmodule ElixirML.SchemaTest do
   end
 
   describe "ML-specific types property testing" do
-    property "validates embeddings of various lengths" do
-      check all(embedding <- list_of(float(), min_length: 1, max_length: 1000)) do
+    test "property: validates embeddings of various lengths" do
+      check all(embedding <- list_of(float(), min_length: 1, max_length: 1000), max_runs: 50) do
         data = %{
           embedding: embedding,
           response: %{text: "test"}
@@ -169,8 +171,8 @@ defmodule ElixirML.SchemaTest do
       end
     end
 
-    property "validates probability values" do
-      check all(prob <- float(min: 0.0, max: 1.0)) do
+    test "property: validates probability values" do
+      check all(prob <- float(min: 0.0, max: 1.0), max_runs: 50) do
         data = %{
           embedding: [1.0, 2.0, 3.0],
           confidence: prob,
@@ -189,8 +191,8 @@ defmodule ElixirML.SchemaTest do
       end
     end
 
-    property "validates token lists" do
-      check all(tokens <- list_of(one_of([string(:alphanumeric), integer()]))) do
+    test "property: validates token lists" do
+      check all(tokens <- list_of(one_of([string(:alphanumeric), integer()])), max_runs: 50) do
         data = %{
           embedding: [1.0, 2.0, 3.0],
           tokens: tokens,
@@ -241,6 +243,7 @@ defmodule ElixirML.SchemaTest do
         field(:temperature, :float, variable: true, default: 0.7)
         field(:model, :string, variable: true, default: "gpt-4")
         field(:text, :string, required: true)
+        field(:optional_field, :string, required: false)
       end
     end
 

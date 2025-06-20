@@ -281,22 +281,10 @@ defmodule ElixirML.Variable.Space do
   end
 
   defp ensure_all_variables_present(%__MODULE__{} = space, configuration) do
-    missing_required =
-      Enum.filter(space.variables, fn {name, variable} ->
-        not Map.has_key?(configuration, name) and is_nil(variable.default)
-      end)
+    missing_required = find_missing_required_variables(space, configuration)
 
     if Enum.empty?(missing_required) do
-      # Add default values for missing variables
-      complete_config =
-        Enum.reduce(space.variables, configuration, fn {name, variable}, acc ->
-          if Map.has_key?(acc, name) do
-            acc
-          else
-            Map.put(acc, name, variable.default)
-          end
-        end)
-
+      complete_config = add_default_values(space, configuration)
       {:ok, complete_config}
     else
       missing_names = Enum.map(missing_required, fn {name, _} -> name end)
@@ -304,47 +292,77 @@ defmodule ElixirML.Variable.Space do
     end
   end
 
-  defp validate_variable_values(%__MODULE__{} = space, configuration) do
-    Enum.reduce_while(configuration, {:ok, %{}}, fn {name, value}, {:ok, acc} ->
-      case Map.get(space.variables, name) do
-        nil ->
-          # Unknown variable - just pass through
-          {:cont, {:ok, Map.put(acc, name, value)}}
+  defp find_missing_required_variables(space, configuration) do
+    Enum.filter(space.variables, fn {name, variable} ->
+      not Map.has_key?(configuration, name) and is_nil(variable.default)
+    end)
+  end
 
-        %ElixirML.Variable{type: :composite} ->
-          # Skip validation for composite variables - they're computed
-          {:cont, {:ok, Map.put(acc, name, value)}}
-
-        variable ->
-          case ElixirML.Variable.validate(variable, value) do
-            {:ok, validated_value} ->
-              {:cont, {:ok, Map.put(acc, name, validated_value)}}
-
-            {:error, reason} ->
-              {:halt, {:error, "Variable #{name}: #{reason}"}}
-          end
+  defp add_default_values(space, configuration) do
+    Enum.reduce(space.variables, configuration, fn {name, variable}, acc ->
+      if Map.has_key?(acc, name) do
+        acc
+      else
+        Map.put(acc, name, variable.default)
       end
     end)
+  end
+
+  defp validate_variable_values(%__MODULE__{} = space, configuration) do
+    Enum.reduce_while(configuration, {:ok, %{}}, fn {name, value}, {:ok, acc} ->
+      case validate_single_variable(space, name, value) do
+        {:ok, validated_value} ->
+          {:cont, {:ok, Map.put(acc, name, validated_value)}}
+
+        {:error, reason} ->
+          {:halt, {:error, "Variable #{name}: #{reason}"}}
+      end
+    end)
+  end
+
+  defp validate_single_variable(space, name, value) do
+    case Map.get(space.variables, name) do
+      nil ->
+        # Unknown variable - just pass through
+        {:ok, value}
+
+      %ElixirML.Variable{type: :composite} ->
+        # Skip validation for composite variables - they're computed
+        {:ok, value}
+
+      variable ->
+        ElixirML.Variable.validate(variable, value)
+    end
   end
 
   defp resolve_dependencies(%__MODULE__{} = space, configuration) do
     dependency_order = dependency_order(space)
 
     Enum.reduce_while(dependency_order, {:ok, configuration}, fn var_name, {:ok, acc_config} ->
-      case Map.get(space.variables, var_name) do
-        %ElixirML.Variable{type: :composite} = variable ->
-          case compute_composite_variable(variable, acc_config) do
-            {:ok, computed_value} ->
-              {:cont, {:ok, Map.put(acc_config, var_name, computed_value)}}
+      case resolve_single_dependency(space, var_name, acc_config) do
+        {:ok, updated_config} ->
+          {:cont, {:ok, updated_config}}
 
-            {:error, reason} ->
-              {:halt, {:error, "Failed to compute #{var_name}: #{reason}"}}
-          end
-
-        _ ->
-          {:cont, {:ok, acc_config}}
+        {:error, reason} ->
+          {:halt, {:error, "Failed to compute #{var_name}: #{reason}"}}
       end
     end)
+  end
+
+  defp resolve_single_dependency(space, var_name, configuration) do
+    case Map.get(space.variables, var_name) do
+      %ElixirML.Variable{type: :composite} = variable ->
+        case compute_composite_variable(variable, configuration) do
+          {:ok, computed_value} ->
+            {:ok, Map.put(configuration, var_name, computed_value)}
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+
+      _ ->
+        {:ok, configuration}
+    end
   end
 
   defp compute_composite_variable(%ElixirML.Variable{type: :composite} = variable, configuration) do

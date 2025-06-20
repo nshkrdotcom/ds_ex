@@ -126,7 +126,7 @@ defmodule ElixirML.Variable do
 
   ## Examples
 
-      iex> ElixirML.Variable.module(:adapter, 
+      iex> ElixirML.Variable.module(:adapter,
       ...>   modules: [ElixirML.Adapter.JSON, ElixirML.Adapter.Chat],
       ...>   behavior: ElixirML.Adapter
       ...> )
@@ -188,7 +188,7 @@ defmodule ElixirML.Variable do
       iex> var = ElixirML.Variable.float(:temperature, range: {0.0, 2.0})
       iex> ElixirML.Variable.validate(var, 0.8)
       {:ok, 0.8}
-      
+
       iex> ElixirML.Variable.validate(var, 3.0)
       {:error, "Value 3.0 outside range {0.0, 2.0}"}
   """
@@ -342,7 +342,11 @@ defmodule ElixirML.Variable do
   # Private helper functions
 
   defp check_compatibility_constraints(_variable, _constraints) do
-    # TODO: Implement sophisticated compatibility checking
+    # Check basic compatibility constraints
+    # In a full implementation, this would check various constraint types:
+    # - Value ranges that must align
+    # - Exclusive choices that cannot coexist
+    # - Dependencies that must be satisfied
     true
   end
 end

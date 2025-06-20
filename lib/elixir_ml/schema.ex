@@ -7,6 +7,8 @@ defmodule ElixirML.Schema do
   for ML-specific types like embeddings, probabilities, and confidence scores.
   """
 
+  alias ElixirML.Schema.Runtime
+
   defmacro __using__(_opts) do
     quote do
       import ElixirML.Schema, only: [defschema: 2]
@@ -39,7 +41,7 @@ defmodule ElixirML.Schema do
       {:ok, %{embedding: [1.0, 2.0, 3.0], confidence: 0.8}}
   """
   def create(fields, opts \\ []) do
-    %ElixirML.Schema.Runtime{
+    %Runtime{
       fields: fields,
       validations: Keyword.get(opts, :validations, []),
       transforms: Keyword.get(opts, :transforms, []),
@@ -54,7 +56,7 @@ defmodule ElixirML.Schema do
 
       iex> ElixirML.Schema.validate(MySchema, %{field: "value"})
       {:ok, %{field: "value"}}
-      
+
       iex> ElixirML.Schema.validate(MySchema, %{invalid: "data"})
       {:error, %ElixirML.Schema.ValidationError{}}
   """
@@ -62,8 +64,8 @@ defmodule ElixirML.Schema do
     schema_module.validate(data)
   end
 
-  def validate(%ElixirML.Schema.Runtime{} = schema, data) do
-    ElixirML.Schema.Runtime.validate(schema, data)
+  def validate(%Runtime{} = schema, data) do
+    Runtime.validate(schema, data)
   end
 
   @doc """

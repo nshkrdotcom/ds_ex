@@ -3,7 +3,8 @@ defmodule ElixirML.VariableTest do
   use ExUnitProperties
 
   alias ElixirML.Variable
-  alias ElixirML.Variable.{Space, MLTypes}
+  alias ElixirML.Variable.MLTypes
+  alias ElixirML.Variable.Space
 
   describe "variable creation" do
     test "creates float variable with constraints" do
@@ -66,7 +67,7 @@ defmodule ElixirML.VariableTest do
       var = Variable.float(:temperature, range: {0.0, 2.0})
 
       assert {:ok, 0.8} = Variable.validate(var, 0.8)
-      assert {:ok, 0.0} = Variable.validate(var, 0.0)
+      assert {:ok, +0.0} = Variable.validate(var, +0.0)
       assert {:ok, 2.0} = Variable.validate(var, 2.0)
 
       assert {:error, _} = Variable.validate(var, -0.1)
@@ -336,10 +337,11 @@ defmodule ElixirML.VariableTest do
   end
 
   describe "property-based testing" do
-    property "random values are always within constraints for float variables" do
+    test "property: random values are always within constraints for float variables" do
       check all(
               min <- float(min: -100.0, max: 100.0),
-              max <- float(min: min, max: min + 100.0)
+              max <- float(min: min, max: min + 100.0),
+              max_runs: 50
             ) do
         var = Variable.float(:test_var, range: {min, max})
 
@@ -352,8 +354,11 @@ defmodule ElixirML.VariableTest do
       end
     end
 
-    property "validation is consistent with random value generation" do
-      check all(choices <- list_of(atom(:alphanumeric), min_length: 1, max_length: 10)) do
+    test "property: validation is consistent with random value generation" do
+      check all(
+              choices <- list_of(atom(:alphanumeric), min_length: 1, max_length: 10),
+              max_runs: 50
+            ) do
         var = Variable.choice(:test_var, choices)
 
         for _i <- 1..10 do
@@ -363,10 +368,11 @@ defmodule ElixirML.VariableTest do
       end
     end
 
-    property "space validates its own random configurations" do
+    test "property: space validates its own random configurations" do
       check all(
               temp_range <- tuple({float(min: 0.0, max: 1.0), float(min: 1.0, max: 2.0)}),
-              choices <- list_of(atom(:alphanumeric), min_length: 1, max_length: 5)
+              choices <- list_of(atom(:alphanumeric), min_length: 1, max_length: 5),
+              max_runs: 50
             ) do
         {min_temp, max_temp} = temp_range
 

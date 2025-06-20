@@ -1,12 +1,14 @@
 defmodule ElixirML.Variable.MLTypes do
   @moduledoc """
-  ML-specific variable types with built-in compatibility and optimization logic.
+  ML-specific variable types and configurations for ElixirML.
 
-  These are pre-built variable definitions for common ML optimization scenarios
-  like provider selection, model configuration, and reasoning strategies.
+  Provides pre-configured variable types commonly used in machine learning
+  applications, including model parameters, provider configurations, and
+  optimization hints.
   """
 
   alias ElixirML.Variable
+  alias ElixirML.Variable.Space
 
   @doc """
   Create a provider variable with model compatibility and cost/performance weights.
@@ -305,8 +307,6 @@ defmodule ElixirML.Variable.MLTypes do
       true
   """
   def standard_ml_config(opts \\ []) do
-    alias ElixirML.Variable.Space
-
     space =
       Space.new(
         name: Keyword.get(opts, :name, "Standard ML Configuration"),
@@ -352,7 +352,7 @@ defmodule ElixirML.Variable.MLTypes do
   Extract variables from a signature module with ML-specific enhancements.
   """
   def extract_from_signature(signature_module) do
-    base_space = ElixirML.Variable.Space.from_signature(signature_module)
+    base_space = Space.from_signature(signature_module)
 
     # Enhance with ML-specific variables
     enhanced_variables = [
@@ -362,7 +362,7 @@ defmodule ElixirML.Variable.MLTypes do
       temperature(:temperature, range: {0.0, 2.0}, default: 0.7)
     ]
 
-    ElixirML.Variable.Space.add_variables(base_space, enhanced_variables)
+    Space.add_variables(base_space, enhanced_variables)
   end
 
   # Private helper functions

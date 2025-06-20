@@ -147,6 +147,19 @@ defmodule ElixirML.Schema.Types do
     validate_basic_type(value, type)
   end
 
+  # Complex type validation for tuples like {:array, :map}
+  defp validate_basic_type(value, {:array, element_type}) when is_list(value) do
+    # Validate each element in the array
+    case validate_array_elements(value, element_type) do
+      {:ok, _} -> {:ok, value}
+      error -> error
+    end
+  end
+
+  defp validate_basic_type(value, {:array, _element_type}) do
+    {:error, "Expected array but got #{inspect(value)}"}
+  end
+
   # Basic type validation fallback
   defp validate_basic_type(value, :string) when is_binary(value), do: {:ok, value}
   defp validate_basic_type(value, :integer) when is_integer(value), do: {:ok, value}
@@ -155,7 +168,18 @@ defmodule ElixirML.Schema.Types do
   defp validate_basic_type(value, :map) when is_map(value), do: {:ok, value}
   defp validate_basic_type(value, :list) when is_list(value), do: {:ok, value}
   defp validate_basic_type(value, :atom) when is_atom(value), do: {:ok, value}
-  defp validate_basic_type(_value, type), do: {:error, "Invalid type: #{type}"}
+  defp validate_basic_type(_value, type) when is_atom(type), do: {:error, "Invalid type: #{type}"}
+  defp validate_basic_type(_value, type), do: {:error, "Invalid type: #{inspect(type)}"}
+
+  # Helper function to validate array elements
+  defp validate_array_elements([], _element_type), do: {:ok, []}
+
+  defp validate_array_elements([head | tail], element_type) do
+    case validate_basic_type(head, element_type) do
+      {:ok, _} -> validate_array_elements(tail, element_type)
+      error -> error
+    end
+  end
 
   # Private helper functions
 
