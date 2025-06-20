@@ -37,14 +37,28 @@ defmodule DSPEx.Predict do
 
   use DSPEx.Program
 
+  # Declare variables for automatic optimization
+  variable :temperature, :float, range: {0.0, 2.0}, default: 0.7, 
+    description: "Sampling temperature for model response"
+  variable :max_tokens, :integer, range: {50, 4000}, default: 1000,
+    description: "Maximum tokens in model response" 
+  variable :provider, :choice, choices: [:openai, :anthropic, :groq],
+    description: "LLM provider selection"
+  variable :model, :choice, choices: [:auto, "gpt-4", "gpt-3.5-turbo", "claude-3-opus"],
+    description: "Model selection"
+  variable :adapter, :module, 
+    modules: [DSPEx.Adapter, DSPEx.Adapter.Chat, DSPEx.Adapter.JSON],
+    description: "Response format adapter"
+
   @enforce_keys [:signature, :client]
-  defstruct [:signature, :client, :adapter, :instruction, demos: []]
+  defstruct [:signature, :client, :adapter, :instruction, :variable_space, demos: []]
 
   @type t :: %__MODULE__{
           signature: module(),
           client: atom() | map(),
           adapter: module() | nil,
           instruction: String.t() | nil,
+          variable_space: ElixirML.Variable.Space.t() | nil,
           demos: [map()]
         }
   @type signature :: module()
@@ -77,13 +91,60 @@ defmodule DSPEx.Predict do
   """
   @spec new(signature(), atom() | map(), keyword() | map()) :: t()
   def new(signature, client, opts \\ []) do
+    # Create variable space for this program
+    variable_space = create_variable_space_for_predict(signature, opts)
+
     %__MODULE__{
       signature: signature,
       client: client,
       adapter: get_option(opts, :adapter, nil),
       demos: get_option(opts, :demos, []),
-      instruction: get_option(opts, :instruction, nil)
+      instruction: get_option(opts, :instruction, nil),
+      variable_space: variable_space
     }
+  end
+
+  # Create variable space combining declared variables with signature analysis
+  defp create_variable_space_for_predict(signature, opts) do
+    # Get declared variables from this module
+    declared_vars = __MODULE__.__variables__()
+    
+    # Create base space from declared variables
+    base_space = Enum.reduce(declared_vars, ElixirML.Variable.Space.new(), fn {_name, variable}, space ->
+      ElixirML.Variable.Space.add_variable(space, variable)
+    end)
+
+    # Enhance with signature-specific variables if requested
+    if get_option(opts, :auto_extract_variables, true) do
+      DSPEx.Program.Variable.extract_from_signature(signature, 
+        include_ml_variables: false)  # Don't duplicate our declared variables
+      |> merge_variable_spaces(base_space)
+    else
+      base_space
+    end
+  rescue
+    # Graceful degradation if ElixirML is not available
+    _ -> nil
+  end
+
+  # Merge two variable spaces (simple implementation)
+  defp merge_variable_spaces(source_space, target_space) do
+    case {source_space, target_space} do
+      {nil, space} -> space
+      {space, nil} -> space
+      {source, target} ->
+        # Add variables from source to target (target takes precedence)
+        source.variables
+        |> Enum.reduce(target, fn {name, variable}, acc_space ->
+          if Map.has_key?(target.variables, name) do
+            acc_space  # Keep target's version
+          else
+            ElixirML.Variable.Space.add_variable(acc_space, variable)
+          end
+        end)
+    end
+  rescue
+    _ -> target_space
   end
 
   # Helper function to get options from either keyword list or map
@@ -120,9 +181,15 @@ defmodule DSPEx.Predict do
     # Step 2: Extract model configuration for SIMBA support
     model_config = extract_model_configuration(opts)
 
+    # Step 2.5: Resolve variables for automatic optimization
+    resolved_variables = DSPEx.Program.resolve_variables(program, opts)
+    
+    # Merge resolved variables into model configuration
+    enhanced_model_config = merge_variables_into_config(model_config, resolved_variables)
+
     # Step 3: Format messages with enhanced adapter support
     format_start = System.monotonic_time()
-    format_result = format_messages_enhanced(program, inputs, model_config, correlation_id)
+    format_result = format_messages_enhanced(program, inputs, enhanced_model_config, correlation_id)
 
     _format_duration =
       System.convert_time_unit(System.monotonic_time() - format_start, :native, :microsecond)
@@ -133,7 +200,7 @@ defmodule DSPEx.Predict do
     request_result =
       case format_result do
         {:ok, messages} ->
-          make_request_with_config(program, messages, model_config, opts, correlation_id)
+          make_request_with_config(program, messages, enhanced_model_config, opts, correlation_id)
 
         error ->
           error
@@ -189,6 +256,14 @@ defmodule DSPEx.Predict do
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
     |> Enum.into(%{})
   end
+
+  defp merge_variables_into_config(model_config, resolved_variables) when is_map(resolved_variables) do
+    # Merge resolved variables into model configuration
+    # Variables take precedence over explicit model config
+    Map.merge(model_config, resolved_variables)
+  end
+
+  defp merge_variables_into_config(model_config, _), do: model_config
 
   defp format_messages_enhanced(program, inputs, model_config, correlation_id) do
     start_time = System.monotonic_time()
