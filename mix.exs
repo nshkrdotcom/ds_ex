@@ -54,6 +54,7 @@ defmodule Dspex.MixProject do
 
       # Testing & Development
       {:propcheck, "~> 1.4", only: [:test, :dev]},
+      {:stream_data, "~> 0.6", only: [:test, :dev]},
       {:mox, "~> 1.1", only: :test},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
