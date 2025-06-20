@@ -478,4 +478,343 @@ defmodule ElixirML.Variable.MLTypes do
       {:ok, config}
     end
   end
+
+  @doc """
+  Creates an embedding variable with specified dimensions.
+  Based on Elixact patterns for vector embeddings.
+  """
+  @spec embedding(atom(), keyword()) :: Variable.t()
+  def embedding(name, opts \\ []) do
+    dimensions = Keyword.get(opts, :dimensions, 1536)
+
+    Variable.composite(name,
+      description: "Embedding vector with #{dimensions} dimensions",
+      default: List.duplicate(0.0, dimensions),
+      compute: fn _config -> List.duplicate(0.0, dimensions) end,
+      metadata: %{
+        ml_type: :embedding,
+        dimensions: dimensions,
+        normalization: :l2,
+        range: {-1.0, 1.0},
+        vector_norm: :l2
+      }
+    )
+  end
+
+  @doc """
+  Creates a probability variable with proper range constraints.
+  Enhanced from basic probability type.
+  """
+  @spec probability(atom(), keyword()) :: Variable.t()
+  def probability(name, opts \\ []) do
+    Variable.float(name,
+      range: {0.0, 1.0},
+      default: 0.5,
+      precision: Keyword.get(opts, :precision, 0.001),
+      description: "Probability value between 0.0 and 1.0",
+      metadata: %{
+        ml_type: :probability,
+        statistical_type: :continuous
+      }
+    )
+  end
+
+  @doc """
+  Creates a confidence score variable.
+  Based on Elixact confidence estimation patterns.
+  """
+  @spec confidence_score(atom(), keyword()) :: Variable.t()
+  def confidence_score(name, opts \\ []) do
+    Variable.float(name,
+      range: {0.0, 1.0},
+      default: 0.5,
+      description: "Confidence score for model predictions",
+      metadata: %{
+        ml_type: :confidence,
+        calibration_method: Keyword.get(opts, :calibration, :platt_scaling)
+      }
+    )
+  end
+
+  @doc """
+  Creates a token count variable for LLM operations.
+  Based on Elixact token management patterns.
+  """
+  @spec token_count(atom(), keyword()) :: Variable.t()
+  def token_count(name, opts \\ []) do
+    max_tokens = Keyword.get(opts, :max, 4096)
+
+    Variable.integer(name,
+      range: {1, max_tokens},
+      default: 100,
+      description: "Token count for LLM operations",
+      metadata: %{
+        ml_type: :token_count,
+        max_tokens: max_tokens,
+        tokenizer: Keyword.get(opts, :tokenizer, :tiktoken)
+      }
+    )
+  end
+
+  @doc """
+  Creates a cost estimation variable for LLM operations.
+  Based on Elixact cost optimization patterns.
+  """
+  @spec cost_estimate(atom(), keyword()) :: Variable.t()
+  def cost_estimate(name, opts \\ []) do
+    currency = Keyword.get(opts, :currency, :usd)
+    scaling = Keyword.get(opts, :scaling, :linear)
+
+    Variable.float(name,
+      range: {0.0, 1000.0},
+      default: 0.01,
+      precision: 0.0001,
+      description: "Cost estimation for LLM operations",
+      metadata: %{
+        ml_type: :cost,
+        currency: currency,
+        scaling: scaling,
+        cost_model: :token_based
+      }
+    )
+  end
+
+  @doc """
+  Creates a latency estimation variable.
+  Based on Sinter performance patterns.
+  """
+  @spec latency_estimate(atom(), keyword()) :: Variable.t()
+  def latency_estimate(name, opts \\ []) do
+    timeout = Keyword.get(opts, :timeout, 30.0)
+
+    Variable.float(name,
+      range: {0.001, timeout},
+      default: 1.0,
+      description: "Latency estimation in seconds",
+      metadata: %{
+        ml_type: :latency,
+        timeout: timeout,
+        measurement_unit: :seconds
+      }
+    )
+  end
+
+  @doc """
+  Creates a quality score variable for model outputs.
+  Based on Elixact quality assessment patterns.
+  """
+  @spec quality_score(atom(), keyword()) :: Variable.t()
+  def quality_score(name, opts \\ []) do
+    Variable.float(name,
+      range: {0.0, 10.0},
+      default: 5.0,
+      description: "Quality assessment score",
+      metadata: %{
+        ml_type: :quality,
+        assessment_scale: Keyword.get(opts, :scale, :likert_10)
+      }
+    )
+  end
+
+  @doc """
+  Creates a reasoning complexity variable.
+  Based on Elixact reasoning assessment patterns.
+  """
+  @spec reasoning_complexity(atom(), keyword()) :: Variable.t()
+  def reasoning_complexity(name, opts \\ []) do
+    Variable.integer(name,
+      range: {1, 10},
+      default: 3,
+      description: "Reasoning complexity assessment",
+      metadata: %{
+        ml_type: :complexity,
+        reasoning_type: Keyword.get(opts, :reasoning_type, :general),
+        complexity_levels: [:trivial, :simple, :moderate, :complex, :expert]
+      }
+    )
+  end
+
+  @doc """
+  Creates a context window variable for LLM operations.
+  Based on Elixact context management patterns.
+  """
+  @spec context_window(atom(), keyword()) :: Variable.t()
+  def context_window(name, opts \\ []) do
+    model = Keyword.get(opts, :model, "gpt-4")
+    max_context = case model do
+      "gpt-4" -> 8192
+      "gpt-3.5-turbo" -> 4096
+      "claude-3" -> 200000
+      _ -> 4096
+    end
+
+    Variable.integer(name,
+      range: {1, max_context},
+      default: div(max_context, 2),
+      description: "Context window size for #{model}",
+      metadata: %{
+        ml_type: :context_window,
+        model: model,
+        max_context: max_context
+      }
+    )
+  end
+
+  @doc """
+  Creates a batch size variable for batch processing.
+  Based on Sinter performance optimization patterns.
+  """
+  @spec batch_size(atom(), keyword()) :: Variable.t()
+  def batch_size(name, opts \\ []) do
+    Variable.integer(name,
+      range: {1, 1000},
+      default: 32,
+      description: "Batch size for processing operations",
+      metadata: %{
+        ml_type: :batch_size,
+        optimization_target: :throughput,
+        power_of_two: Keyword.get(opts, :power_of_two, false)
+      }
+    )
+  end
+
+  # Enhanced Variable Spaces
+
+  @doc """
+  Creates a comprehensive LLM optimization space.
+  Based on Elixact optimization patterns.
+  """
+  @spec llm_optimization_space() :: Variable.Space.t()
+  def llm_optimization_space do
+    variables = [
+      temperature(:temperature),
+      probability(:top_p),
+      token_count(:max_tokens, max: 4096),
+      latency_estimate(:response_time),
+      cost_estimate(:operation_cost),
+      quality_score(:output_quality)
+    ]
+
+    Variable.Space.new(
+      name: "LLM Optimization Space",
+      metadata: %{
+        space_type: :llm_optimization,
+        optimization_objectives: [:quality, :cost, :latency],
+        cost_quality_tradeoff: :pareto_optimal,
+        latency_budget: 30.0
+      }
+    )
+    |> Variable.Space.add_variables(variables)
+  end
+
+  @doc """
+  Creates a teleprompter-specific optimization space.
+  Based on DSPEx teleprompter patterns.
+  """
+  @spec teleprompter_optimization_space() :: Variable.Space.t()
+  def teleprompter_optimization_space do
+    variables = [
+      temperature(:temperature),
+      batch_size(:batch_size),
+      confidence_score(:min_confidence),
+      reasoning_complexity(:complexity_threshold),
+      token_count(:max_context, max: 8192)
+    ]
+
+    Variable.Space.new(
+      name: "Teleprompter Optimization Space",
+      metadata: %{
+        space_type: :teleprompter_optimization,
+        algorithm_support: [:bayesian, :simba, :bootstrap],
+        exploration_exploitation: 0.1,
+        convergence_threshold: 0.01
+      }
+    )
+    |> Variable.Space.add_variables(variables)
+  end
+
+  @doc """
+  Creates a multi-objective optimization space.
+  Based on Elixact multi-objective patterns.
+  """
+  @spec multi_objective_space() :: Variable.Space.t()
+  def multi_objective_space do
+    variables = [
+      quality_score(:accuracy),
+      latency_estimate(:inference_time),
+      cost_estimate(:compute_cost),
+      confidence_score(:prediction_confidence)
+    ]
+
+    Variable.Space.new(
+      name: "Multi-Objective Optimization Space",
+      metadata: %{
+        space_type: :multi_objective,
+        optimization_method: :nsga_ii,
+        pareto_dominance: true,
+        objective_weights: %{accuracy: 0.4, inference_time: 0.3, compute_cost: 0.2, prediction_confidence: 0.1}
+      }
+    )
+    |> Variable.Space.add_variables(variables)
+  end
+
+  @doc """
+  Creates provider-optimized variable spaces.
+  Based on Sinter provider-specific patterns.
+  """
+  @spec provider_optimized_space(atom()) :: Variable.Space.t()
+  def provider_optimized_space(provider) do
+    base_variables = [
+      temperature(:temperature),
+      quality_score(:output_quality),
+      latency_estimate(:response_time)
+    ]
+
+    provider_specific = case provider do
+      :openai ->
+        [
+          probability(:top_p),
+          token_count(:max_tokens, max: 4096),
+          cost_estimate(:cost, currency: :usd, scaling: :token_based)
+        ]
+      :anthropic ->
+        [
+          token_count(:max_tokens, max: 100000),
+          cost_estimate(:cost, currency: :usd, scaling: :character_based),
+          reasoning_complexity(:reasoning_depth)
+        ]
+      :groq ->
+        [
+          batch_size(:batch_size),
+          latency_estimate(:inference_speed, timeout: 5.0),
+          cost_estimate(:cost, currency: :usd, scaling: :throughput_based)
+        ]
+      _ ->
+        []
+    end
+
+    all_variables = base_variables ++ provider_specific
+
+    Variable.Space.new(
+      name: "#{String.capitalize(to_string(provider))} Optimized Space",
+      metadata: %{
+        space_type: :provider_optimized,
+        provider: provider,
+        specialization: provider_specialization(provider),
+        optimization_target: provider_optimization_target(provider)
+      }
+    )
+    |> Variable.Space.add_variables(all_variables)
+  end
+
+  # Helper functions for provider optimization
+  defp provider_optimization_target(:openai), do: :balanced
+  defp provider_optimization_target(:anthropic), do: :quality
+  defp provider_optimization_target(:groq), do: :speed
+  defp provider_optimization_target(_), do: :general
+
+  defp provider_specialization(:openai), do: :general_purpose
+  defp provider_specialization(:anthropic), do: :reasoning_intensive
+  defp provider_specialization(:groq), do: :high_throughput
+  defp provider_specialization(_), do: :generic
 end
