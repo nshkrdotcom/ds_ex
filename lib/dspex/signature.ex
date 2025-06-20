@@ -321,6 +321,107 @@ defmodule DSPEx.Signature do
     end
   end
 
+  @spec __using__(atom()) :: Macro.t()
+  defmacro __using__(:schema_dsl) do
+    generate_schema_dsl_signature()
+  end
+
+  @doc """
+  Defines an input field with optional ML-specific type and constraints.
+  
+  ## Parameters
+  - `name` - Field name as atom
+  - `type` - Field type (supports ElixirML types like :embedding, :confidence_score)
+  - `opts` - Additional constraints and options
+  
+  ## Examples
+      input :question, :string
+      input :context, :embedding, dimensions: 1536
+      input :threshold, :probability, default: 0.8
+  """
+  defmacro input(name, type \\ :string, opts \\ []) do
+    quote do
+      @schema_input_fields {unquote(name), unquote(type), unquote(opts)}
+    end
+  end
+
+  @doc """
+  Defines an output field with optional ML-specific type and constraints.
+  
+  ## Parameters
+  - `name` - Field name as atom
+  - `type` - Field type (supports ElixirML types like :confidence_score, :model_response)
+  - `opts` - Additional constraints and options
+  
+  ## Examples
+      output :answer, :string
+      output :confidence, :confidence_score
+      output :reasoning, :reasoning_chain
+  """
+  defmacro output(name, type \\ :string, opts \\ []) do
+    quote do
+      @schema_output_fields {unquote(name), unquote(type), unquote(opts)}
+    end
+  end
+
+  # Generate schema DSL-based signature
+  @spec generate_schema_dsl_signature() :: Macro.t()
+  defp generate_schema_dsl_signature do
+    quote do
+      @behaviour DSPEx.Signature
+      
+      # Initialize field accumulators
+      Module.register_attribute(__MODULE__, :schema_input_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :schema_output_fields, accumulate: true)
+      
+      # Import DSL macros
+      import DSPEx.Signature, only: [input: 2, input: 3, output: 2, output: 3]
+      
+      # Add schema integration
+      alias ElixirML.{Schema, Variable}
+      
+      @before_compile DSPEx.Signature
+    end
+  end
+
+  # Compile-time callback to generate signature struct and methods
+  defmacro __before_compile__(env) do
+    # Get field definitions at compile time
+    input_field_defs = Module.get_attribute(env.module, :schema_input_fields, []) |> Enum.reverse()
+    output_field_defs = Module.get_attribute(env.module, :schema_output_fields, []) |> Enum.reverse()
+    
+    # Extract field names for compatibility
+    input_field_names = Enum.map(input_field_defs, fn {name, _type, _opts} -> name end)
+    output_field_names = Enum.map(output_field_defs, fn {name, _type, _opts} -> name end)
+    all_field_names = input_field_names ++ output_field_names
+    
+    # Generate enhanced field definitions for schema integration
+    enhanced_input_fields = Enum.map(input_field_defs, fn {name, type, opts} ->
+      %{
+        name: name,
+        type: type,
+        constraints: Map.new(opts),
+        required: Keyword.get(opts, :required, true),
+        default: Keyword.get(opts, :default, nil)
+      }
+    end)
+    
+    enhanced_output_fields = Enum.map(output_field_defs, fn {name, type, opts} ->
+      %{
+        name: name,
+        type: type,
+        constraints: Map.new(opts),
+        required: Keyword.get(opts, :required, true),
+        default: Keyword.get(opts, :default, nil)
+      }
+    end)
+    
+    all_enhanced_fields = enhanced_input_fields ++ enhanced_output_fields
+    
+    # Generate the signature struct and methods
+    generate_signature_struct_with_schema(input_field_names, output_field_names, all_field_names, all_enhanced_fields)
+  end
+
   # Generate enhanced signature with Sinter support
   @spec generate_enhanced_signature(binary()) :: Macro.t()
   defp generate_enhanced_signature(signature_string) do
@@ -346,6 +447,43 @@ defmodule DSPEx.Signature do
     all_fields = input_fields ++ output_fields
 
     generate_signature_struct(input_fields, output_fields, all_fields, nil)
+  end
+
+  # Generate signature struct with schema integration
+  @spec generate_signature_struct_with_schema(list(atom()), list(atom()), list(atom()), list()) ::
+          Macro.t()
+  defp generate_signature_struct_with_schema(input_fields, output_fields, all_fields, enhanced_fields) do
+    quote do
+      @behaviour DSPEx.Signature
+
+      # Create struct with all fields, defaulting to nil
+      defstruct unquote(all_fields |> Enum.map(&{&1, nil}))
+
+      # Define comprehensive type specification
+      @type t :: %__MODULE__{
+              unquote_splicing(
+                all_fields
+                |> Enum.map(fn field ->
+                  {field, quote(do: any())}
+                end)
+              )
+            }
+
+      # Extract instructions from module doc at compile time
+      @instructions @moduledoc ||
+                      "Given the fields #{inspect(unquote(input_fields))}, produce the fields #{inspect(unquote(output_fields))}."
+
+      # Store field lists as module attributes for efficiency
+      @input_fields unquote(input_fields)
+      @output_fields unquote(output_fields)
+      @all_fields unquote(all_fields)
+
+      # Store enhanced field definitions for schema integration
+      @enhanced_fields unquote(Macro.escape(enhanced_fields))
+
+      unquote(generate_signature_methods_with_schema())
+      unquote(generate_schema_integration_methods())
+    end
   end
 
   # Generate the main signature struct with all methods
@@ -394,6 +532,163 @@ defmodule DSPEx.Signature do
 
       # Provide access to enhanced field definitions
       def __enhanced_fields__, do: @enhanced_fields
+    end
+  end
+
+  # Generate signature methods with schema validation
+  @spec generate_signature_methods_with_schema() :: Macro.t()
+  defp generate_signature_methods_with_schema do
+    quote do
+      # Implement behaviour callbacks with proper specs
+      @doc "Returns the instruction string extracted from @moduledoc or auto-generated"
+      @spec instructions() :: String.t()
+      @impl DSPEx.Signature
+      def instructions, do: @instructions
+
+      @doc "Returns the list of input field names as atoms"
+      @spec input_fields() :: [atom()]
+      @impl DSPEx.Signature
+      def input_fields, do: @input_fields
+
+      @doc "Returns the list of output field names as atoms"
+      @spec output_fields() :: [atom()]
+      @impl DSPEx.Signature
+      def output_fields, do: @output_fields
+
+      @doc "Returns all fields (inputs + outputs) as a combined list"
+      @spec fields() :: [atom()]
+      @impl DSPEx.Signature
+      def fields, do: @all_fields
+
+      @doc "Returns enhanced field definitions for schema integration"
+      @spec __enhanced_fields__() :: [map()]
+      def __enhanced_fields__, do: @enhanced_fields
+
+      @doc """
+      Creates a new signature struct instance.
+
+      ## Parameters
+      - `fields` - A map of field names to values (optional, defaults to empty map)
+
+      ## Returns
+      - A new struct instance with the given field values
+
+      ## Examples
+
+          iex> MySignature.new(%{question: "test"})
+          %MySignature{question: "test", answer: nil, ...}
+      """
+      @spec new(map()) :: t()
+      def new(fields \\ %{}) when is_map(fields) do
+        struct(__MODULE__, fields)
+      end
+
+      unquote(generate_validation_methods_with_schema())
+    end
+  end
+
+  # Generate schema integration methods
+  @spec generate_schema_integration_methods() :: Macro.t()
+  defp generate_schema_integration_methods do
+    quote do
+      @doc """
+      Validates inputs using ElixirML Schema Engine with ML-specific type validation.
+      
+      ## Parameters
+      - `inputs` - A map containing input field values
+      
+      ## Returns
+      - `{:ok, validated_inputs}` if validation passes
+      - `{:error, validation_errors}` if validation fails
+      """
+      @spec validate_inputs_with_schema(map()) :: {:ok, map()} | {:error, term()}
+      def validate_inputs_with_schema(inputs) when is_map(inputs) do
+        DSPEx.Signature.SchemaIntegration.validate_fields(__MODULE__, inputs, :input)
+      end
+
+      @doc """
+      Validates outputs using ElixirML Schema Engine with ML-specific type validation.
+      
+      ## Parameters
+      - `outputs` - A map containing output field values
+      
+      ## Returns
+      - `{:ok, validated_outputs}` if validation passes
+      - `{:error, validation_errors}` if validation fails
+      """
+      @spec validate_outputs_with_schema(map()) :: {:ok, map()} | {:error, term()}
+      def validate_outputs_with_schema(outputs) when is_map(outputs) do
+        DSPEx.Signature.SchemaIntegration.validate_fields(__MODULE__, outputs, :output)
+      end
+
+      @doc """
+      Extracts variables from signature field definitions for optimization.
+      
+      ## Returns
+      - Variable space containing extractable variables from field types and constraints
+      """
+      @spec extract_variables() :: ElixirML.Variable.Space.t()
+      def extract_variables do
+        DSPEx.Signature.SchemaIntegration.extract_variables(__MODULE__)
+      end
+    end
+  end
+
+  # Generate validation methods with schema integration
+  @spec generate_validation_methods_with_schema() :: Macro.t()
+  defp generate_validation_methods_with_schema do
+    quote do
+      @doc """
+      Validates that all required input fields are present and non-nil.
+      
+      Uses basic field presence validation for backward compatibility.
+      For ML-specific type validation, use validate_inputs_with_schema/1.
+
+      ## Parameters
+      - `inputs` - A map containing input field values
+
+      ## Returns
+      - `:ok` if all required input fields are present
+      - `{:error, {:missing_inputs, [atom()]}}` if any required fields are missing
+      """
+      @spec validate_inputs(map()) :: DSPEx.Signature.validation_result()
+      def validate_inputs(inputs) when is_map(inputs) do
+        required_inputs = MapSet.new(@input_fields)
+        provided_inputs = MapSet.new(Map.keys(inputs))
+
+        missing = MapSet.difference(required_inputs, provided_inputs)
+
+        case MapSet.size(missing) do
+          0 -> :ok
+          _ -> {:error, {:missing_inputs, MapSet.to_list(missing)}}
+        end
+      end
+
+      @doc """
+      Validates that all required output fields are present and non-nil.
+      
+      Uses basic field presence validation for backward compatibility.
+      For ML-specific type validation, use validate_outputs_with_schema/1.
+
+      ## Parameters
+      - `outputs` - A map containing output field values
+
+      ## Returns
+      - `:ok` if all required output fields are present
+      - `{:error, {:missing_outputs, [atom()]}}` if any required fields are missing
+      """
+      @spec validate_outputs(map()) :: DSPEx.Signature.validation_result()
+      def validate_outputs(outputs) when is_map(outputs) do
+        required_outputs = MapSet.new(@output_fields)
+        provided_outputs = MapSet.new(Map.keys(outputs))
+
+        missing = MapSet.difference(required_outputs, provided_outputs)
+
+        case MapSet.size(missing) do
+          0 -> :ok
+          _ -> {:error, {:missing_outputs, MapSet.to_list(missing)}}
+        end
+      end
     end
   end
 
