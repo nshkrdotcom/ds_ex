@@ -216,70 +216,421 @@ ElixirML.JsonSchema.generate(schema)       # Unified JSON generation
 - ✅ **Maintained compatibility** with existing patterns
 - ✅ **Performance benefits** from unified architecture
 
-## Implementation Strategy
+## Detailed Implementation Plan
 
-### 🚀 **Immediate Actions (This Sprint)**
+### 📋 **Phase 1: ElixirML Enhancement (Sprint 1)**
 
-1. **Enhance ElixirML.Schema** with Elixact's LLM features:
-   ```elixir
-   # Add to lib/elixir_ml/schema.ex
-   def optimize_for_provider(schema, provider)
-   def create_model(name, fields, opts \\ [])
-   def type_adapter(type, opts \\ [])
-   ```
+#### **Step 1.1: Study Existing Systems**
 
-2. **Create ElixirML.Runtime** module:
-   ```elixir
-   # New: lib/elixir_ml/runtime.ex
-   def create_schema(fields, opts \\ [])
-   def infer_schema(examples, opts \\ [])
-   def merge_schemas(schemas, opts \\ [])
-   ```
+**Required Reading (in order):**
 
-3. **Add ML-specific JSON Schema generation**:
-   ```elixir
-   # Enhanced: lib/elixir_ml/json_schema.ex
-   def generate(schema, provider: :openai, flatten_for_llm: true)
-   ```
+1. **ElixirML Current State**:
+   - Read `lib/elixir_ml/schema.ex` (lines 1-90) - Current ElixirML schema foundation
+   - Read `lib/elixir_ml/variable/ml_types.ex` (lines 1-200) - ML-specific types and capabilities
+   - Read `lib/elixir_ml/variable/space.ex` (lines 1-100) - Variable space system
 
-### 🔄 **Migration Path (Next Sprint)**
+2. **Elixact Features to Absorb**:
+   - Read `elixact/lib/elixact/runtime.ex` (lines 1-200) - Runtime schema creation (`create_schema`, `create_enhanced_schema`)
+   - Read `elixact/lib/elixact/json_schema.ex` (lines 1-200) - LLM-optimized JSON Schema generation
+   - Read `elixact/lib/elixact/type_adapter.ex` (lines 1-100) - TypeAdapter pattern for single-value validation
+   - Read `elixact/lib/elixact/wrapper.ex` (lines 1-100) - Wrapper pattern for temporary schemas
+   - Read `elixact/examples/runtime_schema.exs` - Runtime schema creation patterns
+   - Read `elixact/examples/llm_integration.exs` - LLM provider optimization examples
 
-1. **Create DSPEx.Schema bridge module**:
-   ```elixir
-   # New: lib/dspex/schema.ex
-   def signature_to_schema(signature) do
-     # Convert DSPEx signature to ElixirML schema
-     ElixirML.Schema.from_signature(signature)
-   end
-   ```
+3. **Sinter Patterns to Preserve**:
+   - Read `sinter/lib/sinter/schema.ex` (lines 1-100) - Unified schema definition
+   - Read `sinter/lib/sinter/validator.ex` (lines 1-100) - Single validation pipeline
+   - Read `sinter/lib/sinter/json_schema.ex` (lines 1-100) - Unified JSON generation
 
-2. **Migrate existing Sinter usage**:
-   ```elixir
-   # Update: lib/dspex/signature/typed_signature.ex
-   # Replace Sinter calls with ElixirML calls
-   ElixirML.Schema.validate(schema, data, opts)
-   ```
+4. **Current DSPEx Integration**:
+   - Read `lib/dspex/signature/sinter.ex` (lines 1-200) - How DSPEx currently uses Sinter
+   - Read `lib/dspex/teleprompter/simba.ex` (lines 1-200) - How SIMBA uses schema validation
+   - Read `lib/dspex/config/sinter_schemas.ex` (lines 1-100) - Configuration validation patterns
 
-3. **Update teleprompter integration**:
-   ```elixir
-   # Update: lib/dspex/teleprompter/simba.ex
-   # Use ElixirML for dynamic schema creation
-   output_schema = ElixirML.Schema.create_model("ProgramOutput", fields)
-   ```
+#### **Step 1.2: Create ElixirML.Runtime Module (TDD)**
 
-### 📦 **Library Extraction (Future)**
+**File**: `lib/elixir_ml/runtime.ex`
 
-Once consolidated, **ElixirML can be extracted** as a standalone library:
+**Test First** (`test/elixir_ml/runtime_test.exs`):
+```elixir
+defmodule ElixirML.RuntimeTest do
+  use ExUnit.Case
+
+  describe "create_schema/2" do
+    test "creates runtime schema from field definitions" do
+      fields = [
+        {:name, :string, required: true, min_length: 2},
+        {:confidence, :probability, default: 0.5}
+      ]
+      
+      schema = ElixirML.Runtime.create_schema(fields, title: "Test Schema")
+      
+      assert schema.title == "Test Schema"
+      assert Map.has_key?(schema.fields, :name)
+      assert Map.has_key?(schema.fields, :confidence)
+    end
+
+    test "supports ML-specific types" do
+      fields = [
+        {:embedding, :embedding, required: true},
+        {:temperature, :temperature, range: {0.0, 2.0}}
+      ]
+      
+      schema = ElixirML.Runtime.create_schema(fields)
+      
+      {:ok, validated} = ElixirML.Runtime.validate(schema, %{
+        embedding: [1.0, 2.0, 3.0],
+        temperature: 0.7
+      })
+      
+      assert validated.embedding == [1.0, 2.0, 3.0]
+      assert validated.temperature == 0.7
+    end
+  end
+
+  describe "create_model/3 (Pydantic pattern)" do
+    test "creates schema with Pydantic create_model pattern" do
+      fields = %{
+        reasoning: {:string, description: "Chain of thought"},
+        answer: {:string, required: true},
+        confidence: {:float, gteq: 0.0, lteq: 1.0}
+      }
+      
+      schema = ElixirML.Runtime.create_model("LLMOutput", fields)
+      
+      assert schema.name == "LLMOutput"
+      assert Map.has_key?(schema.fields, :reasoning)
+    end
+  end
+end
+```
+
+**Implementation** (based on `elixact/lib/elixact/runtime.ex`):
+```elixir
+defmodule ElixirML.Runtime do
+  @moduledoc """
+  Runtime schema creation with ML-specific types and variable integration.
+  
+  Combines the best of Elixact's runtime capabilities with ElixirML's
+  ML-native types and variable system integration.
+  """
+  
+  alias ElixirML.Variable.MLTypes
+  
+  # Core functions to implement (study elixact/lib/elixact/runtime.ex for patterns)
+  def create_schema(fields, opts \\ [])
+  def create_model(name, fields, opts \\ [])  # Pydantic create_model pattern
+  def validate(schema, data, opts \\ [])
+  def infer_schema(examples, opts \\ [])
+  def merge_schemas(schemas, opts \\ [])
+  
+  # ML-specific enhancements
+  def extract_variables(schema)
+  def optimize_for_provider(schema, provider)
+end
+```
+
+#### **Step 1.3: Enhance ElixirML.Schema with LLM Features (TDD)**
+
+**Test First** (`test/elixir_ml/schema_llm_test.exs`):
+```elixir
+defmodule ElixirML.SchemaLLMTest do
+  use ExUnit.Case
+
+  describe "to_json_schema/2 with provider optimization" do
+    test "generates OpenAI-optimized JSON schema" do
+      schema = create_test_schema()
+      
+      json_schema = ElixirML.Schema.to_json_schema(schema, provider: :openai)
+      
+      # Should have OpenAI-specific optimizations
+      assert json_schema["type"] == "object"
+      assert is_map(json_schema["properties"])
+      refute Map.has_key?(json_schema, "definitions")  # Flattened for OpenAI
+    end
+
+    test "generates Anthropic-optimized JSON schema" do
+      schema = create_test_schema()
+      
+      json_schema = ElixirML.Schema.to_json_schema(schema, provider: :anthropic)
+      
+      # Should have Anthropic-specific optimizations
+      assert json_schema["type"] == "object"
+      assert Map.has_key?(json_schema, "description")
+    end
+  end
+end
+```
+
+**Implementation** (study `elixact/lib/elixact/json_schema.ex` for LLM optimization patterns):
+```elixir
+# Enhance existing lib/elixir_ml/schema.ex
+defmodule ElixirML.Schema do
+  # Add LLM optimization functions
+  def to_json_schema(schema, opts \\ [])
+  def optimize_for_provider(schema, provider)
+  def create_model(name, fields, opts \\ [])
+  def type_adapter(type, opts \\ [])
+end
+```
+
+#### **Step 1.4: Create ElixirML.JsonSchema Module (TDD)**
+
+**File**: `lib/elixir_ml/json_schema.ex`
+
+**Study**: `elixact/lib/elixact/json_schema.ex` and `elixact/examples/json_schema_resolver.exs`
+
+**Test First**:
+```elixir
+defmodule ElixirML.JsonSchemaTest do
+  use ExUnit.Case
+
+  test "generates provider-optimized schemas" do
+    schema = create_ml_schema()
+    
+    openai_schema = ElixirML.JsonSchema.generate(schema, provider: :openai)
+    anthropic_schema = ElixirML.JsonSchema.generate(schema, provider: :anthropic)
+    
+    # OpenAI should be flattened
+    refute Map.has_key?(openai_schema, "definitions")
+    
+    # Anthropic should preserve structure
+    assert is_map(anthropic_schema["properties"])
+  end
+end
+```
+
+### 📋 **Phase 2: DSPEx Integration (Sprint 2)**
+
+#### **Step 2.1: Create DSPEx.Schema Bridge Module (TDD)**
+
+**Required Reading**:
+- Read `lib/dspex/signature/sinter.ex` (lines 1-200) - Current Sinter integration patterns
+- Read `lib/dspex/signature/enhanced_parser.ex` (lines 160-225) - Sinter format conversion
+
+**File**: `lib/dspex/schema.ex`
+
+**Test First** (`test/dspex/schema_test.exs`):
+```elixir
+defmodule DSPEx.SchemaTest do
+  use ExUnit.Case
+
+  describe "signature_to_schema/1" do
+    test "converts DSPEx signature to ElixirML schema" do
+      defmodule TestSignature do
+        use DSPEx.Signature, "question:string -> answer:string"
+      end
+      
+      schema = DSPEx.Schema.signature_to_schema(TestSignature)
+      
+      assert Map.has_key?(schema.fields, :question)
+      assert Map.has_key?(schema.fields, :answer)
+    end
+
+    test "preserves field constraints" do
+      defmodule ConstrainedSignature do
+        use DSPEx.Signature, "name:string[min_length=2] -> greeting:string[max_length=100]"
+      end
+      
+      schema = DSPEx.Schema.signature_to_schema(ConstrainedSignature)
+      
+      name_field = schema.fields[:name]
+      assert name_field.constraints.min_length == 2
+    end
+  end
+end
+```
+
+**Implementation** (replace Sinter patterns with ElixirML):
+```elixir
+defmodule DSPEx.Schema do
+  @moduledoc """
+  Bridge between DSPEx signatures and ElixirML schemas.
+  
+  Replaces DSPEx.Signature.Sinter with ElixirML-based validation.
+  """
+  
+  def signature_to_schema(signature_module)
+  def validate_with_elixir_ml(signature, data, opts \\ [])
+  def generate_json_schema(signature, opts \\ [])
+end
+```
+
+#### **Step 2.2: Migrate SIMBA Integration (TDD)**
+
+**Required Reading**:
+- Read `lib/dspex/teleprompter/simba.ex` (lines 1-200) - Current SIMBA implementation
+- Read `lib/dspex/teleprompter/simba/sinter_schemas.ex` - Schema validation patterns
+
+**Test First** (`test/dspex/teleprompter/simba_elixir_ml_test.exs`):
+```elixir
+defmodule DSPEx.Teleprompter.SIMBAElixirMLTest do
+  use ExUnit.Case
+
+  test "uses ElixirML for dynamic schema creation" do
+    program = create_test_program()
+    
+    # Should create ElixirML schemas for validation
+    {:ok, optimized} = DSPEx.Teleprompter.SIMBA.optimize(program, training_data)
+    
+    # Verify ElixirML integration
+    assert optimized.schema_system == :elixir_ml
+  end
+end
+```
+
+**Implementation**:
+```elixir
+# Update lib/dspex/teleprompter/simba.ex
+defmodule DSPEx.Teleprompter.SIMBA do
+  # Replace Sinter usage with ElixirML
+  # Study current Sinter integration and replace with ElixirML calls
+  
+  defp create_output_schema(fields) do
+    # OLD: SinterSchemas.create_schema(fields)
+    # NEW: ElixirML.Runtime.create_schema(fields)
+    ElixirML.Runtime.create_schema(fields, 
+      title: "SIMBA_Output_Schema",
+      optimize_for_provider: :openai
+    )
+  end
+end
+```
+
+#### **Step 2.3: Update Configuration System (TDD)**
+
+**Required Reading**:
+- Read `lib/dspex/config/sinter_schemas.ex` - Current configuration validation
+
+**Test First**:
+```elixir
+defmodule DSPEx.Config.ElixirMLSchemasTest do
+  use ExUnit.Case
+
+  test "validates configuration with ElixirML schemas" do
+    config = %{temperature: 0.7, provider: :openai}
+    
+    {:ok, validated} = DSPEx.Config.ElixirMLSchemas.validate_config(config)
+    
+    assert validated.temperature == 0.7
+    assert validated.provider == :openai
+  end
+end
+```
+
+### 📋 **Phase 3: Feature Consolidation (Sprint 3)**
+
+#### **Step 3.1: ML-Specific Type System**
+
+**Required Reading**:
+- Read `lib/elixir_ml/variable/ml_types.ex` (full file) - Current ML types
+- Read `elixact/lib/elixact/types.ex` (lines 1-200) - Elixact type system
+
+**Enhance ML Types**:
+```elixir
+# lib/elixir_ml/variable/ml_types.ex
+defmodule ElixirML.Variable.MLTypes do
+  # Add more ML-specific types based on Elixact patterns
+  def embedding(name, opts \\ [])
+  def probability(name, opts \\ [])
+  def confidence_score(name, opts \\ [])
+  def token_count(name, opts \\ [])
+  def cost_estimate(name, opts \\ [])
+end
+```
+
+#### **Step 3.2: Performance Optimization**
+
+**Required Reading**:
+- Read `sinter/lib/sinter/performance.ex` - Sinter performance patterns
+- Read `elixact/examples/advanced_config.exs` - Performance configuration
+
+**Implement Performance Patterns**:
+```elixir
+# lib/elixir_ml/performance.ex
+defmodule ElixirML.Performance do
+  # Implement Sinter's performance optimization patterns
+  def optimize_validation_pipeline(schema)
+  def batch_validate(schemas, data_list)
+  def precompile_schema(schema)
+end
+```
+
+### 📋 **Phase 4: Testing & Validation (Sprint 4)**
+
+#### **Step 4.1: Comprehensive Test Suite**
+
+**Required Reading**:
+- Read `elixact/examples/readme_comprehensive.exs` - Complete feature testing
+- Read `sinter/examples/run_all.exs` - Test suite patterns
+
+**Create Integration Tests**:
+```elixir
+# test/integration/elixir_ml_integration_test.exs
+defmodule ElixirMLIntegrationTest do
+  use ExUnit.Case
+
+  test "complete DSPEx workflow with ElixirML" do
+    # Test end-to-end DSPEx workflow using ElixirML
+    # Replace all Sinter/Elixact usage with ElixirML
+  end
+end
+```
+
+#### **Step 4.2: Performance Benchmarks**
 
 ```elixir
-# mix.exs
-def deps do
-  [
-    {:elixir_ml, "~> 1.0"},  # Extracted library
-    # Remove {:elixact, "~> 0.1.2"}
-    # Remove {:sinter, "~> 0.1.0"}
-  ]
+# test/benchmarks/schema_system_benchmark.exs
+defmodule SchemaSystemBenchmark do
+  # Compare ElixirML vs Sinter vs Elixact performance
+  # Ensure ElixirML meets or exceeds performance requirements
 end
+```
+
+### 📋 **Phase 5: Library Extraction (Sprint 5)**
+
+#### **Step 5.1: Extract ElixirML as Standalone Library**
+
+**Required Reading**:
+- Study current `mix.exs` dependencies
+- Read `COUPLING_ANALYSIS.md` for extraction guidelines
+
+**Create Separate Mix Project**:
+```elixir
+# Create new elixir_ml/ directory with separate mix.exs
+# Move lib/elixir_ml/* to standalone project
+# Update DSPEx to use {:elixir_ml, "~> 1.0"} dependency
+```
+
+### 🧪 **TDD Process for Each Step**
+
+1. **Red**: Write failing tests first
+2. **Green**: Implement minimum code to pass tests  
+3. **Refactor**: Improve code while keeping tests green
+4. **Document**: Update documentation and examples
+
+### 📊 **Success Metrics**
+
+- [ ] All existing DSPEx tests pass with ElixirML
+- [ ] Performance matches or exceeds Sinter
+- [ ] Feature parity with Elixact's LLM capabilities
+- [ ] Clean separation allows ElixirML extraction
+- [ ] Reduced codebase complexity (3 systems → 1 system)
+
+### 🔧 **Tools and Commands**
+
+```bash
+# Run tests for specific phases
+mix test test/elixir_ml/
+mix test test/dspex/schema_test.exs
+mix test test/integration/
+
+# Performance benchmarking
+mix run test/benchmarks/schema_system_benchmark.exs
+
+# Dependency analysis
+mix deps.tree
+mix xref graph --format dot
 ```
 
 ## Conclusion
