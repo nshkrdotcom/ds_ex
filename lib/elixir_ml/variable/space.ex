@@ -246,6 +246,26 @@ defmodule ElixirML.Variable.Space do
   end
 
   @doc """
+  Validate that a variable space is well-formed.
+  
+  Checks for:
+  - Valid variable definitions
+  - Resolvable dependencies
+  - No circular dependencies
+  - Valid constraints
+  """
+  @spec validate_space(t()) :: {:ok, t()} | {:error, term()}
+  def validate_space(%__MODULE__{} = space) do
+    with {:ok, _} <- validate_variables(space),
+         {:ok, _} <- validate_dependencies(space),
+         {:ok, _} <- validate_constraints(space) do
+      {:ok, space}
+    else
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc """
   Extract variables from a signature or schema module.
   """
   @spec from_signature(module(), keyword()) :: t()
@@ -494,5 +514,54 @@ defmodule ElixirML.Variable.Space do
     updated_queue = queue ++ new_queue_nodes
 
     kahn_sort(dependencies, updated_in_degree, updated_queue, [node | result])
+  end
+
+  # Additional validation helper functions for validate_space/1
+
+  defp validate_variables(%__MODULE__{} = space) do
+    # Check that all variables are valid
+    Enum.reduce_while(space.variables, {:ok, []}, fn {name, variable}, {:ok, acc} ->
+      case ElixirML.Variable.validate(variable) do
+        {:ok, _} -> {:cont, {:ok, [name | acc]}}
+        {:error, reason} -> {:halt, {:error, "Invalid variable #{name}: #{reason}"}}
+      end
+    end)
+  end
+
+  defp validate_dependencies(%__MODULE__{} = space) do
+    # Check that all dependencies reference existing variables
+    case check_dependency_references(space) do
+      :ok -> check_circular_dependencies(space)
+      {:error, _} = error -> error
+    end
+  end
+
+  defp validate_constraints(%__MODULE__{} = space) do
+    # Check that all constraints are valid functions
+    try do
+      Enum.each(space.constraints, fn constraint ->
+        unless is_function(constraint, 1) do
+          throw({:error, "Invalid constraint: must be a function of arity 1"})
+        end
+      end)
+      {:ok, space}
+    catch
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp check_dependency_references(%__MODULE__{} = space) do
+    variable_names = Map.keys(space.variables) |> MapSet.new()
+    
+    Enum.reduce_while(space.dependencies, :ok, fn {var_name, deps}, _acc ->
+      case MapSet.member?(variable_names, var_name) do
+        false -> {:halt, {:error, "Unknown variable in dependencies: #{var_name}"}}
+        true ->
+          case Enum.find(deps, fn dep -> not MapSet.member?(variable_names, dep) end) do
+            nil -> {:cont, :ok}
+            unknown_dep -> {:halt, {:error, "Unknown dependency: #{unknown_dep} for variable #{var_name}"}}
+          end
+      end
+    end)
   end
 end

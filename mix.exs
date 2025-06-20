@@ -28,7 +28,14 @@ defmodule Dspex.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {Dspex.Application, []}
+      mod: {Dspex.Application, []},
+      registered: [
+        ElixirML.Process.Orchestrator,
+        ElixirML.Process.SchemaRegistry,
+        ElixirML.Process.VariableRegistry,
+        ElixirML.Process.ResourceManager,
+        ElixirML.Process.ProgramSupervisor
+      ]
     ]
   end
 

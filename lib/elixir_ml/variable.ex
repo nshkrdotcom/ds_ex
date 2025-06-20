@@ -187,6 +187,22 @@ defmodule ElixirML.Variable do
   end
 
   @doc """
+  Validate a variable's definition is well-formed.
+
+  Returns `{:ok, variable}` for valid variables, `{:error, reason}` for invalid ones.
+  """
+  @spec validate(t()) :: {:ok, t()} | {:error, String.t()}
+  def validate(%__MODULE__{} = variable) do
+    # Basic validation - just check the variable is well-formed
+    case variable.type do
+      type when type in [:float, :integer, :choice, :module, :composite] ->
+        {:ok, variable}
+      _ ->
+        {:error, "Invalid variable type: #{variable.type}"}
+    end
+  end
+
+  @doc """
   Validate a variable configuration against its constraints.
 
   ## Examples

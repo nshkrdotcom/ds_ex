@@ -30,7 +30,10 @@ defmodule Dspex.Application do
       {DSPEx.Services.TelemetrySetup, []},
 
       # HTTP client pool for external API calls
-      {Finch, name: DSPEx.Finch}
+      {Finch, name: DSPEx.Finch},
+
+      # ElixirML Process Orchestrator
+      ElixirML.Process.Orchestrator
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
