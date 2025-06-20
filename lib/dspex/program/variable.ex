@@ -57,9 +57,10 @@ defmodule DSPEx.Program.Variable do
   end
 
   @doc """
-  Create standard ML variable configuration.
+  Create standard ML configuration variable space.
 
-  Creates a comprehensive variable space with common ML optimization parameters.
+  Returns a variable space with common ML parameters like provider,
+  model, temperature, max_tokens, and optional reasoning/adapter variables.
 
   ## Parameters
 
@@ -67,15 +68,15 @@ defmodule DSPEx.Program.Variable do
 
   ## Options
 
-  - `:provider_choices` - Available providers (default: [:openai, :anthropic, :groq])
-  - `:include_reasoning` - Include reasoning strategy variables (default: true)
-  - `:include_adapters` - Include adapter selection variables (default: true)
-  - `:temperature_range` - Temperature range (default: {0.0, 2.0})
-  - `:max_tokens_range` - Max tokens range (default: {50, 4000})
+  - `:provider_choices` - List of available providers (default: [:openai, :anthropic, :groq])
+  - `:include_reasoning` - Include reasoning strategy variable (default: true)
+  - `:include_adapters` - Include adapter variable (default: true)
+  - `:temperature_range` - Temperature range tuple (default: {0.0, 2.0})
+  - `:max_tokens_range` - Max tokens range tuple (default: {50, 4000})
 
   ## Returns
 
-  `ElixirML.Variable.Space` with standard ML variables.
+  Variable space with standard ML variables configured.
 
   """
   @spec standard_ml_config(keyword()) :: Space.t()
@@ -88,7 +89,7 @@ defmodule DSPEx.Program.Variable do
 
     Space.new()
     |> Space.add_variable(MLTypes.provider(:provider, providers: provider_choices))
-    |> Space.add_variable(MLTypes.model(:model, [:auto]))
+    |> Space.add_variable(MLTypes.model(:model, models: ["gpt-4", "claude-3-sonnet"]))
     |> Space.add_variable(
       Variable.float(:temperature,
         range: temperature_range,

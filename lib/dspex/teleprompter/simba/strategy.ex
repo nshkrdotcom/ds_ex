@@ -32,7 +32,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy do
 
   """
 
-  alias DSPEx.Teleprompter.SIMBA.{Bucket, SinterSchemas}
+  alias DSPEx.Teleprompter.SIMBA.{Bucket, ElixirMLSchemas}
 
   @doc """
   Apply the strategy to a bucket to create a new program variant.
@@ -227,6 +227,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy do
 
   # Sinter validation functions for strategy application
 
+  @spec validate_bucket_for_strategy_application(Bucket.t()) :: :ok | {:error, String.t()}
   defp validate_bucket_for_strategy_application(bucket) do
     # Convert bucket to format expected by Sinter schema
     bucket_data = %{
@@ -242,7 +243,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy do
       metadata: bucket.metadata || %{}
     }
 
-    case SinterSchemas.validate_bucket(bucket_data) do
+    case ElixirMLSchemas.validate_bucket(bucket_data) do
       {:ok, _validated} ->
         :ok
 
@@ -262,7 +263,7 @@ defmodule DSPEx.Teleprompter.SIMBA.Strategy do
         opts
       )
 
-    case SinterSchemas.validate_strategy_config(strategy_config) do
+    case ElixirMLSchemas.validate_strategy_config(strategy_config) do
       {:ok, _validated} ->
         :ok
 

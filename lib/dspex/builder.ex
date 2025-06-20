@@ -86,7 +86,7 @@ defmodule DSPEx.Builder do
 
   ## Examples
 
-      {:ok, builder} = DSPEx.Builder.new(QASignature, 
+      {:ok, builder} = DSPEx.Builder.new(QASignature,
         client: :openai,
         schema_validation: true
       )
@@ -241,7 +241,7 @@ defmodule DSPEx.Builder do
 
   ## Examples
 
-      builder = DSPEx.Builder.with_instruction(builder, 
+      builder = DSPEx.Builder.with_instruction(builder,
         "Answer the question with high confidence and detailed reasoning."
       )
 
@@ -272,17 +272,25 @@ defmodule DSPEx.Builder do
   @spec build(t()) :: {:ok, Program.t()} | {:error, term()}
   def build(%__MODULE__{} = builder) do
     with {:ok, variable_space} <- create_variable_space(builder),
-         {:ok, program_opts} <- create_program_options(builder, variable_space),
-         {:ok, program} <- Program.new(builder.signature, program_opts) do
-      # Add schema validation configuration if enabled
-      final_program =
-        if builder.schema_validation do
-          DSPEx.Program.enable_schema_validation(program)
-        else
-          program
-        end
+         {:ok, program_opts} <- create_program_options(builder, variable_space) do
+      # Convert keyword options to map for Program.new
+      program_map = Enum.into(program_opts, %{})
 
-      {:ok, final_program}
+      case Program.new(builder.signature, program_map) do
+        {:ok, program} ->
+          # Add schema validation configuration if enabled
+          final_program =
+            if builder.schema_validation do
+              DSPEx.Program.enable_schema_validation(program)
+            else
+              program
+            end
+
+          {:ok, final_program}
+
+        {:error, _} = error ->
+          error
+      end
     end
   end
 
@@ -316,32 +324,21 @@ defmodule DSPEx.Builder do
       variable_space = Variable.Space.new(name: "#{builder.signature} Variables")
 
       # Extract variables from signature if it supports it
-      signature_variables =
-        if function_exported?(builder.signature, :extract_variables, 0) do
-          builder.signature.extract_variables()
-        else
-          Variable.Space.new()
-        end
-
-      # Merge signature variables (if merge function available)
-      variable_space =
-        if function_exported?(Variable.Space, :merge, 2) do
-          Variable.Space.merge(variable_space, signature_variables)
-        else
-          variable_space
-        end
+      if function_exported?(builder.signature, :extract_variables, 0) do
+        _signature_variables = builder.signature.extract_variables()
+        # Note: Variable.Space.merge/2 doesn't exist, so we'll use the base space
+        variable_space
+      else
+        variable_space
+      end
 
       # Add automatic ML variables if enabled
       variable_space =
         if builder.automatic_ml_variables and
              function_exported?(Variable.MLTypes, :standard_ml_config, 0) do
-          ml_variables = Variable.MLTypes.standard_ml_config()
-
-          if function_exported?(Variable.Space, :merge, 2) do
-            Variable.Space.merge(variable_space, ml_variables)
-          else
-            variable_space
-          end
+          _ml_variables = Variable.MLTypes.standard_ml_config()
+          # Note: Variable.Space.merge/2 doesn't exist, so we'll use the base space
+          variable_space
         else
           variable_space
         end

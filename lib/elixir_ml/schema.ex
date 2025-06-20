@@ -198,7 +198,7 @@ defmodule ElixirML.Schema do
   Validate a value using a type adapter.
   """
   @spec validate_with_adapter(map(), any()) :: {:ok, any()} | {:error, term()}
-  def validate_with_adapter(%{type: type, constraints: constraints}, value) do
+  def validate_with_adapter(%{type: type, constraints: _constraints}, value) do
     case ElixirML.Schema.Types.validate_type(value, type) do
       {:ok, validated} ->
         # TODO: Apply constraint validation

@@ -3,7 +3,7 @@ defmodule DSPEx.Signature.SchemaIntegration do
   Integration layer between DSPEx Signatures and ElixirML Schema Engine.
 
   This module provides seamless integration between DSPEx signature definitions
-  and the ElixirML Schema Engine, enabling ML-specific type validation, 
+  and the ElixirML Schema Engine, enabling ML-specific type validation,
   automatic variable extraction, and comprehensive validation pipelines.
 
   ## Features
@@ -19,7 +19,7 @@ defmodule DSPEx.Signature.SchemaIntegration do
 
       defmodule QASignature do
         use DSPEx.Signature, :schema_dsl
-        
+
         input :question, :string
         input :context, :embedding, dimensions: 1536
         output :answer, :string
@@ -33,7 +33,7 @@ defmodule DSPEx.Signature.SchemaIntegration do
       })
   """
 
-  alias ElixirML.{Schema, Variable}
+  alias ElixirML.Variable
 
   @doc """
   Creates an ElixirML schema from signature field definitions.
@@ -85,7 +85,7 @@ defmodule DSPEx.Signature.SchemaIntegration do
 
   ## Parameters
   - `signature_module` - The signature module
-  - `data` - Map of field values to validate  
+  - `data` - Map of field values to validate
   - `field_type` - Either `:input` or `:output` to validate specific field subset
 
   ## Returns

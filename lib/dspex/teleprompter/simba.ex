@@ -24,7 +24,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
   @behaviour DSPEx.Teleprompter
 
   alias DSPEx.{Example, Program}
-  alias DSPEx.Teleprompter.SIMBA.{Bucket, Trajectory, SinterSchemas}
+  alias DSPEx.Teleprompter.SIMBA.{Bucket, Trajectory, ElixirMLSchemas}
 
   @enforce_keys []
   defstruct bsize: 32,
@@ -377,8 +377,8 @@ defmodule DSPEx.Teleprompter.SIMBA do
       metadata: %{exec_id: exec_id}
     }
 
-    # Validate trajectory data with Sinter before creating struct
-    case SinterSchemas.validate_trajectory(trajectory_data) do
+    # Validate trajectory data with ElixirML before creating struct
+    case ElixirMLSchemas.validate_trajectory(trajectory_data) do
       {:ok, validated_data} ->
         %Trajectory{
           program: program,
@@ -429,8 +429,8 @@ defmodule DSPEx.Teleprompter.SIMBA do
       metadata: %{exec_id: exec_id}
     }
 
-    # Validate error trajectory data with Sinter
-    case SinterSchemas.validate_trajectory(trajectory_data) do
+    # Validate error trajectory data with ElixirML
+    case ElixirMLSchemas.validate_trajectory(trajectory_data) do
       {:ok, validated_data} ->
         %Trajectory{
           program: program,
@@ -1178,7 +1178,7 @@ defmodule DSPEx.Teleprompter.SIMBA do
         }
       end)
 
-    case SinterSchemas.validate_training_examples(training_data) do
+    case ElixirMLSchemas.validate_training_examples(training_data) do
       {:ok, _validated} ->
         :ok
 

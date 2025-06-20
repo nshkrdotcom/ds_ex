@@ -345,26 +345,46 @@ defmodule ElixirML.Runtime do
   end
 
   defp extract_constraints_from_opts(:float, opts) do
-    %{
-      range:
+    # Check for explicit range first
+    explicit_range = Keyword.get(opts, :range)
+
+    range =
+      if explicit_range do
+        explicit_range
+      else
         case {Keyword.get(opts, :ge), Keyword.get(opts, :le)} do
-          {nil, nil} -> Keyword.get(opts, :range, {0.0, 1.0})
+          # Default only if no explicit range
+          {nil, nil} -> {0.0, 1.0}
           {min, max} -> {min || 0.0, max || 1.0}
-        end,
-      min_value: Keyword.get(opts, :ge) || Keyword.get(opts, :gteq),
-      max_value: Keyword.get(opts, :le) || Keyword.get(opts, :lteq)
+        end
+      end
+
+    %{
+      range: range,
+      min_value: Keyword.get(opts, :ge) || Keyword.get(opts, :gteq) || Keyword.get(opts, :gt),
+      max_value: Keyword.get(opts, :le) || Keyword.get(opts, :lteq) || Keyword.get(opts, :lt)
     }
   end
 
   defp extract_constraints_from_opts(:integer, opts) do
-    %{
-      range:
+    # Check for explicit range first
+    explicit_range = Keyword.get(opts, :range)
+
+    range =
+      if explicit_range do
+        explicit_range
+      else
         case {Keyword.get(opts, :gt), Keyword.get(opts, :le)} do
-          {nil, nil} -> Keyword.get(opts, :range, {1, 100})
+          # Default only if no explicit range
+          {nil, nil} -> {1, 100}
           {min, max} -> {(min || 0) + 1, max || 100}
-        end,
-      min_value: Keyword.get(opts, :gt) || Keyword.get(opts, :gte),
-      max_value: Keyword.get(opts, :lt) || Keyword.get(opts, :le)
+        end
+      end
+
+    %{
+      range: range,
+      min_value: Keyword.get(opts, :gt) || Keyword.get(opts, :gte) || Keyword.get(opts, :gteq),
+      max_value: Keyword.get(opts, :lt) || Keyword.get(opts, :le) || Keyword.get(opts, :lteq)
     }
   end
 

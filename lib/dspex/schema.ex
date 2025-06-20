@@ -135,10 +135,13 @@ defmodule DSPEx.Schema do
     filtered_data = filter_data_by_field_type(signature, data, field_type)
 
     case Runtime.validate(schema, filtered_data) do
-      {:ok, validated_data} -> {:ok, validated_data}
-      {:error, %ValidationError{} = error} -> {:error, normalize_elixir_ml_errors([error])}
-      {:error, errors} when is_list(errors) -> {:error, normalize_elixir_ml_errors(errors)}
-      {:error, error} -> {:error, [%{message: inspect(error)}]}
+      {:ok, validated_data} ->
+        {:ok, validated_data}
+
+      # Note: Based on dialyzer analysis, Runtime.validate always returns {:ok, map()}
+      # Keeping error handling for future compatibility
+      other_result ->
+        {:error, [%{message: "Unexpected validation result: #{inspect(other_result)}"}]}
     end
   rescue
     error -> {:error, [%{message: "Validation failed: #{inspect(error)}"}]}
