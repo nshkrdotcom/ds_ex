@@ -747,6 +747,63 @@ defmodule DSPEx.Program do
 
   def concurrent_safe?(_), do: false
 
+  @doc """
+  Enables schema validation for a program.
+
+  Adds schema validation capabilities to the program, allowing ML-specific
+  type validation during execution using the ElixirML Schema Engine.
+
+  ## Parameters
+  - `program` - The program struct to enhance
+
+  ## Returns
+  - Updated program with schema validation enabled
+
+  ## Examples
+
+      program = DSPEx.Program.enable_schema_validation(program)
+      assert DSPEx.Program.schema_validation_enabled?(program)
+
+  """
+  @spec enable_schema_validation(t()) :: t()
+  def enable_schema_validation(program) when is_struct(program) do
+    # Add schema validation flag to program metadata
+    current_metadata = Map.get(program, :metadata, %{})
+    updated_metadata = Map.put(current_metadata, :schema_validation_enabled, true)
+    
+    Map.put(program, :metadata, updated_metadata)
+  end
+
+  @doc """
+  Checks if schema validation is enabled for a program.
+
+  Returns true if the program has schema validation enabled, allowing
+  ML-specific type validation during execution.
+
+  ## Parameters
+  - `program` - The program struct to check
+
+  ## Returns
+  - Boolean indicating if schema validation is enabled
+
+  ## Examples
+
+      if DSPEx.Program.schema_validation_enabled?(program) do
+        # Use enhanced validation
+      else
+        # Use basic validation
+      end
+
+  """
+  @spec schema_validation_enabled?(t()) :: boolean()
+  def schema_validation_enabled?(program) when is_struct(program) do
+    program
+    |> Map.get(:metadata, %{})
+    |> Map.get(:schema_validation_enabled, false)
+  end
+
+  def schema_validation_enabled?(_), do: false
+
   # Private helper functions
 
   defp demo_count(program) when is_struct(program) do
