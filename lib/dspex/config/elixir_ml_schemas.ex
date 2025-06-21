@@ -403,8 +403,10 @@ defmodule DSPEx.Config.ElixirMLSchemas do
         field_data = %{field_name => value}
 
         case Runtime.validate(single_field_schema, field_data) do
-          {:ok, _validated} -> :ok
-          {:error, errors} -> {:error, format_elixir_ml_error(errors, field_path)}
+          {:ok, _validated} ->
+            :ok
+            # Note: Runtime.validate always returns {:ok, map()} according to Dialyzer
+            # Keeping this for future compatibility if the library changes
         end
 
       {:error, :field_not_found} ->
@@ -442,43 +444,8 @@ defmodule DSPEx.Config.ElixirMLSchemas do
     end
   end
 
-  # Format ElixirML errors to match legacy error format
-  @spec format_elixir_ml_error([map()] | map(), list(atom())) :: term()
-  defp format_elixir_ml_error([error | _], field_path),
-    do: format_elixir_ml_error(error, field_path)
-
-  defp format_elixir_ml_error(
-         %ElixirML.Schema.ValidationError{path: path, message: message},
-         field_path
-       ) do
-    # Use the provided field_path if ElixirML path is empty or unclear
-    field =
-      case path do
-        [field_atom] when is_atom(field_atom) ->
-          field_atom
-
-        [field_atom | _] when is_atom(field_atom) ->
-          field_atom
-
-        _ ->
-          # Fall back to using the field_path we passed in
-          List.last(field_path)
-      end
-
-    error_atom = field_to_error_atom(field)
-    {error_atom, message}
-  end
-
-  defp format_elixir_ml_error(%{field: field, message: message}, _field_path) do
-    error_atom = field_to_error_atom(field)
-    {error_atom, message}
-  end
-
-  defp format_elixir_ml_error(_error, field_path) do
-    field_name = List.last(field_path)
-    error_atom = field_to_error_atom(field_name)
-    {error_atom, "Configuration validation failed"}
-  end
+  # Note: format_elixir_ml_error functions removed as they were unused
+  # due to Runtime.validate always returning {:ok, map()}
 
   # Map field names to legacy error atoms (maintaining compatibility)
   @spec field_to_error_atom(atom()) :: atom()

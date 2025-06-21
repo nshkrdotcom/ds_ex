@@ -196,7 +196,8 @@ defmodule DSPEx.Program.Variable do
     end
   end
 
-  def config_from_opts(_), do: %{}
+  # Note: Removed catch-all clause as it was unreachable -
+  # all valid inputs are handled by the is_list and is_map guards
 
   # Private helper functions
 
@@ -296,7 +297,8 @@ defmodule DSPEx.Program.Variable do
     |> maybe_put(:model, Map.get(opts, :model))
   end
 
-  defp extract_implicit_variables(_), do: %{}
+  # Note: Removed catch-all clause as it was unreachable -
+  # all valid inputs are handled by the is_list and is_map guards
 
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)

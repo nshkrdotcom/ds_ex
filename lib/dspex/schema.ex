@@ -136,11 +136,8 @@ defmodule DSPEx.Schema do
     case Runtime.validate(schema, filtered_data) do
       {:ok, validated_data} ->
         {:ok, validated_data}
-
-      # Note: Based on dialyzer analysis, Runtime.validate always returns {:ok, map()}
-      # Keeping error handling for future compatibility
-      other_result ->
-        {:error, [%{message: "Unexpected validation result: #{inspect(other_result)}"}]}
+        # Note: Based on dialyzer analysis, Runtime.validate always returns {:ok, map()}
+        # Removed unreachable error handling pattern
     end
   rescue
     error -> {:error, [%{message: "Validation failed: #{inspect(error)}"}]}

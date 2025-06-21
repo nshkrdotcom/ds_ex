@@ -148,12 +148,6 @@ defmodule DSPEx.Predict do
   # Merge two variable spaces (simple implementation)
   defp merge_variable_spaces(source_space, target_space) do
     case {source_space, target_space} do
-      {nil, space} ->
-        space
-
-      {space, nil} ->
-        space
-
       {source, target} ->
         # Add variables from source to target (target takes precedence)
         source.variables
@@ -890,7 +884,7 @@ defmodule DSPEx.Predict do
   end
 
   defp validate_outputs_with_sinter(_signature, outputs) do
-    # Graceful degradation - Sinter validation not yet implemented  
+    # Graceful degradation - Sinter validation not yet implemented
     # This is a placeholder for future Sinter integration
     {:ok, outputs}
   end
