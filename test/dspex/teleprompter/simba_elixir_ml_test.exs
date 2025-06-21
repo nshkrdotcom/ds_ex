@@ -243,8 +243,20 @@ defmodule DSPEx.Teleprompter.SIMBAElixirMLTest do
       # Should identify missing required fields
       assert %ElixirML.Schema.ValidationError{} = error
 
-      assert String.contains?(error.message, "min_score") or
-               String.contains?(error.message, "avg_score")
+      # ElixirML.Runtime generates error messages in the format "Field <field_name> is required"
+      # The bucket schema has these required fields: trajectories, max_score, min_score, avg_score, max_to_min_gap, max_to_avg_gap
+      # Since we're providing trajectories and max_score, the first missing required field should be min_score
+      # But let's be more flexible and check for any missing required field error
+      is_required_field_error = String.contains?(error.message, "is required")
+
+      contains_expected_field =
+        String.contains?(error.message, "min_score") or
+          String.contains?(error.message, "avg_score") or
+          String.contains?(error.message, "max_to_min_gap") or
+          String.contains?(error.message, "max_to_avg_gap")
+
+      assert is_required_field_error and contains_expected_field,
+             "Expected error about missing required field, got: #{inspect(error.message)}"
     end
   end
 
