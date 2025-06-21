@@ -1,7 +1,7 @@
 defmodule DSPEx.Teleprompter.SIMBA.SinterIntegrationTest do
   use ExUnit.Case, async: false
 
-  alias DSPEx.{Example, Program, Predict}
+  alias DSPEx.{Example, Predict}
   alias DSPEx.Teleprompter.SIMBA
   alias DSPEx.Teleprompter.SIMBA.{SinterSchemas, Trajectory, Bucket}
   alias DSPEx.Signature.BasicSignatures.QuestionAnswering

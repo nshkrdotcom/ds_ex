@@ -11,6 +11,7 @@ defmodule DSPEx.Performance.SinterVsBaselineTest do
   @moduletag :sinter_test
 
   describe "Sinter vs Custom Schema Performance" do
+    @tag :slow
     test "compares validation performance: Sinter vs manual validation" do
       # Test data for benchmarking
       test_data = %{

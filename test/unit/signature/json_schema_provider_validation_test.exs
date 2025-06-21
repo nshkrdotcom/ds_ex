@@ -439,6 +439,7 @@ defmodule DSPEx.Signature.JsonSchemaProviderValidationTest do
   end
 
   describe "performance validation" do
+    @tag :slow
     test "schema generation performance is consistent across providers" do
       defmodule PerformanceComparisonSignature do
         use DSPEx.Signature,

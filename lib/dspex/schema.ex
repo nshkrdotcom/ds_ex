@@ -44,7 +44,6 @@ defmodule DSPEx.Schema do
   """
 
   alias ElixirML.Runtime
-  alias ElixirML.Schema.ValidationError
 
   @type signature_module :: module()
   @type validation_opts :: [
@@ -414,37 +413,6 @@ defmodule DSPEx.Schema do
         data
     end
   end
-
-  defp normalize_elixir_ml_errors(errors) when is_list(errors) do
-    Enum.map(errors, &normalize_single_error/1)
-  end
-
-  defp normalize_single_error(%ValidationError{} = error) do
-    %{
-      path: extract_path_from_message(error.message),
-      message: error.message,
-      code: :validation_error,
-      context: %{schema: error.schema, data: error.data}
-    }
-  end
-
-  defp normalize_single_error(error) when is_map(error) do
-    error
-  end
-
-  defp normalize_single_error(error) do
-    %{message: inspect(error)}
-  end
-
-  defp extract_path_from_message(message) when is_binary(message) do
-    # Extract field name from error message like "Field name: error"
-    case Regex.run(~r/Field (\w+):/, message) do
-      [_full, field_name] -> [field_name]
-      _ -> []
-    end
-  end
-
-  defp extract_path_from_message(_), do: []
 
   defp extract_signature_title(signature) do
     if function_exported?(signature, :__signature_title__, 0) do

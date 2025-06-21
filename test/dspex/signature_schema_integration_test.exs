@@ -3,7 +3,6 @@ defmodule DSPEx.SignatureSchemaIntegrationTest do
   doctest DSPEx.Signature.SchemaIntegration
 
   alias DSPEx.Signature.SchemaIntegration
-  alias ElixirML.Variable
 
   describe "schema DSL integration" do
     defmodule TestMLSignature do
@@ -326,7 +325,7 @@ defmodule DSPEx.SignatureSchemaIntegrationTest do
           assert program.signature == IntegrationSignature
           assert is_struct(program, DSPEx.Program)
 
-        {:error, reason} ->
+        {:error, _reason} ->
           # Program creation might have specific requirements - that's ok
           # The important thing is that the signature is compatible
           assert IntegrationSignature.input_fields() == [:question, :context]

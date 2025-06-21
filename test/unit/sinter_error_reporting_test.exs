@@ -27,6 +27,7 @@ defmodule DSPEx.Unit.SinterErrorReportingTest do
   end
 
   describe "Performance impact of validation integration" do
+    @tag :slow
     test "validation integration has minimal overhead" do
       inputs = %{question: "Performance test"}
 

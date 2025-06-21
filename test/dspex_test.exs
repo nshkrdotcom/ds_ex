@@ -13,7 +13,7 @@ defmodule DSPExTest do
       use DSPEx.Signature, "question -> answer"
     end
 
-    defmodule TestMLSignature do
+    defmodule TestMainMLSignature do
       @moduledoc "A schema-enhanced test signature"
       use DSPEx.Signature, :schema_dsl
 
@@ -220,9 +220,9 @@ defmodule DSPExTest do
 
   describe "schema integration" do
     test "schema-enhanced signatures work with main API" do
-      case DSPEx.program(TestMLSignature) do
+      case DSPEx.program(TestMainMLSignature) do
         {:ok, builder} ->
-          assert builder.signature == TestMLSignature
+          assert builder.signature == TestMainMLSignature
 
           # Enable schema validation
           enhanced_builder = DSPEx.with_schema_validation(builder, true)
@@ -235,8 +235,8 @@ defmodule DSPExTest do
 
     test "variable extraction from schema signatures" do
       # Test that schema signatures can provide variables
-      if function_exported?(DSPExTest.TestMLSignature, :extract_variables, 0) do
-        variable_space = DSPExTest.TestMLSignature.extract_variables()
+      if function_exported?(DSPExTest.TestMainMLSignature, :extract_variables, 0) do
+        variable_space = DSPExTest.TestMainMLSignature.extract_variables()
         assert %Variable.Space{} = variable_space
 
         variables = Map.values(variable_space.variables)
@@ -365,7 +365,7 @@ defmodule DSPExTest do
   describe "success criteria validation" do
     test "STEP 3 success criteria: fluent API workflow" do
       # This tests the exact workflow from GAP_STEPS.md Step 3 success criteria
-      case DSPEx.program(TestMLSignature) do
+      case DSPEx.program(TestMainMLSignature) do
         {:ok, builder} ->
           # Build the fluent API chain
           enhanced_program =

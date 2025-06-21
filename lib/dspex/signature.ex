@@ -368,8 +368,6 @@ defmodule DSPEx.Signature do
   @spec generate_schema_dsl_signature() :: Macro.t()
   defp generate_schema_dsl_signature do
     quote do
-      @behaviour DSPEx.Signature
-
       # Initialize field accumulators
       Module.register_attribute(__MODULE__, :schema_input_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :schema_output_fields, accumulate: true)

@@ -2,7 +2,6 @@ defmodule DSPEx.Teleprompter.SIMBAElixirMLTest do
   use ExUnit.Case, async: true
 
   alias DSPEx.Teleprompter.SIMBA
-  alias DSPEx.{Example, Program}
 
   @moduletag :simba_elixir_ml
 
