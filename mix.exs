@@ -1,6 +1,8 @@
 defmodule Dspex.MixProject do
   use Mix.Project
 
+  @source_url "https://github.com/nshkrdotcom/ds_ex"
+
   def project do
     [
       app: :dspex,
@@ -8,6 +10,7 @@ defmodule Dspex.MixProject do
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      package: package(),
       elixirc_options: elixirc_options(Mix.env()),
       dialyzer: [
         plt_add_apps: [:mix],
@@ -66,6 +69,13 @@ defmodule Dspex.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
+    ]
+  end
+
+  defp package do
+    [
+      licenses: ["MIT"],
+      links: %{"GitHub" => @source_url}
     ]
   end
 end

@@ -1192,7 +1192,7 @@ DSPEx follows a rigorous test-driven development approach with comprehensive cov
 
 ## License
 
-Same as original DSPy project.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 
