@@ -120,7 +120,7 @@ defmodule DSPEx.Builder do
   Adds or updates variables in the builder configuration.
 
   Variables added here will be available for automatic optimization by
-  teleprompters like SIMBA.
+  teleprompters that understand builder config (not used in the minimal stack).
 
   ## Parameters
   - `builder` - The program builder

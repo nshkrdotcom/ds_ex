@@ -1,6 +1,8 @@
 defmodule Dspex.MixProject do
   use Mix.Project
 
+  @source_url "https://github.com/nshkrdotcom/ds_ex"
+
   def project do
     [
       app: :dspex,
@@ -8,6 +10,7 @@ defmodule Dspex.MixProject do
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      package: package(),
       elixirc_options: elixirc_options(Mix.env()),
       dialyzer: [
         plt_add_apps: [:mix],
@@ -45,9 +48,6 @@ defmodule Dspex.MixProject do
       # Infrastructure & Observability
       {:foundation, "~> 0.1.5"},
 
-      # Core - JSON serialization (jason already included in foundation)
-      # {:jason, "~> 1.4"}, # Removed - provided by Foundation
-
       # HTTP & Networking - minimal resilient client
       {:req, "~> 0.5"},
       # {:fuse, "~> 2.5"}, # Removed - provided by Foundation
@@ -55,9 +55,12 @@ defmodule Dspex.MixProject do
       {:external_service, "~> 1.1"},
       {:retry, "~> 0.18"},
 
-      # Structured outputs
-      {:instructor_lite, "~> 0.3.0"},
+      # Structured outputs / validation
       {:sinter, github: "nshkrdotcom/sinter"},
+      {:json_remedy, "~> 0.1.11"},
+
+      # LLM + embeddings
+      {:req_llm, "~> 1.0"},
 
       # Testing & Development
       {:propcheck, "~> 1.4", only: [:test, :dev]},
@@ -65,7 +68,17 @@ defmodule Dspex.MixProject do
       {:mox, "~> 1.1", only: :test},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.34", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.40.0", only: :dev, runtime: false},
+
+      # Optimization
+      {:gepa_ex, "~> 0.1.2"}
+    ]
+  end
+
+  defp package do
+    [
+      licenses: ["MIT"],
+      links: %{"GitHub" => @source_url}
     ]
   end
 end

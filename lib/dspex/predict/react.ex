@@ -55,9 +55,8 @@ defmodule DSPEx.Predict.ReAct do
       raise ArgumentError, "ReAct requires at least one tool in :tools option"
     end
 
-    # Extract client from opts, default to :test for testing
-    client = Keyword.get(opts, :client, :test)
-    model = Keyword.get(opts, :model, client)
+    client = Keyword.get(opts, :client, DSPEx.Client)
+    model = Keyword.get(opts, :model, nil)
 
     # Create a special ReAct signature
     react_signature = create_react_signature(signature)
@@ -65,9 +64,11 @@ defmodule DSPEx.Predict.ReAct do
     # Create custom instruction that encourages ReAct reasoning
     instruction = build_react_instruction(signature, tools)
     opts_with_instruction = Keyword.put(opts, :instruction, instruction)
+    opts_with_model = if model, do: Keyword.put(opts_with_instruction, :model, model), else: opts_with_instruction
+    opts_with_client = Keyword.put(opts_with_model, :client, client)
 
     # Create the Predict program with tools attached
-    predict_program = Predict.new(react_signature, model, opts_with_instruction)
+    predict_program = Predict.new(react_signature, opts_with_client)
 
     # Add tools to the program struct for reference
     Map.put(predict_program, :tools, tools)

@@ -100,11 +100,9 @@ defmodule DSPEx.Retrieve.BasicRetriever do
   def retrieve(retriever, query, opts \\ [])
 
   def retrieve(%__MODULE__{} = retriever, query, opts) when is_binary(query) do
-    # Ensure embeddings are computed
-    retriever_with_embeddings = ensure_embeddings(retriever)
-
     top_k = Keyword.get(opts, :top_k, 10)
     similarity_threshold = Keyword.get(opts, :similarity_threshold, 0.0)
+    retriever_with_embeddings = ensure_embeddings(retriever, opts)
 
     # Use the semantic search functionality from Embeddings module
     Embeddings.semantic_search(
@@ -195,12 +193,14 @@ defmodule DSPEx.Retrieve.BasicRetriever do
   # Private helper functions
 
   # Ensure embeddings are computed for all documents
-  defp ensure_embeddings(%__MODULE__{embeddings: nil} = retriever) do
-    {:ok, embeddings} = Embeddings.batch_embed(retriever.documents, model: retriever.model)
+  defp ensure_embeddings(%__MODULE__{embeddings: nil} = retriever, opts) do
+    {:ok, embeddings} =
+      Embeddings.batch_embed(retriever.documents, Keyword.put(opts, :model, retriever.model))
+
     %{retriever | embeddings: embeddings}
   end
 
-  defp ensure_embeddings(%__MODULE__{} = retriever) do
+  defp ensure_embeddings(%__MODULE__{} = retriever, _opts) do
     retriever
   end
 end

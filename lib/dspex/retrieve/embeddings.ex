@@ -44,29 +44,15 @@ defmodule DSPEx.Retrieve.Embeddings do
   def embed(text, opts \\ [])
 
   def embed(text, opts) when is_binary(text) do
-    model = Keyword.get(opts, :model, :text_embedding_ada_002)
-
-    case model do
-      :text_embedding_ada_002 ->
-        # Generate mock embedding with 1536 dimensions for Ada-002
-        embedding = generate_mock_embedding(text, 1536)
-        {:ok, embedding}
-
-      :text_embedding_small ->
-        # Generate mock embedding with 768 dimensions for small model
-        embedding = generate_mock_embedding(text, 768)
-        {:ok, embedding}
-
-      _ ->
-        # Default to Ada-002 dimensions for unknown models
-        embedding = generate_mock_embedding(text, 1536)
-        {:ok, embedding}
+    case DSPEx.Client.embed(text, opts) do
+      {:ok, [embedding]} when is_list(embedding) -> {:ok, embedding}
+      {:ok, embedding} when is_list(embedding) -> {:ok, embedding}
+      {:error, reason} -> {:error, inspect(reason)}
+      _ -> {:error, "Failed to generate embedding"}
     end
   end
 
-  def embed(_text, _opts) do
-    {:error, "Text must be a string"}
-  end
+  def embed(_text, _opts), do: {:error, "Text must be a string"}
 
   @doc """
   Generate embeddings for multiple texts in batch.
@@ -83,26 +69,14 @@ defmodule DSPEx.Retrieve.Embeddings do
   @spec batch_embed([String.t()], keyword()) :: {:ok, [[float()]]} | {:error, String.t()}
   def batch_embed(texts, opts \\ [])
 
-  def batch_embed([], _opts), do: {:ok, []}
-
   def batch_embed(texts, opts) when is_list(texts) do
-    # Validate all texts are strings
-    if Enum.all?(texts, &is_binary/1) do
-      embeddings =
-        Enum.map(texts, fn text ->
-          {:ok, embedding} = embed(text, opts)
-          embedding
-        end)
-
-      {:ok, embeddings}
-    else
-      {:error, "All texts must be strings"}
+    case DSPEx.Client.embed(texts, opts) do
+      {:ok, embeddings} -> {:ok, embeddings}
+      {:error, reason} -> {:error, inspect(reason)}
     end
   end
 
-  def batch_embed(_texts, _opts) do
-    {:error, "Texts must be a list"}
-  end
+  def batch_embed(_texts, _opts), do: {:error, "Texts must be a list"}
 
   @doc """
   Compute cosine similarity between two embeddings.
@@ -189,27 +163,7 @@ defmodule DSPEx.Retrieve.Embeddings do
     {:error, "Query must be a string and texts must be a list"}
   end
 
-  # Private helper functions
-
-  # Generate a mock embedding based on text content (for testing)
-  defp generate_mock_embedding(text, dimensions) do
-    # Create a simple hash-based mock embedding
-    # In production, this would call an actual embedding API
-    seed = :erlang.phash2(text, 1_000_000)
-    :rand.seed(:exsplus, {seed, seed + 1, seed + 2})
-
-    # Generate normalized random vector
-    vector = for _ <- 1..dimensions, do: (:rand.uniform() - 0.5) * 2.0
-    normalize_vector(vector)
-  end
-
-  # Normalize a vector to unit length
-  defp normalize_vector(vector) do
-    norm = vector_norm(vector)
-    if norm > 0, do: Enum.map(vector, &(&1 / norm)), else: vector
-  end
-
-  # Compute dot product of two vectors
+  # Private helpers
   defp dot_product(vec1, vec2) do
     vec1
     |> Enum.zip(vec2)
@@ -217,7 +171,6 @@ defmodule DSPEx.Retrieve.Embeddings do
     |> Enum.sum()
   end
 
-  # Compute the L2 norm of a vector
   defp vector_norm(vector) do
     vector
     |> Enum.map(&(&1 * &1))

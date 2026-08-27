@@ -1,187 +1,224 @@
 defmodule DSPEx.Adapter do
   @moduledoc """
-  Translation layer between DSPEx signatures and LLM API messages.
+  Sinter-backed adapter for turning signatures into prompts and validating/repairing outputs.
 
-  Handles conversion of signature inputs to API request messages and parsing
-  of API responses back to signature outputs.
-
-  ## Examples
-
-      iex> signature = MySignature  # has fields: question -> answer
-      iex> inputs = %{question: "What is 2+2?"}
-      iex> messages = DSPEx.Adapter.format_messages(signature, inputs)
-      iex> messages
-      [%{role: "user", content: "What is 2+2?"}]
-      
-      iex> response = %{choices: [%{message: %{content: "4"}}]}
-      iex> {:ok, outputs} = DSPEx.Adapter.parse_response(signature, response)
-      iex> outputs
-      %{answer: "4"}
-
+  - Validates inputs with the signature's Sinter schema.
+  - Builds a prompt that includes instructions, inputs as JSON, and the expected JSON schema.
+  - Repairs and validates model outputs using JsonRemedy + Sinter.
   """
+
+  alias DSPEx.Signature.Sinter, as: SignatureSinter
+  alias JsonRemedy
 
   @type signature :: module()
   @type inputs :: map()
   @type outputs :: map()
-  @type messages :: [DSPEx.Client.message()]
-  @type api_response :: DSPEx.Client.response()
+  @type request :: %{
+          prompt: String.t(),
+          schema: map(),
+          output_fields: [atom()],
+          inputs: map()
+        }
 
   @doc """
-  Convert signature inputs to LLM API messages.
-
-  Takes a signature module and input values, formats them into a message
-  list suitable for the LLM API.
-
-  ## Parameters
-
-  - `signature` - Signature module defining input/output fields
-  - `inputs` - Map of input field values
-
-  ## Returns
-
-  - `{:ok, messages}` - Formatted message list
-  - `{:error, reason}` - Error with validation or formatting
-
+  Prepare a prompt + schema request for the client.
   """
-  @spec format_messages(signature(), inputs()) :: {:ok, messages()} | {:error, atom()}
-  def format_messages(signature, inputs) do
-    with {:ok, input_fields} <- get_input_fields(signature),
-         {:ok, validated_inputs} <- validate_inputs(input_fields, inputs),
-         {:ok, prompt} <- build_prompt(signature, validated_inputs) do
-      messages = [%{role: "user", content: prompt}]
-      {:ok, messages}
-    else
-      {:error, reason} -> {:error, reason}
+  @spec prepare(signature(), inputs(), keyword()) :: {:ok, request()} | {:error, term()}
+  def prepare(signature, inputs, opts \\ []) do
+    normalized_inputs = normalize_inputs(inputs)
+
+    with {:ok, validated_inputs} <- validate_inputs(signature, normalized_inputs),
+         {:ok, schema} <- build_output_schema(signature, opts),
+         {:ok, prompt} <- build_prompt(signature, validated_inputs, schema, opts) do
+      {:ok,
+       %{
+         prompt: prompt,
+         schema: schema,
+         output_fields: signature.output_fields(),
+         inputs: validated_inputs
+       }}
     end
   end
 
   @doc """
-  Parse LLM API response to signature outputs.
-
-  Takes an API response and extracts the output values according to
-  the signature's output field definitions.
-
-  ## Parameters
-
-  - `signature` - Signature module defining input/output fields
-  - `response` - API response with choices
-
-  ## Returns
-
-  - `{:ok, outputs}` - Parsed output values map
-  - `{:error, reason}` - Error with parsing or validation
-
+  Parse a raw response (object map or content string) into validated outputs.
   """
-  @spec parse_response(signature(), api_response()) :: {:ok, outputs()} | {:error, atom()}
-  def parse_response(signature, response) do
-    with {:ok, output_fields} <- get_output_fields(signature),
-         {:ok, response_text} <- extract_response_text(response),
-         {:ok, parsed_outputs} <- parse_output_text(output_fields, response_text) do
-      {:ok, parsed_outputs}
-    else
-      {:error, reason} -> {:error, reason}
-    end
+  @spec parse_response(signature(), map() | String.t()) :: {:ok, outputs()} | {:error, term()}
+  def parse_response(signature, %{object: object}) when is_map(object) do
+    normalize_and_validate(signature, object)
   end
 
-  # Private functions
-
-  @spec get_input_fields(signature()) :: {:ok, [atom()]} | {:error, :invalid_signature}
-  defp get_input_fields(signature) do
-    if function_exported?(signature, :input_fields, 0) do
-      {:ok, signature.input_fields()}
-    else
-      {:error, :invalid_signature}
-    end
+  def parse_response(signature, %{content: content}) when is_binary(content) do
+    decode_and_validate(signature, content)
   end
 
-  @spec get_output_fields(signature()) :: {:ok, [atom()]} | {:error, :invalid_signature}
-  defp get_output_fields(signature) do
-    if function_exported?(signature, :output_fields, 0) do
-      {:ok, signature.output_fields()}
-    else
-      {:error, :invalid_signature}
-    end
+  def parse_response(signature, content) when is_binary(content) do
+    decode_and_validate(signature, content)
   end
 
-  @spec validate_inputs([atom()], inputs()) ::
-          {:ok, inputs()} | {:error, :missing_inputs | :invalid_input}
-  defp validate_inputs(required_fields, inputs) do
-    missing_fields =
-      Enum.filter(required_fields, fn field ->
-        not Map.has_key?(inputs, field)
-      end)
+  def parse_response(_signature, _response), do: {:error, :invalid_response}
 
-    # Also check for nil values in required fields
-    nil_fields =
-      Enum.filter(required_fields, fn field ->
-        Map.has_key?(inputs, field) && is_nil(Map.get(inputs, field))
-      end)
+  # -- Internal helpers -------------------------------------------------------
 
-    cond do
-      not Enum.empty?(missing_fields) -> {:error, :missing_inputs}
-      not Enum.empty?(nil_fields) -> {:error, :invalid_input}
-      true -> {:ok, inputs}
-    end
+  defp normalize_inputs(inputs) when is_map(inputs) do
+    inputs
+    |> normalize_context()
   end
 
-  @spec build_prompt(signature(), inputs()) ::
-          {:ok, String.t()} | {:error, :prompt_generation_failed}
-  defp build_prompt(signature, inputs) do
-    # Try to get signature description for context
-    description =
-      if function_exported?(signature, :description, 0) do
-        signature.description()
+  defp normalize_inputs(other), do: other
+
+  defp normalize_context(%{context: context} = inputs) when is_list(context) do
+    encoded =
+      context
+      |> Enum.map(&normalize_context_item/1)
+      |> Jason.encode!()
+
+    Map.put(inputs, :context, encoded)
+  end
+
+  defp normalize_context(inputs), do: inputs
+
+  defp normalize_context_item(%{text: text, score: score}) do
+    %{text: to_string(text), score: score}
+  end
+
+  defp normalize_context_item(%{text: text}) do
+    %{text: to_string(text)}
+  end
+
+  defp normalize_context_item(text) when is_binary(text), do: %{text: text}
+  defp normalize_context_item(other), do: other
+
+  defp validate_inputs(signature, inputs) do
+    case SignatureSinter.validate_with_sinter(signature, inputs, field_type: :inputs) do
+      {:ok, validated} -> {:ok, validated}
+      {:error, reason} -> {:error, {:invalid_inputs, reason}}
+    end
+  rescue
+    _ ->
+      case signature.validate_inputs(inputs) do
+        :ok -> {:ok, inputs}
+        {:error, reason} -> {:error, {:invalid_inputs, reason}}
+      end
+  end
+
+  defp build_output_schema(signature, opts) do
+    provider = Keyword.get(opts, :provider, :generic)
+    schema = SignatureSinter.generate_json_schema(signature, field_type: :outputs, provider: provider)
+    {:ok, schema}
+  rescue
+    error -> {:error, {:schema_generation_failed, error}}
+  end
+
+  defp build_prompt(signature, inputs, schema, opts) do
+    instructions =
+      if function_exported?(signature, :instructions, 0) do
+        signature.instructions()
       else
-        "Please process the following input"
+        "Given the inputs, return the requested outputs as JSON."
       end
 
-    # Build a simple prompt with the inputs
-    input_text =
-      Enum.map_join(inputs, "\n", fn {key, value} ->
-        "#{key}: #{value}"
-      end)
+    input_json = Jason.encode!(inputs)
+    schema_json = Jason.encode!(schema)
+    extra = Keyword.get(opts, :instruction, nil)
 
-    prompt = "#{description}\n\n#{input_text}"
+    prompt =
+      [
+        instructions,
+        extra,
+        "Inputs (JSON):",
+        input_json,
+        "Return ONLY a JSON object matching this schema:",
+        schema_json
+      ]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.join("\n\n")
+
     {:ok, prompt}
   rescue
-    _ -> {:error, :prompt_generation_failed}
+    error -> {:error, {:prompt_generation_failed, error}}
   end
 
-  @spec extract_response_text(api_response()) :: {:ok, String.t()} | {:error, :invalid_response}
-  defp extract_response_text(%{choices: choices}) when is_list(choices) and length(choices) > 0 do
-    case List.first(choices) do
-      %{message: %{content: content}} when is_binary(content) ->
-        {:ok, content}
+  defp decode_and_validate(signature, content) do
+    case decode_json(content) do
+      {:ok, decoded} ->
+        normalize_decoded(signature, decoded)
 
-      _ ->
-        {:error, :invalid_response}
+      {:error, _reason} ->
+        normalize_decoded(signature, content, raw: true)
     end
   end
 
-  defp extract_response_text(_), do: {:error, :invalid_response}
+  defp decode_json(content) do
+    case Jason.decode(content) do
+      {:ok, data} ->
+        {:ok, data}
 
-  @spec parse_output_text([atom()], String.t()) :: {:ok, outputs()} | {:error, :parsing_failed}
-  defp parse_output_text(output_fields, response_text) do
-    # For now, use simple parsing - put all response text in first output field
-    # In a more sophisticated implementation, this would parse structured output
-    case output_fields do
-      [single_field] ->
-        {:ok, %{single_field => String.trim(response_text)}}
-
-      multiple_fields ->
-        # For multiple fields, try to split by lines or use first field as fallback
-        lines = String.split(response_text, "\n", trim: true)
-
-        if length(lines) >= length(multiple_fields) do
-          outputs = Enum.zip(multiple_fields, lines) |> Enum.into(%{})
-          {:ok, outputs}
-        else
-          # Fallback: put all text in first field
-          [first_field | _] = multiple_fields
-          {:ok, %{first_field => String.trim(response_text)}}
+      {:error, _} ->
+        case JsonRemedy.repair(content) do
+          {:ok, data} -> {:ok, data}
+          {:ok, data, _logs} -> {:ok, data}
+          {:error, reason} -> {:error, {:json_repair_failed, reason}}
         end
     end
+  end
+
+  defp normalize_decoded(signature, decoded, _opts \\ []) do
+    case decoded do
+      map when is_map(map) ->
+        normalize_and_validate(signature, map)
+
+      other ->
+        wrap_single_field(signature, other)
+    end
+  end
+
+  defp normalize_and_validate(signature, map) when is_map(map) do
+    output_fields = signature.output_fields()
+    normalized = normalize_output_keys(map, output_fields)
+
+    case SignatureSinter.validate_with_sinter(signature, normalized, field_type: :outputs) do
+      {:ok, validated} -> {:ok, Map.take(validated, output_fields)}
+      {:error, reason} -> {:error, {:output_validation_failed, reason}}
+    end
   rescue
-    _ -> {:error, :parsing_failed}
+    _ -> {:error, :output_validation_failed}
+  end
+
+  defp normalize_and_validate(_signature, _), do: {:error, :invalid_response_body}
+
+  defp wrap_single_field(signature, value) do
+    case signature.output_fields() do
+      [field] ->
+        normalize_and_validate(signature, %{field => normalize_scalar(value)})
+
+      _ ->
+        {:error, :invalid_response_body}
+    end
+  end
+
+  defp normalize_scalar(value) when is_binary(value), do: value
+  defp normalize_scalar(value) when is_atom(value), do: Atom.to_string(value)
+  defp normalize_scalar(value), do: to_string(value)
+
+  defp normalize_output_keys(map, output_fields) do
+    output_lookup = Map.new(output_fields, fn field -> {Atom.to_string(field), field} end)
+    output_set = MapSet.new(output_fields)
+
+    map
+    |> Enum.reduce(%{}, fn {key, value}, acc ->
+      atom_key =
+        cond do
+          is_atom(key) and MapSet.member?(output_set, key) -> key
+          is_binary(key) and Map.has_key?(output_lookup, key) -> Map.fetch!(output_lookup, key)
+          true -> nil
+        end
+
+      if atom_key do
+        Map.put(acc, atom_key, value)
+      else
+        acc
+      end
+    end)
   end
 end

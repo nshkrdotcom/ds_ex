@@ -1,7 +1,9 @@
 defmodule DspexDemo do
   @moduledoc """
   DSPEx + BEACON Demo Application
-  
+
+  Legacy note: BEACON is not implemented in the supported stack. This module remains for reference only.
+
   This application demonstrates the power of DSPEx with BEACON optimization
   across different use cases: question answering, sentiment analysis, and
   chain-of-thought reasoning.

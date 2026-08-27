@@ -1,39 +1,11 @@
 defmodule DSPEx.OptimizedProgram do
   @moduledoc """
-  Wrapper for programs that have been optimized with demonstrations and enhanced metadata support.
+  Wrapper for programs that have been optimized with demonstrations and metadata.
 
-  This module provides a container for programs that don't natively support
-  demonstration storage, allowing any program to be enhanced with few-shot
-  learning capabilities through teleprompter optimization. Enhanced with
-  comprehensive metadata support for SIMBA optimization tracking.
-
-  ## Key Features
-
-  - **Immutable Wrapper**: Safely wraps existing programs without modification
-  - **Demo Storage**: Manages demonstrations for programs lacking native support
-  - **Metadata Tracking**: Records optimization history and configuration with SIMBA support
-  - **Flexible Integration**: Works with any DSPEx.Program implementation
-  - **SIMBA Compatibility**: Full support for SIMBA optimization metadata and strategies
-
-  ## Examples
-
-      # Wrap a program with optimized demonstrations
-      iex> program = %DSPEx.Predict{signature: MySignature, client: :openai}
-      iex> demos = [%DSPEx.Example{data: %{question: "Hi", answer: "Hello"}, input_keys: MapSet.new([:question])}]
-      iex> optimized = DSPEx.OptimizedProgram.new(program, demos)
-      iex> optimized.program == program
-      true
-
-      # With SIMBA optimization metadata
-      iex> simba_metadata = %{
-      ...>   teleprompter: :simba,
-      ...>   optimization_strategy: :append_demo,
-      ...>   trajectory_analysis: %{...},
-      ...>   performance_metrics: %{...}
-      ...> }
-      iex> optimized = DSPEx.OptimizedProgram.new(program, demos, simba_metadata)
-
-  See `@type t` for the complete type specification.
+  Teleprompters such as BootstrapFewShot and GEPA wrap programs with this
+  struct to carry demos, instruction overrides, and optimization metadata.
+  SIMBA-specific helpers remain for compatibility, but SIMBA itself is not
+  part of the supported stack.
   """
 
   use DSPEx.Program
@@ -63,7 +35,7 @@ defmodule DSPEx.OptimizedProgram do
   - `:teleprompter` - Which teleprompter was used (:simba, :beacon, etc.)
   - `:optimization_strategy` - Strategy used (:append_demo, etc.)
   - `:performance_metrics` - Before/after performance data
-  - `:trajectory_analysis` - SIMBA trajectory analysis results
+  - `:trajectory_analysis` - legacy optimizer trajectory analysis (SIMBA compatibility)
   - `:instruction_candidates` - Generated instruction variants
   - `:optimization_history` - Step-by-step optimization process
   """
@@ -72,7 +44,7 @@ defmodule DSPEx.OptimizedProgram do
     # Handle nil metadata gracefully
     safe_metadata = metadata || %{}
 
-    # Extract instruction from metadata if present (SIMBA optimization)
+    # Extract instruction from metadata if present (legacy teleprompter metadata)
     instruction = extract_instruction_from_metadata(safe_metadata)
 
     %__MODULE__{
@@ -134,13 +106,13 @@ defmodule DSPEx.OptimizedProgram do
   def get_program(%__MODULE__{program: program}), do: program
 
   @doc """
-  Get optimization metadata with SIMBA-specific enhancements.
+  Get optimization metadata (may include legacy teleprompter fields).
   """
   @spec get_metadata(t()) :: map()
   def get_metadata(%__MODULE__{metadata: metadata}), do: metadata
 
   @doc """
-  Get instruction from the optimized program (SIMBA enhancement).
+  Get the stored instruction override, if any.
   """
   @spec get_instruction(t()) :: String.t() | nil
   def get_instruction(%__MODULE__{instruction: instruction}), do: instruction
@@ -180,7 +152,7 @@ defmodule DSPEx.OptimizedProgram do
   end
 
   @doc """
-  Update the instruction in the optimized program (SIMBA enhancement).
+  Update the instruction in the optimized program.
   """
   @spec update_instruction(t(), String.t() | nil) :: t()
   def update_instruction(%__MODULE__{} = optimized, new_instruction) do
@@ -213,7 +185,7 @@ defmodule DSPEx.OptimizedProgram do
   end
 
   @doc """
-  Add SIMBA-specific optimization metadata.
+  Legacy helper to attach SIMBA-specific optimization metadata.
   """
   @spec add_simba_metadata(t(), map()) :: t()
   def add_simba_metadata(%__MODULE__{metadata: existing_metadata} = optimized, simba_metadata) do
@@ -233,7 +205,7 @@ defmodule DSPEx.OptimizedProgram do
   end
 
   @doc """
-  Get SIMBA-specific optimization data.
+  Legacy accessor for SIMBA-specific optimization data.
   """
   @spec get_simba_metadata(t()) :: map()
   def get_simba_metadata(%__MODULE__{metadata: metadata}) do
@@ -256,7 +228,6 @@ defmodule DSPEx.OptimizedProgram do
   Check if a program natively supports instructions.
 
   Returns true if the program struct has an `instruction` field, false otherwise.
-  Used by SIMBA to determine enhancement strategy.
   """
   @spec supports_native_instruction?(struct()) :: boolean()
   def supports_native_instruction?(program) when is_struct(program) do
@@ -266,9 +237,9 @@ defmodule DSPEx.OptimizedProgram do
   def supports_native_instruction?(_), do: false
 
   @doc """
-  Determine SIMBA enhancement strategy for a program.
+  Determine the enhancement strategy for a program (legacy SIMBA naming).
 
-  Returns the optimal strategy for enhancing a program with SIMBA optimizations:
+  Returns the optimal strategy for enhancing a program with demos/instructions:
   - `:native_full` - Program supports both demos and instructions natively
   - `:native_demos` - Program supports demos but not instructions natively
   - `:wrap_optimized` - Program needs OptimizedProgram wrapper for enhancements
@@ -301,10 +272,10 @@ defmodule DSPEx.OptimizedProgram do
   def simba_enhancement_strategy(_), do: :wrap_optimized
 
   @doc """
-  Create an optimized program using SIMBA enhancement strategy.
+  Create an optimized program using the chosen enhancement strategy.
 
   This function analyzes the source program and chooses the optimal way to
-  apply SIMBA optimizations (demos and instruction).
+  apply demos and optional instruction overrides.
 
   ## Parameters
   - `source_program` - Original program to enhance
@@ -363,7 +334,7 @@ defmodule DSPEx.OptimizedProgram do
   @doc """
   Create a performance comparison between original and optimized programs.
 
-  Useful for SIMBA optimization analysis and reporting.
+  Useful for comparing baseline and optimized programs.
   """
   @spec create_performance_comparison(t(), [DSPEx.Example.t()], function()) :: map()
   def create_performance_comparison(

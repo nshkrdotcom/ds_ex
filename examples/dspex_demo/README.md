@@ -1,5 +1,7 @@
 # DSPEx + BEACON Demo Application 🚀
 
+> Legacy note: BEACON is not part of the supported stack. This demo is archived for reference; see `docs/_legacy/` for BEACON/SIMBA planning.
+
 A comprehensive demonstration of the DSPEx framework with **BEACON teleprompter optimization**, showcasing how Bayesian optimization can automatically improve language model programs.
 
 ## ✅ Status: FULLY WORKING

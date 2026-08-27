@@ -1,50 +1,11 @@
 defmodule DSPEx do
   @moduledoc """
-  Enhanced entry point for DSPEx with ElixirML foundation integration.
+  Minimal entry point for the supported DSPEx stack.
 
-  DSPEx is an Elixir implementation of the DSPy framework enhanced with the revolutionary
-  ElixirML foundation, providing universal parameter optimization, ML-native validation,
-  and automatic module selection capabilities.
-
-  ## Key Features
-
-  - **Declarative Signatures**: Define program interfaces with ML-specific types
-  - **Universal Variable System**: Automatic optimization of ANY parameter
-  - **ML-Native Validation**: Schema validation with embeddings, probabilities, etc.
-  - **Automatic Optimization**: SIMBA teleprompter with variable-aware optimization
-  - **Process Orchestration**: Advanced supervision and fault tolerance
-  - **Schema Integration**: ElixirML Schema Engine for comprehensive validation
-
-  ## Enhanced Quick Start
-
-      # Define an ML-aware signature
-      defmodule QASignature do
-        use DSPEx.Signature, :schema_dsl
-        
-        input :question, :string
-        input :context, :embedding, dimensions: 1536
-        output :answer, :string
-        output :confidence, :confidence_score
-      end
-
-      # Create an enhanced program with variables
-      program = DSPEx.program(QASignature)
-      |> DSPEx.with_variables(%{provider: :openai, temperature: 0.7})
-      |> DSPEx.with_schema_validation(true)
-
-      # Execute with automatic validation
-      {:ok, result} = DSPEx.forward(program, %{
-        question: "What is ML?",
-        context: [0.1, 0.2, ...] # 1536-dimensional embedding
-      })
-
-  ## Enhanced Modules
-
-  - `DSPEx.Signature` - ML-aware program interfaces with schema validation
-  - `DSPEx.Program` - Enhanced program execution with variable optimization
-  - `DSPEx.Builder` - Fluent API for program configuration
-  - `ElixirML.Variable` - Universal parameter optimization system
-  - `ElixirML.Schema` - ML-native validation engine
+  The functions here wire together signatures, adapters, clients, and
+  teleprompters used in the vertical slice (Predict, Retrieval/RAG,
+  BootstrapFewShot, GEPA). Builder helpers remain for compatibility but
+  advanced variable-system features are intentionally out of scope.
   """
 
   alias DSPEx.{Program, Builder}
@@ -85,8 +46,9 @@ defmodule DSPEx do
   @doc """
   Adds variables to a program builder for automatic optimization.
 
-  Variables specified here can be automatically optimized by SIMBA and other
-  teleprompters, enabling parameter tuning without manual intervention.
+  Variables specified here are preserved on the builder for experimental
+  optimizers. The minimal teleprompters in this slice do not automatically
+  tune them.
 
   ## Parameters
   - `builder` - Program builder from DSPEx.program/2
@@ -184,41 +146,26 @@ defmodule DSPEx do
   end
 
   @doc """
-  Optimizes a program using the enhanced SIMBA teleprompter with variable awareness.
+  Run a teleprompter (BootstrapFewShot or GEPA) against a program.
 
-  This function leverages the ElixirML Variable System to automatically
-  optimize any parameters declared as variables in the program.
-
-  ## Parameters
-  - `program` - Program or builder to optimize
-  - `training_data` - List of training examples
-  - `opts` - Optimization options
-
-  ## Options
-  - `:variables` - List of variable names to optimize (default: all)
-  - `:objectives` - List of optimization objectives (default: [:accuracy])
-  - `:teleprompter` - Teleprompter module (default: DSPEx.Teleprompter.SIMBA)
-
-  ## Returns
-  - `{:ok, optimized_program}` - Optimization successful
-  - `{:error, reason}` - Optimization failed
-
-  ## Examples
-
-      {:ok, optimized} = DSPEx.optimize(program, training_data,
-        variables: [:temperature, :provider],
-        objectives: [:accuracy, :cost, :latency]
-      )
-
+  Requires a teacher program and a metric function; by default it uses
+  `DSPEx.Teleprompter.BootstrapFewShot`.
   """
   @spec optimize(Builder.t() | struct(), [DSPEx.Example.t()], keyword()) ::
           {:ok, struct()} | {:error, term()}
   def optimize(program_or_builder, training_data, opts \\ []) do
-    teleprompter = Keyword.get(opts, :teleprompter, DSPEx.Teleprompter.SIMBA)
+    teleprompter = Keyword.get(opts, :teleprompter, DSPEx.Teleprompter.BootstrapFewShot)
+    teacher = Keyword.get(opts, :teacher)
+    metric_fn = Keyword.get(opts, :metric)
 
-    case ensure_program(program_or_builder) do
-      {:ok, program} -> teleprompter.optimize(program, training_data, opts)
-      {:error, reason} -> {:error, reason}
+    with {:ok, program} <- ensure_program(program_or_builder),
+         {:ok, teacher} <- ensure_teacher(teacher),
+         {:ok, metric_fn} <- ensure_metric(metric_fn),
+         :ok <- DSPEx.Teleprompter.validate_student(program),
+         :ok <- DSPEx.Teleprompter.validate_teacher(teacher),
+         :ok <- DSPEx.Teleprompter.validate_trainset(training_data),
+         true <- DSPEx.Teleprompter.implements_behavior?(teleprompter) || {:error, :invalid_teleprompter} do
+      teleprompter.compile(program, teacher, training_data, metric_fn, Keyword.drop(opts, [:teleprompter, :teacher, :metric]))
     end
   end
 
@@ -253,6 +200,18 @@ defmodule DSPEx do
   defp ensure_program(program) when is_struct(program) do
     {:ok, program}
   end
+
+  defp ensure_teacher(nil), do: {:error, :teacher_required}
+  defp ensure_teacher(%_{} = teacher), do: {:ok, teacher}
+  defp ensure_teacher(_), do: {:error, :invalid_teacher}
+
+  defp ensure_metric(nil), do: {:error, :metric_required}
+
+  defp ensure_metric(metric_fn) when is_function(metric_fn, 2) do
+    {:ok, metric_fn}
+  end
+
+  defp ensure_metric(_), do: {:error, :invalid_metric}
 
   @spec maybe_validate_inputs(struct(), map(), boolean()) :: {:ok, map()} | {:error, term()}
   defp maybe_validate_inputs(program, inputs, true) do

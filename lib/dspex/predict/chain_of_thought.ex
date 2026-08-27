@@ -40,9 +40,8 @@ defmodule DSPEx.Predict.ChainOfThought do
   """
   @spec new(module(), keyword()) :: Predict.t()
   def new(signature, opts \\ []) do
-    # Extract client from opts, default to :test for testing
-    client = Keyword.get(opts, :client, :test)
-    model = Keyword.get(opts, :model, client)
+    client = Keyword.get(opts, :client, DSPEx.Client)
+    model = Keyword.get(opts, :model, nil)
 
     # Create a special Chain of Thought signature
     cot_signature = create_cot_signature(signature)
@@ -50,9 +49,10 @@ defmodule DSPEx.Predict.ChainOfThought do
     # Create custom instruction that encourages step-by-step reasoning
     instruction = build_cot_instruction(signature)
     opts_with_instruction = Keyword.put(opts, :instruction, instruction)
+    opts_with_model = if model, do: Keyword.put(opts_with_instruction, :model, model), else: opts_with_instruction
+    opts_with_client = Keyword.put(opts_with_model, :client, client)
 
-    # Create the Predict program
-    Predict.new(cot_signature, model, opts_with_instruction)
+    Predict.new(cot_signature, opts_with_client)
   end
 
   # Create a CoT signature dynamically at runtime
